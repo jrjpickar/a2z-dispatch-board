@@ -598,7 +598,8 @@ async function loadDashboard() {
 
 /* ---------- Rendering ---------- */
 function render() {
-  const { labor, jobs } = dashboardData;
+  const labor = dashboardData.labor || [];
+  const jobs = dashboardData.jobs || [];
 
   const available = labor.filter(w => w.status === 'available');
   const booked = labor.filter(w => w.status === 'booked');
