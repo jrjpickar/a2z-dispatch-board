@@ -525,8 +525,7 @@
    ============================================================ */
 const CONFIG = {
   GET_DASHBOARD_DATA_URL: "https://hook.us2.make.com/qw14kv9l5ynkz8v9kkgngvbn72gsxj6r",
-  CREATE_JOB_URL: "https://hook.us1.make.com/REPLACE_WITH_CREATE_JOB_WEBHOOK",
-  LABOR_STATUS_URL: "https://hook.us2.make.com/3otyoay8td91lhm4u2yuk3gem4d14ajc"
+  CREATE_JOB_URL: "https://hook.us1.make.com/REPLACE_WITH_CREATE_JOB_WEBHOOK"
 };
 
 /* ============================================================
@@ -586,40 +585,13 @@ async function loadDashboard() {
   document.getElementById('jobsBody').innerHTML = `<tr><td colspan="6" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
 
   try {
-    const [jobsResult, laborResult] = await Promise.allSettled([
-      fetch(CONFIG.GET_DASHBOARD_DATA_URL),
-      fetch(CONFIG.LABOR_STATUS_URL)
-    ]);
-
-    let jobsData = null;
-    let laborData = null;
-
-    if (jobsResult.status === 'fulfilled' && jobsResult.value.ok) {
-      jobsData = await jobsResult.value.json();
-    }
-
-    if (laborResult.status === 'fulfilled' && laborResult.value.ok) {
-      laborData = await laborResult.value.json();
-    }
-
-    dashboardData = {
-      ...(jobsData || MOCK_DATA),
-      labor: Array.isArray(laborData)
-        ? laborData
-        : Array.isArray(laborData?.labor)
-          ? laborData.labor
-          : Array.isArray(jobsData?.labor)
-            ? jobsData.labor
-            : MOCK_DATA.labor
-    };
-
-    if (!jobsData && !laborData) {
-      showToast("Showing sample data — connect your Make.com webhooks in CONFIG to go live.", true);
-    }
+    const res = await fetch(CONFIG.GET_DASHBOARD_DATA_URL);
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+    dashboardData = await res.json();
   } catch (err) {
     console.warn("Falling back to mock data:", err.message);
     dashboardData = MOCK_DATA;
-    showToast("Showing sample data — connect your Make.com webhooks in CONFIG to go live.", true);
+    showToast("Showing sample data — connect your Make.com webhook in CONFIG to go live.", true);
   }
   render();
 }
