@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A2Z Dispatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --grey: #9ea0a3;
+    --grey-dark: #7d7f82;
+    --grey-light: #e4e4e2;
+    --ink: #1c1d1f;
+    --ink-soft: #4a4b4d;
+    --orange: #e8622c;
+    --orange-dark: #c94f1f;
+    --gold: #c9a227;
+    --bg: #f4f4f2;
+    --card: #ffffff;
+    --stripe: #f0f0ee;
+    --border: #dddddb;
+    --danger: #c0392b;
+    --radius: 3px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, .label-caps {
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* ---------- Header ---------- */
+  .topbar {
+    background: var(--ink);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 4px solid var(--orange);
+  }
+  .topbar .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .topbar .brand h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .topbar .brand span.tag {
+    color: var(--orange);
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .topbar .date {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--grey);
+    font-size: 13px;
+  }
+  .topbar .actions { display: flex; gap: 10px; align-items: center; }
+
+  button {
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    border: none;
+    border-radius: var(--radius);
+  }
+
+  .btn-primary {
+    background: var(--orange);
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 18px;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    transition: background 0.15s ease;
+  }
+  .btn-primary:hover { background: var(--orange-dark); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--grey);
+    border: 1px solid var(--grey-dark);
+    padding: 9px 14px;
+    font-size: 13px;
+  }
+  .btn-ghost:hover { color: #fff; border-color: #fff; }
+
+  /* ---------- Status strip ---------- */
+  .status-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .status-card {
+    background: var(--card);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .status-card .num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .status-card.available .num { color: var(--ink); }
+  .status-card.booked .num { color: var(--orange); }
+  .status-card.scheduled .num { color: var(--gold); }
+  .status-card .label-caps { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+
+  /* ---------- Layout ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 160px);
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel { background: var(--card); }
+
+  .panel-head {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+
+  /* ---------- Roster ---------- */
+  .roster-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .roster-tab {
+    flex: 1;
+    background: none;
+    padding: 12px 8px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    border-bottom: 3px solid transparent;
+  }
+  .roster-tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--orange);
+  }
+  .roster-search {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .roster-search input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+  }
+  .roster-list { list-style: none; margin: 0; padding: 0; max-height: 640px; overflow-y: auto; }
+  .roster-list li {
+    padding: 11px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--stripe);
+  }
+  .roster-list li:nth-child(even) { background: var(--stripe); }
+  .worker-name { font-weight: 500; }
+  .worker-meta { font-size: 11px; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; }
+  .pill {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+  .pill.avail { border: 1px solid var(--grey-dark); color: var(--ink-soft); }
+  .pill.booked { background: var(--orange); color: #fff; }
+
+  /* ---------- Jobs table ---------- */
+  .jobs-table-wrap { overflow-x: auto; }
+  table.jobs { width: 100%; border-collapse: collapse; }
+  table.jobs th {
+    text-align: left;
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--ink);
+    padding: 10px 16px;
+    white-space: nowrap;
+  }
+  table.jobs td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--stripe);
+    vertical-align: top;
+    font-size: 13px;
+  }
+  table.jobs tr:nth-child(even) td { background: var(--stripe); }
+  .job-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--grey-light);
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+  .crew-chip-row { display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px; }
+  .crew-chip {
+    font-size: 11px;
+    background: var(--grey-light);
+    color: var(--ink);
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .crew-chip.empty-slot { border: 1px dashed var(--grey-dark); color: var(--ink-soft); background: none; }
+  .status-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 10px;
+    display: inline-block;
+  }
+  .status-tag.confirmed { background: var(--gold); color: #fff; }
+  .status-tag.open { border: 1px solid var(--danger); color: var(--danger); }
+
+  /* ---------- Empty / loading states ---------- */
+  .empty-state, .load-state {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  .empty-state .label-caps { font-size: 13px; color: var(--ink); margin-bottom: 6px; }
+  .empty-state p { margin: 0 0 16px; font-size: 13px; }
+  .error-state {
+    margin: 16px 20px;
+    padding: 12px 16px;
+    background: #fbeae7;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+  .spinner {
+    width: 22px; height: 22px;
+    border: 3px solid var(--grey-light);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Slide-over panel ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(28,29,31,0.55);
+    display: none;
+    z-index: 50;
+  }
+  .overlay.open { display: block; }
+  .sheet {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 440px;
+    max-width: 92vw;
+    background: var(--card);
+    box-shadow: -6px 0 24px rgba(0,0,0,0.25);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    z-index: 51;
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet.open { transform: translateX(0); }
+  .sheet-head {
+    background: var(--ink);
+    color: #fff;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 4px solid var(--orange);
+  }
+  .sheet-head h2 { margin: 0; font-size: 16px; }
+  .sheet-head button {
+    background: none; color: var(--grey); font-size: 20px; line-height: 1;
+  }
+  .sheet-body { padding: 20px 22px; overflow-y: auto; flex: 1; }
+  .sheet-foot { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    background: #fff;
+  }
+  .field textarea { min-height: 70px; resize: vertical; }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .tool-check {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .tool-check input { width: auto; }
+
+  .stepper {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .stepper button {
+    width: 32px; height: 32px;
+    background: var(--grey-light);
+    font-weight: 700; font-size: 16px;
+  }
+  .stepper span { font-family: 'IBM Plex Mono', monospace; font-size: 16px; min-width: 24px; text-align: center; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    border-left: 4px solid var(--gold);
+    opacity: 0;
+    transition: all 0.25s ease;
+    pointer-events: none;
+    z-index: 60;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { border-left-color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <h1>A2Z <span class="tag">DISPATCH</span></h1>
+  </div>
+  <div class="date mono" id="todayDate"></div>
+  <div class="actions">
+    <button class="btn-ghost" id="refreshBtn">Refresh</button>
+    <button class="btn-primary" id="newJobBtn">+ Book Job</button>
+  </div>
+</div>
+
+<div class="status-strip">
+  <div class="status-card available">
+    <div class="num" id="statAvailable">–</div>
+    <div class="label-caps">Available</div>
+  </div>
+  <div class="status-card booked">
+    <div class="num" id="statBooked">–</div>
+    <div class="label-caps">Booked Today</div>
+  </div>
+  <div class="status-card scheduled">
+    <div class="num" id="statScheduled">–</div>
+    <div class="label-caps">Jobs Scheduled</div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Labor roster -->
+  <div class="panel">
+    <div class="panel-head"><h2>Labor Roster</h2></div>
+    <div class="roster-tabs">
+      <button class="roster-tab active" data-tab="available">Available</button>
+      <button class="roster-tab" data-tab="booked">Booked</button>
+    </div>
+    <div class="roster-search">
+      <input type="text" id="rosterSearch" placeholder="Search by name...">
+    </div>
+    <ul class="roster-list" id="rosterList"></ul>
+  </div>
+
+  <!-- Jobs scheduled -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Jobs Scheduled</h2>
+    </div>
+    <div class="jobs-table-wrap">
+      <table class="jobs" id="jobsTable">
+        <thead>
+          <tr>
+            <th>Job ID</th>
+            <th>Client</th>
+            <th>Address</th>
+            <th>Report Time</th>
+            <th>Crew</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="jobsBody"></tbody>
+      </table>
+    </div>
+    <div id="jobsEmpty" class="empty-state" style="display:none;">
+      <div class="label-caps">No jobs on the board</div>
+      <p>Nothing's scheduled for this window yet.</p>
+      <button class="btn-primary" id="emptyBookBtn">+ Book a Job</button>
+    </div>
+  </div>
+</div>
+
+<!-- Book Job slide-over -->
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="bookSheet">
+  <div class="sheet-head">
+    <h2>Book a Job</h2>
+    <button id="closeSheet">&times;</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field">
+      <label for="clientName">Client Name</label>
+      <input type="text" id="clientName" placeholder="e.g. Gomez Construction">
+    </div>
+    <div class="field">
+      <label for="jobAddress">Job Address</label>
+      <input type="text" id="jobAddress" placeholder="Street, City">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="jobDate">Report Date</label>
+        <input type="date" id="jobDate">
+      </div>
+      <div class="field">
+        <label for="jobTime">Report Time</label>
+        <input type="time" id="jobTime">
+      </div>
+    </div>
+    <div class="field">
+      <label for="scopeWork">Scope of Work</label>
+      <textarea id="scopeWork" placeholder="Sequenced scope, work order..."></textarea>
+    </div>
+    <div class="field">
+      <label>Tools / Equipment Required</label>
+      <div class="tools-grid" id="toolsGrid">
+        <label class="tool-check"><input type="checkbox" value="Jackhammer"> Jackhammer</label>
+        <label class="tool-check"><input type="checkbox" value="Skid Steer"> Skid Steer</label>
+        <label class="tool-check"><input type="checkbox" value="Mini Excavator"> Mini Excavator</label>
+        <label class="tool-check"><input type="checkbox" value="Dumpster"> Dumpster</label>
+        <label class="tool-check"><input type="checkbox" value="Dump Trailer"> Dump Trailer</label>
+        <label class="tool-check"><input type="checkbox" value="Concrete Saw"> Concrete Saw</label>
+        <label class="tool-check"><input type="checkbox" value="Generator"> Generator</label>
+        <label class="tool-check"><input type="checkbox" value="Cutting Rig"> Cutting Rig</label>
+      </div>
+    </div>
+    <div class="field">
+      <label>Crew Size</label>
+      <div class="stepper">
+        <button type="button" id="crewMinus">–</button>
+        <span id="crewCount">4</span>
+        <button type="button" id="crewPlus">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn-ghost" id="cancelBook" style="color:var(--ink-soft); border-color:var(--border);">Cancel</button>
+    <button class="btn-primary" id="submitBook">Create Job</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIG — replace with your live Make.com webhook URLs
+   ============================================================ */
+const CONFIG = {
+  GET_DASHBOARD_DATA_URL: "https://hook.us2.make.com/qw14kv9l5ynkz8v9kkgngvbn72gsxj6r",
+  CREATE_JOB_URL: "https://hook.us1.make.com/REPLACE_WITH_CREATE_JOB_WEBHOOK"
+};
+
+/* ============================================================
+   Mock data — used automatically if the webhook isn't reachable,
+   so the dashboard is demoable before Make.com is wired up.
+   ============================================================ */
+const MOCK_DATA = {
+  labor: [
+    { name: "M. Ramirez", phone: "(714) 555-0102", status: "available" },
+    { name: "J. Torres", phone: "(714) 555-0138", status: "available" },
+    { name: "D. Whitfield", phone: "(949) 555-0177", status: "booked", jobId: "CDM-0715" },
+    { name: "K. Alvarez", phone: "(657) 555-0190", status: "booked", jobId: "CDM-0715" },
+    { name: "R. Nguyen", phone: "(714) 555-0121", status: "available" },
+    { name: "T. Osei", phone: "(949) 555-0144", status: "booked", jobId: "LB-0715" }
+  ],
+  jobs: [
+    {
+      jobId: "CDM-0715",
+      client: "Gomez Construction",
+      address: "412 Marguerite Ave, Corona Del Mar",
+      reportTime: "07:00 AM",
+      crew: ["D. Whitfield", "K. Alvarez", null, null],
+      status: "open"
+    },
+    {
+      jobId: "LB-0715",
+      client: "Pacific Demo Co.",
+      address: "1980 Cherry Ave, Long Beach",
+      reportTime: "06:30 AM",
+      crew: ["T. Osei"],
+      status: "confirmed"
+    }
+  ]
+};
+
+let currentTab = "available";
+let dashboardData = null;
+
+const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
+
+function getReportTime(job) {
+  if (!job || !Array.isArray(job.customFields)) return "—";
+  const match = job.customFields.find(f => f && f.id === REPORT_TIME_FIELD_ID);
+  if (match && match.fieldValueString) return match.fieldValueString;
+  return "—";
+}
+
+function sortJobsForReport(jobs) {
+  if (!Array.isArray(jobs)) return [];
+  return [...jobs].sort((a, b) => {
+    const aHas = getReportTime(a) !== "—";
+    const bHas = getReportTime(b) !== "—";
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    return 0;
+  });
+}
+
+/* ---------- Utilities ---------- */
+function fmtDateHeader() {
+  const d = new Date();
+  document.getElementById('todayDate').textContent = d.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+  }).toUpperCase();
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ---------- Data fetching ---------- */
+async function loadDashboard() {
+  document.getElementById('rosterList').innerHTML = `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
+  document.getElementById('jobsBody').innerHTML = `<tr><td colspan="6" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
+
+  try {
+    const res = await fetch(CONFIG.GET_DASHBOARD_DATA_URL);
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+    dashboardData = await res.json();
+  } catch (err) {
+    console.warn("Falling back to mock data:", err.message);
+    dashboardData = MOCK_DATA;
+    showToast("Showing sample data — connect your Make.com webhook in CONFIG to go live.", true);
+  }
+  render();
+}
+
+/* ---------- Rendering ---------- */
+function render() {
+  const labor = dashboardData.labor || [];
+  const jobs = dashboardData.jobs || [];
+
+  const available = labor.filter(w => w.status === 'available');
+  const booked = labor.filter(w => w.status === 'booked');
+
+  document.getElementById('statAvailable').textContent = available.length;
+  document.getElementById('statBooked').textContent = booked.length;
+  document.getElementById('statScheduled').textContent = jobs.length;
+
+  renderRoster();
+  renderJobs(jobs);
+}
+
+function renderRoster() {
+  const search = document.getElementById('rosterSearch').value.toLowerCase();
+  const laborList = (dashboardData.labor || []);
+  const list = laborList.filter(w => w.status === currentTab && (w.name || '').toLowerCase().includes(search));
+  const el = document.getElementById('rosterList');
+
+  if (laborList.length === 0) {
+    el.innerHTML = `<li style="border:none; display:block; text-align:center; padding:32px 20px; color:var(--ink-soft);">
+      Labor roster isn't connected yet — the Contacts search hasn't been wired into this webhook.
+    </li>`;
+    return;
+  }
+
+  if (list.length === 0) {
+    el.innerHTML = `<li style="border:none; display:block; text-align:center; padding:32px 20px; color:var(--ink-soft);">
+      No ${currentTab} workers${search ? ' matching "' + search + '"' : ''}.
+    </li>`;
+    return;
+  }
+
+  el.innerHTML = list.map(w => `
+    <li>
+      <div>
+        <div class="worker-name">${w.name}</div>
+        <div class="worker-meta">${w.phone || ''}${w.jobId ? ' · ' + w.jobId : ''}</div>
+      </div>
+      <span class="pill ${w.status === 'available' ? 'avail' : 'booked'}">${w.status}</span>
+    </li>
+  `).join('');
+}
+
+// Maps raw GHL pipelineStageId -> a friendly label + status-tag class.
+// Fill in your real "Completed" stage IDs here once you have them handy;
+// anything not listed just falls through to showing the raw status.
+const STAGE_LABELS = {
+  // "773c6ea5-0d64-4954-9cd5-27e26d2f730e": { label: "Scheduled", cls: "confirmed" },
+  // "bb901617-1ec6-4f3c-8c77-27ccafb96404": { label: "In Progress", cls: "open" },
+};
+
+function renderJobs(jobs) {
+  jobs = sortJobsForReport(jobs);
+  const body = document.getElementById('jobsBody');
+  const emptyState = document.getElementById('jobsEmpty');
+  const table = document.getElementById('jobsTable');
+
+  if (!jobs || jobs.length === 0) {
+    table.style.display = 'none';
+    emptyState.style.display = 'block';
+    return;
+  }
+  table.style.display = 'table';
+  emptyState.style.display = 'none';
+
+  body.innerHTML = jobs.map(j => {
+    const client = (j.contact && j.contact.name) ? j.contact.name : '—';
+    const address = j.name || '—';
+    const stageInfo = STAGE_LABELS[j.pipelineStageId];
+    const statusLabel = stageInfo ? stageInfo.label : (j.status || '—');
+    const statusClass = stageInfo ? stageInfo.cls : 'open';
+
+    // Crew isn't flowing into this webhook yet (needs Crew Assignment data pulled in) —
+    // showing an honest placeholder instead of blank/fake chips.
+    const crewChips = `<span class="crew-chip empty-slot">crew not linked yet</span>`;
+
+    return `
+      <tr>
+        <td><span class="job-id">${(j.id || '').slice(-8)}</span></td>
+        <td>${client}</td>
+        <td>${address}</td>
+        <td class="mono">${getReportTime(j)}</td>
+        <td><div class="crew-chip-row">${crewChips}</div></td>
+        <td><span class="status-tag ${statusClass}">${statusLabel}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* ---------- Roster tabs / search ---------- */
+document.querySelectorAll('.roster-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.roster-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    renderRoster();
+  });
+});
+document.getElementById('rosterSearch').addEventListener('input', renderRoster);
+
+/* ---------- Book Job sheet ---------- */
+const overlay = document.getElementById('overlay');
+const sheet = document.getElementById('bookSheet');
+let crewSize = 4;
+
+function openSheet() {
+  overlay.classList.add('open');
+  sheet.classList.add('open');
+}
+function closeSheetFn() {
+  overlay.classList.remove('open');
+  sheet.classList.remove('open');
+}
+
+document.getElementById('newJobBtn').addEventListener('click', openSheet);
+document.getElementById('emptyBookBtn').addEventListener('click', openSheet);
+document.getElementById('closeSheet').addEventListener('click', closeSheetFn);
+document.getElementById('cancelBook').addEventListener('click', closeSheetFn);
+overlay.addEventListener('click', closeSheetFn);
+
+document.getElementById('crewMinus').addEventListener('click', () => {
+  crewSize = Math.max(1, crewSize - 1);
+  document.getElementById('crewCount').textContent = crewSize;
+});
+document.getElementById('crewPlus').addEventListener('click', () => {
+  crewSize = Math.min(30, crewSize + 1);
+  document.getElementById('crewCount').textContent = crewSize;
+});
+
+document.getElementById('submitBook').addEventListener('click', async () => {
+  const payload = {
+    clientName: document.getElementById('clientName').value.trim(),
+    jobAddress: document.getElementById('jobAddress').value.trim(),
+    reportDate: document.getElementById('jobDate').value,
+    reportTime: document.getElementById('jobTime').value,
+    scopeOfWork: document.getElementById('scopeWork').value.trim(),
+    toolsRequired: Array.from(document.querySelectorAll('#toolsGrid input:checked')).map(c => c.value),
+    crewSize: crewSize
+  };
+
+  if (!payload.clientName || !payload.jobAddress || !payload.reportDate || !payload.reportTime) {
+    showToast("Client, address, date, and time are required.", true);
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitBook');
+  submitBtn.textContent = "Creating...";
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch(CONFIG.CREATE_JOB_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+    showToast(`Job created — ${payload.crewSize} crew slot(s) ready in GHL.`);
+    closeSheetFn();
+    loadDashboard();
+  } catch (err) {
+    console.warn(err);
+    showToast("Couldn't reach the booking webhook. Check CONFIG.CREATE_JOB_URL.", true);
+  } finally {
+    submitBtn.textContent = "Create Job";
+    submitBtn.disabled = false;
+  }
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+
+/* ---------- Init ---------- */
+fmtDateHeader();
+loadDashboard();
+</script>
+
+</body>
+</html>
