@@ -566,16 +566,10 @@ let dashboardData = null;
 
 const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
 
-function getCustomFieldValue(customFields, fieldId) {
-  if (!Array.isArray(customFields)) return '';
-  const match = customFields.find(field => field && field.id === fieldId);
-  return match && match.fieldValueString ? match.fieldValueString : '';
-}
-
 function getReportTime(job) {
-  const combined = getCustomFieldValue(job.customFields, REPORT_TIME_FIELD_ID);
-  if (combined) return combined;
-  if (job.reportTime) return job.reportTime;
+  const fields = Array.isArray(job.customFields) ? job.customFields : [];
+  const match = fields.find(f => f && f.id === REPORT_TIME_FIELD_ID);
+  if (match && match.fieldValueString) return match.fieldValueString;
   return '';
 }
 
@@ -667,6 +661,7 @@ const STAGE_LABELS = {
 };
 
 function renderJobs(jobs) {
+  jobs = sortJobsForReport(jobs);
   const body = document.getElementById('jobsBody');
   const emptyState = document.getElementById('jobsEmpty');
   const table = document.getElementById('jobsTable');
