@@ -581,25 +581,6 @@ function showToast(msg, isError = false) {
 }
 
 /* ---------- Data fetching ---------- */
-
-async function loadLaborRoster() {
-  const rosterList = document.getElementById("rosterList");
-  rosterList.innerHTML = '<li class="load-state" style="border:none"><div class="spinner"></div>Loading roster...</li>';
-  try {
-    const res = await fetch(CONFIG.LABOR_ROSTER_URL);
-    if (!res.ok) throw new Error('Labor webhook returned ' + res.status);
-    const data = await res.json();
-    dashboardData = dashboardData || {};
-    dashboardData.labor = Array.isArray(data.labor) ? data.labor : [];
-    render();
-  } catch (err) {
-    console.warn('Labor roster webhook failed, falling back to mock labor', err.message);
-    dashboardData = dashboardData || {};
-    dashboardData.labor = Array.isArray(MOCK_DATA.labor) ? MOCK_DATA.labor : [];
-    render();
-  }
-}
-
 async function loadDashboard() {
   document.getElementById('rosterList').innerHTML = `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
   document.getElementById('jobsBody').innerHTML = `<tr><td colspan="6" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
