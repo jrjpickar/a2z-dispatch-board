@@ -563,7 +563,19 @@ const MOCK_DATA = {
 };
 
 let currentTab = "available";
-let dashboardData = null;
+let dashboardData = { jobs: [], labor: [] };
+
+const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
+
+function getCustomFieldValue(customFields, fieldId) {
+  if (!Array.isArray(customFields)) return '';
+  const match = customFields.find(field => field && field.id === fieldId);
+  return match && match.fieldValueString ? match.fieldValueString : '';
+}
+
+function getReportTime(job) {
+  return getCustomFieldValue(job.customFields, REPORT_TIME_FIELD_ID) || job.reportTime || '—';
+}
 
 /* ---------- Utilities ---------- */
 function fmtDateHeader() {
@@ -581,20 +593,57 @@ function showToast(msg, isError = false) {
 }
 
 /* ---------- Data fetching ---------- */
-async function loadDashboard() {
-  document.getElementById('rosterList').innerHTML = `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
-  document.getElementById('jobsBody').innerHTML = `<tr><td colspan="6" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
+/* Each loader touches ONLY its own key, so jobs and labor can never overwrite
+   each other regardless of which one finishes first. */
+function normalizeLabor(data) {
+  let arr = null;
+  if (Array.isArray(data)) arr = data;                         // bare array
+  else if (data && Array.isArray(data.labor)) arr = data.labor; // { labor: [...] }
+  else if (data && Array.isArray(data.laborers)) arr = data.laborers;
+  else if (data && (data.name || data.full_name)) arr = [data]; // single bare object
+  else arr = [];
+  return arr.map(w => ({
+    name: w.name || w.full_name || w.fullName || 'Unknown',
+    phone: w.phone || '',
+    status: String(w.status || 'available').toLowerCase().trim(),
+    jobId: w.jobId || w.job_id || ''
+  }));
+}
 
+async function loadDashboard() {
+  document.getElementById('jobsBody').innerHTML =
+    `<tr><td colspan="6" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
   try {
-    const res = await fetch(CONFIG.GET_DASHBOARD_DATA_URL);
-    if (!res.ok) throw new Error("Webhook returned " + res.status);
-    dashboardData = await res.json();
+    const res = await fetch(CONFIG.GET_DASHBOARD_DATA_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error("Jobs webhook returned " + res.status);
+    const data = await res.json();
+    dashboardData.jobs = Array.isArray(data.jobs) ? data.jobs : (Array.isArray(data) ? data : []);
   } catch (err) {
-    console.warn("Falling back to mock data:", err.message);
-    dashboardData = MOCK_DATA;
-    showToast("Showing sample data — connect your Make.com webhook in CONFIG to go live.", true);
+    console.warn("Jobs webhook failed, falling back to mock:", err.message);
+    dashboardData.jobs = Array.isArray(MOCK_DATA.jobs) ? MOCK_DATA.jobs.slice() : [];
   }
   render();
+}
+
+async function loadLaborRoster() {
+  document.getElementById('rosterList').innerHTML =
+    `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
+  try {
+    const res = await fetch(CONFIG.LABOR_ROSTER_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error("Labor webhook returned " + res.status);
+    const data = await res.json();
+    dashboardData.labor = normalizeLabor(data);
+  } catch (err) {
+    console.warn("Labor roster webhook failed, falling back to mock labor", err.message);
+    dashboardData.labor = Array.isArray(MOCK_DATA.labor) ? MOCK_DATA.labor.map(w => ({
+      name: w.name, phone: w.phone, status: String(w.status || 'available').toLowerCase().trim(), jobId: w.jobId || ''
+    })) : [];
+  }
+  render();
+}
+
+async function refreshAll() {
+  await Promise.all([loadDashboard(), loadLaborRoster()]);
 }
 
 /* ---------- Rendering ---------- */
@@ -681,7 +730,7 @@ function renderJobs(jobs) {
         <td><span class="job-id">${(j.id || '').slice(-8)}</span></td>
         <td>${client}</td>
         <td>${address}</td>
-        <td class="mono">—</td>
+        <td class="mono">${getReportTime(j)}</td>
         <td><div class="crew-chip-row">${crewChips}</div></td>
         <td><span class="status-tag ${statusClass}">${statusLabel}</span></td>
       </tr>
@@ -768,11 +817,12 @@ document.getElementById('submitBook').addEventListener('click', async () => {
   }
 });
 
-document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+document.getElementById('refreshBtn').addEventListener('click', refreshAll);
 
 /* ---------- Init ---------- */
 fmtDateHeader();
 loadDashboard();
+loadLaborRoster();
 </script>
 
 </body>
