@@ -524,7 +524,7 @@
    CONFIG — replace with your live Make.com webhook URLs
    ============================================================ */
 const CONFIG = {
-  GET_DASHBOARD_DATA_URL: "https://hook.us2.make.com/qw14kv9l5ynkz8v9kkgngvbn72gsxj6r",
+  GET_DASHBOARD_DATA_URL: "https://hook.us2.make.com/3otyoay8td91lhm4u2yuk3gem4d14ajc",
   CREATE_JOB_URL: "https://hook.us1.make.com/REPLACE_WITH_CREATE_JOB_WEBHOOK"
 };
 
@@ -563,6 +563,18 @@ const MOCK_DATA = {
 
 let currentTab = "available";
 let dashboardData = null;
+
+const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
+
+function getCustomFieldValue(customFields, fieldId) {
+  if (!Array.isArray(customFields)) return '';
+  const match = customFields.find(field => field && field.id === fieldId);
+  return match && match.fieldValueString ? match.fieldValueString : '';
+}
+
+function getReportTime(job) {
+  return getCustomFieldValue(job.customFields, REPORT_TIME_FIELD_ID) || job.reportTime || '—';
+}
 
 /* ---------- Utilities ---------- */
 function fmtDateHeader() {
@@ -680,7 +692,7 @@ function renderJobs(jobs) {
         <td><span class="job-id">${(j.id || '').slice(-8)}</span></td>
         <td>${client}</td>
         <td>${address}</td>
-        <td class="mono">—</td>
+        <td class="mono">${getReportTime(j)}</td>
         <td><div class="crew-chip-row">${crewChips}</div></td>
         <td><span class="status-tag ${statusClass}">${statusLabel}</span></td>
       </tr>
