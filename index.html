@@ -566,11 +566,24 @@ let dashboardData = null;
 
 const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
 
+const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
+
 function getReportTime(job) {
-  const fields = Array.isArray(job.customFields) ? job.customFields : [];
-  const match = fields.find(f => f && f.id === REPORT_TIME_FIELD_ID);
+  if (!job || !Array.isArray(job.customFields)) return "—";
+  const match = job.customFields.find(f => f && f.id === REPORT_TIME_FIELD_ID);
   if (match && match.fieldValueString) return match.fieldValueString;
-  return '';
+  return "—";
+}
+
+function sortJobsForReport(jobs) {
+  if (!Array.isArray(jobs)) return [];
+  return [...jobs].sort((a, b) => {
+    const aHas = getReportTime(a) !== "—";
+    const bHas = getReportTime(b) !== "—";
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    return 0;
+  });
 }
 
 /* ---------- Utilities ---------- */
