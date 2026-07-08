@@ -703,7 +703,7 @@ function renderJobs(jobs) {
         <td><span class="job-id">${(j.id || '').slice(-8)}</span></td>
         <td>${client}</td>
         <td>${address}</td>
-        <td class="mono">—</td>
+        <td class="mono">${getReportTime(j)}</td>
         <td><div class="crew-chip-row">${crewChips}</div></td>
         <td><span class="status-tag ${statusClass}">${statusLabel}</span></td>
       </tr>
