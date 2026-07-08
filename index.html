@@ -525,6 +525,7 @@
    ============================================================ */
 const CONFIG = {
   GET_DASHBOARD_DATA_URL: "https://hook.us2.make.com/qw14kv9l5ynkz8v9kkgngvbn72gsxj6r",
+  LABOR_ROSTER_URL: "https://hook.us2.make.com/3otyoay8td91lhm4u2yuk3gem4d14ajc",
   CREATE_JOB_URL: "https://hook.us1.make.com/REPLACE_WITH_CREATE_JOB_WEBHOOK"
 };
 
@@ -564,26 +565,6 @@ const MOCK_DATA = {
 let currentTab = "available";
 let dashboardData = null;
 
-const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
-
-function getReportTime(job) {
-  if (!job || !Array.isArray(job.customFields)) return "—";
-  const match = job.customFields.find(f => f && f.id === REPORT_TIME_FIELD_ID);
-  if (match && match.fieldValueString) return match.fieldValueString;
-  return "—";
-}
-
-function sortJobsForReport(jobs) {
-  if (!Array.isArray(jobs)) return [];
-  return [...jobs].sort((a, b) => {
-    const aHas = getReportTime(a) !== "—";
-    const bHas = getReportTime(b) !== "—";
-    if (aHas && !bHas) return -1;
-    if (!aHas && bHas) return 1;
-    return 0;
-  });
-}
-
 /* ---------- Utilities ---------- */
 function fmtDateHeader() {
   const d = new Date();
@@ -600,6 +581,25 @@ function showToast(msg, isError = false) {
 }
 
 /* ---------- Data fetching ---------- */
+
+async function loadLaborRoster() {
+  const rosterList = document.getElementById("rosterList");
+  rosterList.innerHTML = '<li class="load-state" style="border:none"><div class="spinner"></div>Loading roster...</li>';
+  try {
+    const res = await fetch(CONFIG.LABOR_ROSTER_URL);
+    if (!res.ok) throw new Error('Labor webhook returned ' + res.status);
+    const data = await res.json();
+    dashboardData = dashboardData || {};
+    dashboardData.labor = Array.isArray(data.labor) ? data.labor : [];
+    render();
+  } catch (err) {
+    console.warn('Labor roster webhook failed, falling back to mock labor', err.message);
+    dashboardData = dashboardData || {};
+    dashboardData.labor = Array.isArray(MOCK_DATA.labor) ? MOCK_DATA.labor : [];
+    render();
+  }
+}
+
 async function loadDashboard() {
   document.getElementById('rosterList').innerHTML = `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
   document.getElementById('jobsBody').innerHTML = `<tr><td colspan="6" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
@@ -672,7 +672,6 @@ const STAGE_LABELS = {
 };
 
 function renderJobs(jobs) {
-  jobs = sortJobsForReport(jobs);
   const body = document.getElementById('jobsBody');
   const emptyState = document.getElementById('jobsEmpty');
   const table = document.getElementById('jobsTable');
@@ -701,7 +700,7 @@ function renderJobs(jobs) {
         <td><span class="job-id">${(j.id || '').slice(-8)}</span></td>
         <td>${client}</td>
         <td>${address}</td>
-        <td class="mono">${getReportTime(j)}</td>
+        <td class="mono">—</td>
         <td><div class="crew-chip-row">${crewChips}</div></td>
         <td><span class="status-tag ${statusClass}">${statusLabel}</span></td>
       </tr>
