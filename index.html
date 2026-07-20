@@ -128,6 +128,8 @@
   .status-card.available .num { color: var(--ink); }
   .status-card.booked .num { color: var(--orange); }
   .status-card.scheduled .num { color: var(--gold); }
+  .status-card.available, .status-card.booked { cursor: pointer; }
+  .status-card.available:hover, .status-card.booked:hover { filter: brightness(0.97); }
   .status-card .label-caps { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
 
   /* ---------- Layout ---------- */
@@ -387,6 +389,148 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.error { border-left-color: var(--danger); }
+
+  .label-optional { font-size: 10px; font-weight: 400; color: var(--ink-soft); text-transform: none; }
+  .crew-assign-wrap { position: relative; display: inline-block; }
+  .crew-assign-toggle {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--grey-light);
+    color: var(--ink);
+    border: 1px solid var(--grey-light);
+    border-radius: 8px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .crew-assign-toggle:hover {
+    background: #fff;
+    border-color: var(--orange);
+  }
+  .crew-assign-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    background: #fff;
+    border: 1px solid var(--grey-light);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    padding: 10px;
+    min-width: 190px;
+  }
+  .crew-assign-panel.open { display: block; }
+  .crew-assign-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 4px 2px;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .crew-assign-option:hover { background: var(--grey-light); }
+  .crew-assign-option input { accent-color: var(--orange); }
+  .crew-assign-confirm {
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .crew-chip.removable {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .crew-chip-remove {
+    background: none;
+    border: none;
+    color: var(--ink);
+    opacity: 0.5;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    transition: opacity 0.15s ease, color 0.15s ease;
+  }
+  .crew-chip-remove:hover {
+    opacity: 1;
+    color: var(--orange);
+  }
+  .time-edit-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 130px;
+  }
+  .report-date-input, .report-time-input, .end-date-input, .end-time-input {
+    font-size: 11px;
+    border: 1px solid var(--grey-light);
+    border-radius: 6px;
+    padding: 3px 6px;
+    width: 100%;
+  }
+  .end-save, .time-unlock {
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--grey-light);
+    color: var(--ink);
+    border: 1px solid var(--grey-light);
+    border-radius: 6px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .end-save:hover, .time-unlock:hover {
+    background: #fff;
+    border-color: var(--orange);
+  }
+  .time-locked-display {
+    font-size: 11px;
+    padding: 3px 0;
+    display: block;
+  }
+  .job-stage-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .job-stage-btn {
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 3px 7px;
+    background: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .job-stage-btn.complete { border: 1px solid var(--gold); color: var(--gold); }
+  .job-stage-btn.complete:hover { background: var(--gold); color: #fff; }
+  .job-stage-btn.cancel { border: 1px solid var(--danger); color: var(--danger); }
+  .job-stage-btn.cancel:hover { background: var(--danger); color: #fff; }
+  .segmented {
+    display: flex;
+    border: 1px solid var(--grey-light);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .segmented-option {
+    flex: 1;
+    background: #fff;
+    padding: 10px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-right: 1px solid var(--grey-light);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .segmented-option:last-child { border-right: none; }
+  .segmented-option.active { background: var(--ink); color: #fff; }
+
 </style>
 </head>
 <body>
@@ -444,6 +588,7 @@
             <th>Client</th>
             <th>Address</th>
             <th>Report Time</th>
+            <th>End Date/Time</th>
             <th>Crew</th>
             <th>Status</th>
           </tr>
@@ -467,13 +612,30 @@
     <button id="closeSheet">&times;</button>
   </div>
   <div class="sheet-body">
+    <div class="field-row">
+      <div class="field">
+        <label for="clientFirstName">First Name</label>
+        <input type="text" id="clientFirstName" placeholder="e.g. Maria">
+      </div>
+      <div class="field">
+        <label for="clientLastName">Last Name</label>
+        <input type="text" id="clientLastName" placeholder="e.g. Gomez">
+      </div>
+    </div>
     <div class="field">
-      <label for="clientName">Client Name</label>
-      <input type="text" id="clientName" placeholder="e.g. Gomez Construction">
+      <label for="clientPhone">Client Phone</label>
+      <input type="tel" id="clientPhone" placeholder="+15555555555" inputmode="tel" maxlength="12" value="+1">
     </div>
     <div class="field">
       <label for="jobAddress">Job Address</label>
       <input type="text" id="jobAddress" placeholder="Street, City">
+    </div>
+    <div class="field">
+      <label>Job Type</label>
+      <div class="segmented" id="jobTypeToggle">
+        <button type="button" class="segmented-option active" data-type="hourly">Hourly (Labor)</button>
+        <button type="button" class="segmented-option" data-type="contract">Contract (Demo)</button>
+      </div>
     </div>
     <div class="field-row">
       <div class="field">
@@ -483,6 +645,16 @@
       <div class="field">
         <label for="jobTime">Report Time</label>
         <input type="time" id="jobTime">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="jobEndDate">Report End Date <span class="label-optional">(optional — defaults to Report Date)</span></label>
+        <input type="date" id="jobEndDate">
+      </div>
+      <div class="field">
+        <label for="jobEndTime">Report End Time</label>
+        <input type="time" id="jobEndTime">
       </div>
     </div>
     <div class="field">
@@ -526,7 +698,14 @@
 const CONFIG = {
   GET_DASHBOARD_DATA_URL: "https://hook.us2.make.com/qw14kv9l5ynkz8v9kkgngvbn72gsxj6r",
   LABOR_ROSTER_URL: "https://hook.us2.make.com/3otyoay8td91lhm4u2yuk3gem4d14ajc",
-  CREATE_JOB_URL: "https://hook.us1.make.com/REPLACE_WITH_CREATE_JOB_WEBHOOK"
+  CREATE_JOB_URL: "https://hook.us2.make.com/s2ijm77vf023z47b1dncn4jm9yt11w1d",
+  // Make.com scenario needs to: 1) create the Contact<->Opportunity association,
+  // 2) flip the Contact's labor-status custom field from "available" to "booked".
+  // Expects POST body: { jobId: "<opportunityId>", contactId: "<contactId>" }
+  MOVE_WORKER_URL: "https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l",
+  // Also handles Report End Time + Report End Date updates for existing jobs.
+  // Expects POST body: { jobId, reportEndTime, reportEndDate }
+  UPDATE_JOB_URL: "https://hook.us2.make.com/v4uirggw17cnamlym2t5151ohwzonlr6"
 };
 
 /* ============================================================
@@ -566,15 +745,62 @@ let currentTab = "available";
 let dashboardData = { jobs: [], labor: [] };
 
 const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
+const START_DATE_FIELD_ID = "rY3IebKlcBhAjWlaSSQm"; // "Report Date" — Single line
+const REPORT_END_TIME_FIELD_ID = "XHoqx1ZNRcNRtwDCb4He"; // "REPORT END TIME" — Single line
+const REPORT_END_DATE_FIELD_ID = "gPo421cmQiTMJP2EpkD4"; // "REPORT END DATE" — Date picker (stores fieldValueDate, a Unix ms timestamp)
 
 function getCustomFieldValue(customFields, fieldId) {
   if (!Array.isArray(customFields)) return '';
   const match = customFields.find(field => field && field.id === fieldId);
-  return match && match.fieldValueString ? match.fieldValueString : '';
+  if (!match) return '';
+  // Date-picker fields (like REPORT END DATE) store their value under
+  // fieldValueDate as a Unix ms timestamp instead of fieldValueString —
+  // convert straight to YYYY-MM-DD so it drops right into <input type="date">.
+  if (match.fieldValueDate) {
+    const d = new Date(match.fieldValueDate);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
+  return match.fieldValueString || '';
 }
 
 function getReportTime(job) {
-  return getCustomFieldValue(job.customFields, REPORT_TIME_FIELD_ID) || job.reportTime || '—';
+  const override = window.jobTimeOverride && window.jobTimeOverride[job.id];
+  if (override && override.time) return override.time;
+  return getCustomFieldValue(job.customFields, REPORT_TIME_FIELD_ID) || job.reportTime || '';
+}
+
+function getReportDate(job) {
+  const override = window.jobTimeOverride && window.jobTimeOverride[job.id];
+  if (override && override.date) return override.date;
+  // Was previously reading job.reportDate/dateAdded/startTime, none of which
+  // exist on the raw GHL object — this field's real value lives in customFields.
+  return getCustomFieldValue(job.customFields, START_DATE_FIELD_ID) || '';
+}
+
+function getReportEndTime(job) {
+  const override = window.jobEndOverride && window.jobEndOverride[job.id];
+  if (override && override.time) return override.time;
+  return getCustomFieldValue(job.customFields, REPORT_END_TIME_FIELD_ID) || job.reportEndTime || '';
+}
+
+function getReportEndDate(job) {
+  const override = window.jobEndOverride && window.jobEndOverride[job.id];
+  if (override && override.date) return override.date;
+  // getCustomFieldValue now returns YYYY-MM-DD directly for date-picker fields,
+  // so no extra slicing/parsing needed here anymore.
+  return getCustomFieldValue(job.customFields, REPORT_END_DATE_FIELD_ID) || job.reportEndDate || '';
+}
+
+// A job's report/end time is "locked" (crew can be assigned) once it's been
+// explicitly saved via the Save button, OR if it already arrived with real
+// report/end times set (e.g. filled in at booking) and has never been
+// touched on this dashboard — so pre-existing jobs aren't blocked. Once a
+// dispatcher hits Unlock, it stays unlocked until Save is pressed again.
+function isJobTimeLocked(job) {
+  const jobId = job.id || '';
+  const stored = window.jobTimesLocked ? window.jobTimesLocked[jobId] : undefined;
+  if (stored === true || stored === false) return stored;
+  return !!(getReportDate(job) && getReportTime(job) && getReportEndDate(job) && getReportEndTime(job));
 }
 
 /* ---------- Utilities ---------- */
@@ -595,6 +821,26 @@ function showToast(msg, isError = false) {
 /* ---------- Data fetching ---------- */
 /* Each loader touches ONLY its own key, so jobs and labor can never overwrite
    each other regardless of which one finishes first. */
+// Some contacts come back with name/phone/status packed into a single JSON
+// custom field instead of top-level properties, e.g.
+//   { customData: { JSON: '{"name":"...","phone":"...","status":"..."}' } }
+// This unpacks that (a plain JSON string on customData also works) so the
+// fields below resolve either way.
+function parseCustomData(raw) {
+  if (!raw) return null;
+  try {
+    if (typeof raw === 'string') return JSON.parse(raw);
+    if (typeof raw === 'object') {
+      if (typeof raw.JSON === 'string') return JSON.parse(raw.JSON);
+      if (typeof raw.json === 'string') return JSON.parse(raw.json);
+      if (raw.name || raw.phone || raw.status) return raw;
+    }
+  } catch (err) {
+    console.warn('Could not parse customData', err);
+  }
+  return null;
+}
+
 function normalizeLabor(data) {
   let arr = null;
   if (Array.isArray(data)) arr = data;                         // bare array
@@ -602,12 +848,16 @@ function normalizeLabor(data) {
   else if (data && Array.isArray(data.laborers)) arr = data.laborers;
   else if (data && (data.name || data.full_name)) arr = [data]; // single bare object
   else arr = [];
-  return arr.map(w => ({
-    name: w.name || w.full_name || w.fullName || 'Unknown',
-    phone: w.phone || '',
-    status: String(w.status || 'available').toLowerCase().trim(),
-    jobId: w.jobId || w.job_id || ''
-  }));
+  return arr.map(w => {
+    const custom = parseCustomData(w.customData) || {};
+    return {
+      id: w.id || w.contactId || w.contact_id || '',
+      name: w.name || w.full_name || w.fullName || custom.name || 'Unknown',
+      phone: w.phone || custom.phone || '',
+      status: String(w.status || custom.status || 'available').toLowerCase().trim(),
+      jobId: w.jobId || w.job_id || ''
+    };
+  });
 }
 
 async function loadDashboard() {
@@ -636,7 +886,7 @@ async function loadLaborRoster() {
   } catch (err) {
     console.warn("Labor roster webhook failed, falling back to mock labor", err.message);
     dashboardData.labor = Array.isArray(MOCK_DATA.labor) ? MOCK_DATA.labor.map(w => ({
-      name: w.name, phone: w.phone, status: String(w.status || 'available').toLowerCase().trim(), jobId: w.jobId || ''
+      id: w.id || w.name, name: w.name, phone: w.phone, status: String(w.status || 'available').toLowerCase().trim(), jobId: w.jobId || ''
     })) : [];
   }
   render();
@@ -651,8 +901,9 @@ function render() {
   const labor = dashboardData.labor || [];
   const jobs = dashboardData.jobs || [];
 
-  const available = labor.filter(w => w.status === 'available');
-  const booked = labor.filter(w => w.status === 'booked');
+  const liveBookedStats = getLiveBookedIdentifiers();
+  const available = labor.filter(w => getEffectiveLaborStatus(w, liveBookedStats) === 'available');
+  const booked = labor.filter(w => getEffectiveLaborStatus(w, liveBookedStats) === 'booked');
 
   document.getElementById('statAvailable').textContent = available.length;
   document.getElementById('statBooked').textContent = booked.length;
@@ -665,7 +916,8 @@ function render() {
 function renderRoster() {
   const search = document.getElementById('rosterSearch').value.toLowerCase();
   const laborList = (dashboardData.labor || []);
-  const list = laborList.filter(w => w.status === currentTab && (w.name || '').toLowerCase().includes(search));
+  const liveBookedRoster = getLiveBookedIdentifiers();
+  const list = laborList.filter(w => getEffectiveLaborStatus(w, liveBookedRoster) === currentTab && (w.name || '').toLowerCase().includes(search));
   const el = document.getElementById('rosterList');
 
   if (laborList.length === 0) {
@@ -682,15 +934,18 @@ function renderRoster() {
     return;
   }
 
-  el.innerHTML = list.map(w => `
+  el.innerHTML = list.map(w => {
+    const effectiveStatus = getEffectiveLaborStatus(w, liveBookedRoster);
+    return `
     <li>
       <div>
         <div class="worker-name">${w.name}</div>
         <div class="worker-meta">${w.phone || ''}${w.jobId ? ' · ' + w.jobId : ''}</div>
       </div>
-      <span class="pill ${w.status === 'available' ? 'avail' : 'booked'}">${w.status}</span>
+      <span class="pill ${effectiveStatus === 'available' ? 'avail' : 'booked'}">${effectiveStatus}</span>
     </li>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // Maps raw GHL pipelineStageId -> a friendly label + status-tag class.
@@ -700,6 +955,112 @@ const STAGE_LABELS = {
   // "773c6ea5-0d64-4954-9cd5-27e26d2f730e": { label: "Scheduled", cls: "confirmed" },
   // "bb901617-1ec6-4f3c-8c77-27ccafb96404": { label: "In Progress", cls: "open" },
 };
+
+// Reads associated crew off a job/opportunity once the Make.com scenario for
+// GET_DASHBOARD_DATA_URL includes them. Expected shape (any of these works):
+//   job.associations: [{ contactId, name }, ...]
+//   job.contacts:      [{ id, name }, ...]
+//   job.crew:          [{ id, name }, ...]  or  ["Name One", "Name Two"]
+// Returns [] (not an error) if none of these are present yet, so the UI keeps
+// working with the "not linked yet" placeholder until the backend catches up.
+function getCrew(job) {
+  const raw = job.associations || job.contacts || job.crew || [];
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(Boolean)
+    .map(c => (typeof c === 'string')
+      ? { id: '', name: c }
+      : { id: c.contactId || c.id || '', name: c.name || c.full_name || c.fullName || 'Unknown' }
+    );
+}
+
+// ---------- Live Available/Booked status ----------
+// A worker's Available/Booked state is computed fresh on every render from
+// whether they're assigned to a job whose report start/end window covers
+// right now, instead of trusting a static status field — so it flips
+// automatically the moment a job starts or ends, no manual action needed.
+
+function normalizePhoneForMatch(raw) {
+  if (!raw) return '';
+  const digits = String(raw).replace(/[^\d]/g, '');
+  if (digits.length === 11 && digits.startsWith('1')) return digits.slice(1);
+  return digits;
+}
+
+function parseJobDateTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  const dateMatch = String(dateStr).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!dateMatch) return null;
+  const [, y, mo, d] = dateMatch;
+
+  let hours, minutes;
+  const ampm = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+  if (ampm) {
+    hours = parseInt(ampm[1], 10) % 12;
+    minutes = parseInt(ampm[2], 10);
+    if (/pm/i.test(ampm[3])) hours += 12;
+  } else {
+    const t24 = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})/);
+    if (!t24) return null;
+    hours = parseInt(t24[1], 10);
+    minutes = parseInt(t24[2], 10);
+  }
+
+  const dt = new Date(parseInt(y, 10), parseInt(mo, 10) - 1, parseInt(d, 10), hours, minutes, 0, 0);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+function isJobActiveNow(job) {
+  const start = parseJobDateTime(getReportDate(job), getReportTime(job));
+  const end = parseJobDateTime(getReportEndDate(job), getReportEndTime(job));
+  if (!start || !end) return false;
+  const now = new Date();
+  return now >= start && now <= end;
+}
+
+// A job counts as "open" (still holding its crew) unless its status/stage
+// label reads as Completed or Cancelled. Once setJobStage() moves a job to
+// either of those, its crew should fall back to Available even though the
+// job may still be sitting in the fetched list for a moment.
+function isJobOpen(job) {
+  const stageInfo = STAGE_LABELS[job.pipelineStageId];
+  const label = String(stageInfo ? stageInfo.label : (job.status || '')).toLowerCase();
+  return !/complete|cancel/.test(label);
+}
+
+// Scans every open job (not Completed/Cancelled) — regardless of whether its
+// report window has started yet — and collects who's on it, so a worker
+// moves to "Booked" the moment they're assigned rather than only while the
+// job happens to be actively running right now. Matched by phone via the
+// crew-assignment override (the reliable source right now) and by name via
+// the backend crew fields too, in case those get wired up later.
+function getLiveBookedIdentifiers() {
+  const bookedPhones = new Set();
+  const bookedNames = new Set();
+  (dashboardData.jobs || []).forEach(job => {
+    if (!isJobOpen(job)) return;
+    const jobId = job.id || '';
+    const overrideCrew = (window.jobCrewOverride && window.jobCrewOverride[jobId]) || [];
+    overrideCrew.forEach(c => {
+      const p = normalizePhoneForMatch(c.phone);
+      if (p) bookedPhones.add(p);
+      if (c.name) bookedNames.add(String(c.name).toLowerCase().trim());
+    });
+    getCrew(job).forEach(c => {
+      if (c.name) bookedNames.add(String(c.name).toLowerCase().trim());
+    });
+  });
+  return { bookedPhones, bookedNames };
+}
+
+function getEffectiveLaborStatus(worker, liveBooked) {
+  const phoneKey = normalizePhoneForMatch(worker.phone);
+  const nameKey = (worker.name || '').toLowerCase().trim();
+  if ((phoneKey && liveBooked.bookedPhones.has(phoneKey)) || (nameKey && liveBooked.bookedNames.has(nameKey))) {
+    return 'booked';
+  }
+  return 'available';
+}
 
 function renderJobs(jobs) {
   const body = document.getElementById('jobsBody');
@@ -714,29 +1075,418 @@ function renderJobs(jobs) {
   table.style.display = 'table';
   emptyState.style.display = 'none';
 
+  // Jobs with a locked (saved & confirmed) report time float to the top,
+  // soonest first — unlocked jobs (no confirmed time yet) stay below them
+  // in whatever order they arrived in.
+  jobs = jobs.slice().sort((a, b) => {
+    const aLocked = isJobTimeLocked(a);
+    const bLocked = isJobTimeLocked(b);
+    if (aLocked !== bLocked) return aLocked ? -1 : 1;
+    if (!aLocked) return 0;
+    const aTime = parseJobDateTime(getReportDate(a), getReportTime(a));
+    const bTime = parseJobDateTime(getReportDate(b), getReportTime(b));
+    if (!aTime && !bTime) return 0;
+    if (!aTime) return 1;
+    if (!bTime) return -1;
+    return aTime - bTime;
+  });
+
+  const liveBookedJobs = getLiveBookedIdentifiers();
+  const availableWorkers = (dashboardData.labor || []).filter(w => getEffectiveLaborStatus(w, liveBookedJobs) === 'available');
+
+  function normalizePhone(raw) {
+    if (!raw) return '';
+    const digits = String(raw).replace(/[^\d]/g, '');
+    if (digits.length === 10) return '+1' + digits;
+    if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+    if (String(raw).startsWith('+')) return raw;
+    return digits ? '+' + digits : '';
+  }
+
   body.innerHTML = jobs.map(j => {
     const client = (j.contact && j.contact.name) ? j.contact.name : '—';
     const address = j.name || '—';
     const stageInfo = STAGE_LABELS[j.pipelineStageId];
     const statusLabel = stageInfo ? stageInfo.label : (j.status || '—');
     const statusClass = stageInfo ? stageInfo.cls : 'open';
+    const jobId = j.id || '';
 
-    // Crew isn't flowing into this webhook yet (needs Crew Assignment data pulled in) —
-    // showing an honest placeholder instead of blank/fake chips.
-    const crewChips = `<span class="crew-chip empty-slot">crew not linked yet</span>`;
+    const crew = getCrew(j);
+
+    const overrideCrew = (window.jobCrewOverride && window.jobCrewOverride[jobId]) || [];
+    const overrideChips = overrideCrew.map(c => `
+      <span class="crew-chip removable" data-job-id="${jobId}" data-phone="${c.phone}" data-name="${c.name}">
+        ${c.name}
+        <button type="button" class="crew-chip-remove" title="Remove ${c.name}">&times;</button>
+      </span>
+    `).join('');
+
+    const backendCrewChips = crew.map(c => `
+      <span class="crew-chip removable" data-job-id="${jobId}" data-phone="" data-name="${c.name}">
+        ${c.name}
+        <button type="button" class="crew-chip-remove" title="Remove ${c.name}">&times;</button>
+      </span>
+    `).join('');
+
+    const assignedNames = new Set([
+      ...crew.map(c => c.name),
+      ...overrideCrew.map(c => c.name)
+    ]);
+    const assignableWorkers = availableWorkers.filter(w => !assignedNames.has(w.name));
+
+    const timesLocked = isJobTimeLocked(j);
+
+    const assignChecklist = !timesLocked
+      ? `<span class="crew-chip empty-slot" title="Save and lock report/end time before assigning crew">save &amp; lock times first</span>`
+      : (assignableWorkers.length
+        ? `<div class="crew-assign-wrap" data-job-id="${jobId}">
+             <button type="button" class="crew-assign-toggle">+ Assign crew</button>
+             <div class="crew-assign-panel">
+               ${assignableWorkers.map(w => {
+                 const phone = normalizePhone(w.phone);
+                 return `
+                   <label class="crew-assign-option">
+                     <input type="checkbox" value="${phone}" data-name="${w.name}">
+                     <span>${w.name}</span>
+                   </label>
+                 `;
+               }).join('')}
+               <button type="button" class="btn btn-primary crew-assign-confirm">Assign selected</button>
+             </div>
+           </div>`
+        : `<span class="crew-chip empty-slot">no one available</span>`);
+
+    const reportDateVal = getReportDate(j);
+    const reportTimeVal = getReportTime(j);
+    const endDateVal = getReportEndDate(j);
+    const endTimeVal = getReportEndTime(j);
+
+    const reportCell = timesLocked
+      ? `
+      <div class="time-edit-wrap locked" data-job-id="${jobId}">
+        <span class="time-locked-display mono">${reportDateVal || '—'} ${reportTimeVal || ''}</span>
+      </div>
+    `
+      : `
+      <div class="time-edit-wrap" data-job-id="${jobId}">
+        <input type="date" class="report-date-input mono" value="${reportDateVal}">
+        <input type="time" class="report-time-input mono" value="${reportTimeVal}">
+      </div>
+    `;
+
+    const endCell = timesLocked
+      ? `
+      <div class="time-edit-wrap locked" data-job-id="${jobId}">
+        <span class="time-locked-display mono">${endDateVal || '—'} ${endTimeVal || ''}</span>
+        <button type="button" class="time-unlock" title="Unlock to edit report/end time">Edit</button>
+      </div>
+    `
+      : `
+      <div class="time-edit-wrap" data-job-id="${jobId}">
+        <input type="date" class="end-date-input mono" value="${endDateVal}">
+        <input type="time" class="end-time-input mono" value="${endTimeVal}">
+        <button type="button" class="end-save" title="Save report and end date/time">Save</button>
+      </div>
+    `;
 
     return `
       <tr>
         <td><span class="job-id">${(j.id || '').slice(-8)}</span></td>
         <td>${client}</td>
         <td>${address}</td>
-        <td class="mono">${getReportTime(j)}</td>
-        <td><div class="crew-chip-row">${crewChips}</div></td>
-        <td><span class="status-tag ${statusClass}">${statusLabel}</span></td>
+        <td>${reportCell}</td>
+        <td>${endCell}</td>
+        <td><div class="crew-chip-row">${backendCrewChips}${overrideChips}${assignChecklist}${(!crew.length && !overrideCrew.length && job_associationsMissing(j)) ? '<span class="crew-chip empty-slot">crew not linked yet</span>' : ''}</div></td>
+        <td>
+          <span class="status-tag ${statusClass}">${statusLabel}</span>
+          <div class="job-stage-actions">
+            <button type="button" class="job-stage-btn complete" data-job-id="${jobId}">Completed</button>
+            <button type="button" class="job-stage-btn cancel" data-job-id="${jobId}">Cancelled</button>
+          </div>
+        </td>
       </tr>
     `;
   }).join('');
 }
+
+// True when the backend hasn't started sending associations at all (vs. a job
+// that legitimately has zero crew assigned yet) — keeps the honest placeholder
+// showing until your Make.com scenario adds the field.
+function job_associationsMissing(job) {
+  return !job.associations && !job.contacts && !job.crew;
+}
+
+// Report/end time edits are saved to localStorage so they survive a page
+// refresh even if GHL/Make hasn't caught up to the write yet — still fully
+// editable afterward, saving again just overwrites the stored values.
+function loadTimeOverridesFromStorage(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || '{}') || {};
+  } catch (err) {
+    console.warn('Couldn\'t parse stored ' + key, err);
+    return {};
+  }
+}
+function persistTimeOverride(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn('Couldn\'t persist ' + key, err);
+  }
+}
+
+window.jobEndOverride = loadTimeOverridesFromStorage('jobEndOverride');
+window.jobTimeOverride = loadTimeOverridesFromStorage('jobTimeOverride');
+window.jobCrewOverride = loadTimeOverridesFromStorage('jobCrewOverride');
+window.jobTimesLocked = loadTimeOverridesFromStorage('jobTimesLocked');
+
+async function assignCrew(jobId, workers, confirmBtn) {
+  if (!jobId || !workers.length) return;
+
+  const validWorkers = workers.filter(w => w.phone && w.phone.trim() !== "");
+  if (!validWorkers.length) {
+    showToast("Selected workers are missing a phone number — check labor webhook data.", true);
+    return;
+  }
+
+  confirmBtn.disabled = true;
+  const originalLabel = confirmBtn.textContent;
+  confirmBtn.textContent = "Assigning...";
+
+  // Pull the job's current date/time straight from the same getters the
+  // table uses to display them — includes any unsaved override values too,
+  // so the payload matches exactly what's on screen right now.
+  const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId) || {};
+
+  const payload = {
+    jobId: jobId,
+    action: "assign",
+    jobAddress: job.name || "",
+    reportDate: getReportDate(job),
+    reportTime: getReportTime(job),
+    reportEndDate: getReportEndDate(job),
+    reportEndTime: getReportEndTime(job),
+    assignedWorkers: validWorkers.map(w => ({
+      workerPhone: w.phone,
+      workerName: w.name
+    }))
+  };
+
+  try {
+    const res = await fetch(CONFIG.MOVE_WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    window.jobCrewOverride[jobId] = window.jobCrewOverride[jobId] || [];
+    validWorkers.forEach(w => {
+      const exists = window.jobCrewOverride[jobId].some(c => c.phone === w.phone);
+      if (!exists) window.jobCrewOverride[jobId].push({ name: w.name, phone: w.phone });
+    });
+    persistTimeOverride('jobCrewOverride', window.jobCrewOverride);
+
+    const names = validWorkers.map(w => w.name);
+    showToast(`${names.join(", ")} assigned to job.`);
+    renderJobs(dashboardData.jobs || []);
+    await refreshAll();
+  } catch (err) {
+    console.warn(err);
+    showToast("Couldn't assign crew. Check CONFIG.MOVE_WORKER_URL.", true);
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = originalLabel;
+  }
+}
+
+async function removeCrewMember(jobId, phone, name, chipEl) {
+  chipEl.style.opacity = "0.5";
+  const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId) || {};
+  const payload = {
+    jobId: jobId,
+    action: "remove",
+    jobAddress: job.name || "",
+    removedWorkers: [{ workerPhone: phone || "", workerName: name }]
+  };
+
+  try {
+    const res = await fetch(CONFIG.MOVE_WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    const backendCrew = getCrew((dashboardData.jobs || []).find(j => (j.id || '') === jobId));
+    window.jobCrewOverride[jobId] = (window.jobCrewOverride[jobId] || [])
+      .filter(c => c.name !== name && c.phone !== phone);
+
+    if (backendCrew.length) {
+      window.jobCrewOverride[jobId] = backendCrew
+        .filter(c => c.name !== name)
+        .map(c => ({ name: c.name, phone: c.phone || '' }));
+    }
+    persistTimeOverride('jobCrewOverride', window.jobCrewOverride);
+
+    chipEl.remove();
+    showToast(`${name} removed from job.`);
+    renderJobs(dashboardData.jobs || []);
+    await refreshAll();
+  } catch (err) {
+    console.warn(err);
+    showToast("Couldn't remove crew member. Check CONFIG.MOVE_WORKER_URL.", true);
+    chipEl.style.opacity = "1";
+  }
+}
+
+// Moves a job to the Completed or Cancelled pipeline stage in GHL. Reuses
+// CREATE_JOB_URL — the Make scenario behind it routes on the `action` field
+// (same pattern as MOVE_WORKER_URL's assign/remove) to tell create/complete/
+// cancel apart.
+async function setJobStage(jobId, action, btn) {
+  if (!jobId) return;
+  const label = action === 'complete' ? 'Completed' : 'Cancelled';
+  if (!confirm(`Mark this job as ${label}? This moves it to the ${label} stage in GHL.`)) return;
+
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = "Saving...";
+
+  try {
+    const res = await fetch(CONFIG.CREATE_JOB_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, jobId, opportunityId: jobId })
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+    showToast(`Job marked ${label.toLowerCase()}.`);
+    await refreshAll();
+  } catch (err) {
+    console.warn(err);
+    showToast(`Couldn't mark job ${label.toLowerCase()}. Check CONFIG.CREATE_JOB_URL.`, true);
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+async function saveJobTimes(jobId, reportDate, reportTime, endDate, endTime, saveBtn) {
+  if (!jobId || !reportDate || !reportTime || !endDate || !endTime) {
+    showToast("Pick report date/time and end date/time first.", true);
+    return;
+  }
+  saveBtn.disabled = true;
+  const originalLabel = saveBtn.textContent;
+  saveBtn.textContent = "Saving...";
+
+  try {
+    const res = await fetch(CONFIG.UPDATE_JOB_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jobId,
+        reportDate,
+        reportTime,
+        reportEndDate: endDate,
+        reportEndTime: endTime
+      })
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    window.jobTimeOverride[jobId] = { date: reportDate, time: reportTime };
+    window.jobEndOverride[jobId] = { date: endDate, time: endTime };
+    window.jobTimesLocked[jobId] = true;
+    persistTimeOverride('jobTimeOverride', window.jobTimeOverride);
+    persistTimeOverride('jobEndOverride', window.jobEndOverride);
+    persistTimeOverride('jobTimesLocked', window.jobTimesLocked);
+    showToast("Report and end times saved and locked — crew can now be assigned.");
+    saveBtn.textContent = "Saved";
+    setTimeout(() => { renderJobs(dashboardData.jobs || []); }, 700);
+  } catch (err) {
+    console.warn(err);
+    showToast("Couldn't save report/end times. Check CONFIG.UPDATE_JOB_URL.", true);
+    saveBtn.textContent = originalLabel;
+    saveBtn.disabled = false;
+  }
+}
+
+document.getElementById('jobsBody').addEventListener('click', (e) => {
+  const removeBtn = e.target.closest('.crew-chip-remove');
+  if (removeBtn) {
+    const chip = removeBtn.closest('.crew-chip');
+    const jobId = chip.dataset.jobId;
+    const phone = chip.dataset.phone;
+    const name = chip.dataset.name;
+    removeCrewMember(jobId, phone, name, chip);
+    return;
+  }
+
+  const toggle = e.target.closest('.crew-assign-toggle');
+  if (toggle) {
+    const panel = toggle.parentElement.querySelector('.crew-assign-panel');
+    document.querySelectorAll('.crew-assign-panel.open').forEach(p => {
+      if (p !== panel) p.classList.remove('open');
+    });
+    panel.classList.toggle('open');
+    return;
+  }
+
+  const confirmBtn = e.target.closest('.crew-assign-confirm');
+  if (confirmBtn) {
+    const wrap = confirmBtn.closest('.crew-assign-wrap');
+    const jobId = wrap.dataset.jobId;
+    const existingNames = Array.from(document.querySelectorAll(`.crew-chip[data-job-id="${jobId}"]`)).map(chip => chip.dataset.name);
+    const checked = Array.from(wrap.querySelectorAll('input[type="checkbox"]:checked'));
+    const workers = checked
+      .map(cb => ({ phone: cb.value, name: cb.dataset.name }))
+      .filter(worker => !existingNames.includes(worker.name));
+    if (!workers.length) {
+      showToast("Select at least one new worker.", true);
+      return;
+    }
+    assignCrew(jobId, workers, confirmBtn);
+    return;
+  }
+
+  const completeBtn = e.target.closest('.job-stage-btn.complete');
+  if (completeBtn) {
+    setJobStage(completeBtn.dataset.jobId, 'complete', completeBtn);
+    return;
+  }
+
+  const cancelBtn = e.target.closest('.job-stage-btn.cancel');
+  if (cancelBtn) {
+    setJobStage(cancelBtn.dataset.jobId, 'cancel', cancelBtn);
+    return;
+  }
+
+  const unlockBtn = e.target.closest('.time-unlock');
+  if (unlockBtn) {
+    const wrap = unlockBtn.closest('.time-edit-wrap');
+    const jobId = wrap.dataset.jobId;
+    window.jobTimesLocked[jobId] = false;
+    persistTimeOverride('jobTimesLocked', window.jobTimesLocked);
+    renderJobs(dashboardData.jobs || []);
+    return;
+  }
+
+  const endSaveBtn = e.target.closest('.end-save');
+  if (endSaveBtn) {
+    const endWrap = endSaveBtn.closest('.time-edit-wrap');
+    const row = endSaveBtn.closest('tr');
+    const reportWrap = row.querySelector('td:nth-child(4) .time-edit-wrap');
+    const jobId = endWrap.dataset.jobId;
+    const reportDateInput = reportWrap.querySelector('.report-date-input');
+    const reportTimeInput = reportWrap.querySelector('.report-time-input');
+    const endDateInput = endWrap.querySelector('.end-date-input');
+    const endTimeInput = endWrap.querySelector('.end-time-input');
+    saveJobTimes(jobId, reportDateInput.value, reportTimeInput.value, endDateInput.value, endTimeInput.value, endSaveBtn);
+    return;
+  }
+
+  if (!e.target.closest('.crew-assign-wrap')) {
+    document.querySelectorAll('.crew-assign-panel.open').forEach(p => p.classList.remove('open'));
+  }
+});
 
 /* ---------- Roster tabs / search ---------- */
 document.querySelectorAll('.roster-tab').forEach(tab => {
@@ -749,10 +1499,27 @@ document.querySelectorAll('.roster-tab').forEach(tab => {
 });
 document.getElementById('rosterSearch').addEventListener('input', renderRoster);
 
+// The Available/Booked Today stat cards up top act as shortcuts into the
+// same roster tabs below — click one and it switches the roster tab,
+// updates the active state, and scrolls the roster panel into view.
+document.querySelectorAll('.status-card.available, .status-card.booked').forEach(card => {
+  card.addEventListener('click', () => {
+    const targetTab = card.classList.contains('available') ? 'available' : 'booked';
+    const tabBtn = document.querySelector(`.roster-tab[data-tab="${targetTab}"]`);
+    if (tabBtn) tabBtn.click();
+    document.getElementById('rosterSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+});
+
 /* ---------- Book Job sheet ---------- */
 const overlay = document.getElementById('overlay');
 const sheet = document.getElementById('bookSheet');
 let crewSize = 4;
+let jobType = 'hourly';
+const JOB_PIPELINE_IDS = {
+  hourly: "RAP4Cqc1jKRTHaakYTL4",   // Hourly (Labor) pipeline
+  contract: "d5Ix1SlN3YpZ5gQewZUo"  // Contract (Demo) pipeline
+};
 
 function openSheet() {
   overlay.classList.add('open');
@@ -769,6 +1536,14 @@ document.getElementById('closeSheet').addEventListener('click', closeSheetFn);
 document.getElementById('cancelBook').addEventListener('click', closeSheetFn);
 overlay.addEventListener('click', closeSheetFn);
 
+document.querySelectorAll('#jobTypeToggle .segmented-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#jobTypeToggle .segmented-option').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    jobType = btn.dataset.type;
+  });
+});
+
 document.getElementById('crewMinus').addEventListener('click', () => {
   crewSize = Math.max(1, crewSize - 1);
   document.getElementById('crewCount').textContent = crewSize;
@@ -779,18 +1554,34 @@ document.getElementById('crewPlus').addEventListener('click', () => {
 });
 
 document.getElementById('submitBook').addEventListener('click', async () => {
+  const reportDateVal = document.getElementById('jobDate').value;
+  const jobEndDateVal = document.getElementById('jobEndDate').value;
+
   const payload = {
-    clientName: document.getElementById('clientName').value.trim(),
+    action: "create",
+    firstName: document.getElementById('clientFirstName').value.trim(),
+    lastName: document.getElementById('clientLastName').value.trim(),
+    clientName: (document.getElementById('clientFirstName').value.trim() + ' ' + document.getElementById('clientLastName').value.trim()).trim(),
+    clientPhone: document.getElementById('clientPhone').value.trim(),
     jobAddress: document.getElementById('jobAddress').value.trim(),
-    reportDate: document.getElementById('jobDate').value,
+    jobType: jobType,
+    pipelineId: JOB_PIPELINE_IDS[jobType],
+    reportDate: reportDateVal,
     reportTime: document.getElementById('jobTime').value,
+    reportEndDate: jobEndDateVal || reportDateVal,
+    reportEndTime: document.getElementById('jobEndTime').value,
     scopeOfWork: document.getElementById('scopeWork').value.trim(),
     toolsRequired: Array.from(document.querySelectorAll('#toolsGrid input:checked')).map(c => c.value),
     crewSize: crewSize
   };
 
-  if (!payload.clientName || !payload.jobAddress || !payload.reportDate || !payload.reportTime) {
+  if (!payload.firstName || !payload.lastName || !payload.jobAddress || !payload.reportDate || !payload.reportTime) {
     showToast("Client, address, date, and time are required.", true);
+    return;
+  }
+
+  if (!payload.clientPhone || !/^\+1\d{10}$/.test(payload.clientPhone)) {
+    showToast("Client phone must be in +15555555555 format.", true);
     return;
   }
 
@@ -805,6 +1596,30 @@ document.getElementById('submitBook').addEventListener('click', async () => {
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    // If the Make scenario's webhook response includes the new opportunity's
+    // ID, seed the report/end time as already-locked immediately using the
+    // exact values just submitted — so the job shows up correctly filled in
+    // on the board without waiting on (or depending on) GHL/Make's own
+    // round-trip of the custom fields, and without making the dispatcher
+    // re-enter what they just typed.
+    try {
+      const data = await res.json();
+      const newJobId = (data && (data.id || data.opportunityId || (data.opportunity && data.opportunity.id))) || '';
+      if (newJobId) {
+        window.jobTimeOverride[newJobId] = { date: payload.reportDate, time: payload.reportTime };
+        window.jobEndOverride[newJobId] = { date: payload.reportEndDate, time: payload.reportEndTime };
+        window.jobTimesLocked[newJobId] = true;
+        persistTimeOverride('jobTimeOverride', window.jobTimeOverride);
+        persistTimeOverride('jobEndOverride', window.jobEndOverride);
+        persistTimeOverride('jobTimesLocked', window.jobTimesLocked);
+      }
+    } catch (parseErr) {
+      // Webhook didn't return usable JSON — fine, the job still gets created,
+      // it just won't show pre-locked until the backend's own data catches up.
+      console.warn("Couldn't read new job id from create response:", parseErr);
+    }
+
     showToast(`Job created — ${payload.crewSize} crew slot(s) ready in GHL.`);
     closeSheetFn();
     loadDashboard();
