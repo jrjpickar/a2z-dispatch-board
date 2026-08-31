@@ -1059,7 +1059,7 @@ const CONFIG = {
   // Sends both jobId and opportunityId while the Make scenario is being mapped.
   DAILY_RESET_URL: "https://hook.us2.make.com/5879hdynfye7ykhi3z1m1y8m9cns461v",
   // Creates standalone Container opportunities.
-  LOGISTICS_CREATE_URL: "https://hook.us2.make.com/30np7d1bieaapqcluxlkxdgbg8l5pw2w",
+  LOGISTICS_CREATE_URL: "/api/container-action",
   // Read-only Container Opportunity search, called when Logistics opens or refreshes.
   LOGISTICS_DASHBOARD_URL: "https://hook.us2.make.com/atjk343135x5zmxhfmtu4113nj9rbcx4",
   // Container-specific Data Store sync. Receives the complete container record after creation.
@@ -3381,6 +3381,10 @@ async function setContainerStage(jobId, action, button) {
   button.disabled = true; button.textContent = action === 'complete' ? 'Completing...' : 'Cancelling...';
   try {
     const endpoint = isAddon ? CONFIG.CONTAINER_SHARED_STATE_SYNC_URL : CONFIG.LOGISTICS_CREATE_URL;
+    const completionDriverName = getLogisticsDriverName(move);
+    const completionDriver = (logisticsData.drivers || []).find(item => item.name === completionDriverName) || {};
+    const completionMoveKey = String(move.moveId || move.id || jobId);
+    const completionBreaks = window.logisticsBreakSchedule[completionMoveKey] || {};
     const payload = isAddon ? {
       ...move,
       action,
@@ -3391,7 +3395,13 @@ async function setContainerStage(jobId, action, button) {
       moveId,
       jobId,
       opportunityId: jobId,
-      sourceOpportunityId: move.sourceOpportunityId || jobId
+      sourceOpportunityId: move.sourceOpportunityId || jobId,
+      date: move.scheduledDate || move.requestedDate || move.reportDate || move.date || '',
+      employee: completionDriverName,
+      hours: completionDriver.hours || move.hours || '',
+      signature: completionDriverName,
+      lunch: completionBreaks.lunch || '',
+      rows: buildDriverLogRows(completionDriverName, move)
     } : {
       action,
       jobId,

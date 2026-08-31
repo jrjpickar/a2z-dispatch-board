@@ -13,6 +13,11 @@
   to = "/.netlify/functions/shared-state"
   status = 200
 
+[[redirects]]
+  from = "/api/container-action"
+  to = "/.netlify/functions/container-action"
+  status = 200
+
 [[headers]]
   for = "/api/*"
   [headers.values]
