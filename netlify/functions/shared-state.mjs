@@ -45,13 +45,15 @@ export default async function handler(request) {
   try {
     const sql = db();
     await ensureSchema(sql);
-    const serialized = JSON.stringify(storedData);
-
     const [row] = await sql`
       insert into job_shared_state (job_id, data, active, updated_at)
-      values (${jobId}, ${serialized}::jsonb, ${active}, now())
+      values (${jobId}, ${sql.json(storedData)}, ${active}, now())
       on conflict (job_id) do update set
-        data = job_shared_state.data || excluded.data,
+        data = case
+          when jsonb_typeof(job_shared_state.data) = 'object'
+            then job_shared_state.data || excluded.data
+          else excluded.data
+        end,
         active = excluded.active,
         updated_at = now()
       returning job_id, data, active, updated_at
