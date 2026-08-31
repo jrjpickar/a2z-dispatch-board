@@ -3436,6 +3436,13 @@ async function setContainerStage(jobId, action, button) {
       const directAssetMatch = move.assetId && String(asset.id || asset.assetId || '') === String(move.assetId);
       return directAssetMatch || (assetMoveId && assetMoveId === completionMoveKey) || (!assetMoveId && assetJobId && assetJobId === String(jobId));
     });
+    // Older Make records were marked assigned without storing their move/job
+    // link. If there is exactly one assigned vehicle, it is safe to release it
+    // as the legacy fallback; newer records carry IDs and use the match above.
+    if (!assignedAssets.length) {
+      const legacyAssigned = (logisticsData.assets || []).filter(asset => asset.booked === true || String(asset.status || '').toLowerCase() === 'assigned');
+      if (legacyAssigned.length === 1) assignedAssets.push(legacyAssigned[0]);
+    }
     for (const cachedAsset of cachedAssetsForMove(completionMoveKey)) {
       if (!assignedAssets.some(asset => String(asset.id || asset.assetId || '') === String(cachedAsset.id || cachedAsset.assetId || ''))) assignedAssets.push(cachedAsset);
     }
