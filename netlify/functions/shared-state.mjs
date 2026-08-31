@@ -16,6 +16,41 @@ function sameSiteRequest(request) {
   return origin === new URL(request.url).origin;
 }
 
+function parseEmbeddedJson(value) {
+  let current = value;
+  for (let attempt = 0; attempt < 3 && typeof current === "string"; attempt += 1) {
+    try {
+      current = JSON.parse(current);
+    } catch {
+      break;
+    }
+  }
+  return current;
+}
+
+function normalizePayload(input) {
+  const parsed = parseEmbeddedJson(input);
+  if (Array.isArray(parsed)) {
+    const objects = parsed
+      .map(parseEmbeddedJson)
+      .filter(value => value && typeof value === "object" && !Array.isArray(value));
+    return Object.assign({}, ...objects);
+  }
+  if (!parsed || typeof parsed !== "object") return {};
+
+  const regularEntries = Object.entries(parsed)
+    .filter(([key]) => !/^\d+$/.test(key));
+  const embeddedObjects = Object.entries(parsed)
+    .filter(([key]) => /^\d+$/.test(key))
+    .map(([, value]) => parseEmbeddedJson(value))
+    .filter(value => value && typeof value === "object" && !Array.isArray(value));
+
+  return {
+    ...Object.assign({}, ...embeddedObjects),
+    ...Object.fromEntries(regularEntries)
+  };
+}
+
 export default async function handler(request) {
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, 405, { Allow: "POST" });
@@ -27,7 +62,7 @@ export default async function handler(request) {
 
   let payload;
   try {
-    payload = await request.json();
+    payload = normalizePayload(await request.json());
   } catch {
     return json({ error: "Request body must be valid JSON" }, 400);
   }
@@ -37,7 +72,7 @@ export default async function handler(request) {
     return json({ error: "jobId is required" }, 400);
   }
 
-  const active = payload.active !== false;
+  const active = payload.active !== false && payload.active !== "false";
   const storedData = { ...payload, jobId };
   delete storedData.opportunityId;
   delete storedData.active;

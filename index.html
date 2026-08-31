@@ -909,6 +909,15 @@
         <label class="tool-check"><input type="checkbox" value="Concrete Saw"> Concrete Saw</label>
         <label class="tool-check"><input type="checkbox" value="Generator"> Generator</label>
         <label class="tool-check"><input type="checkbox" value="Cutting Rig"> Cutting Rig</label>
+        <label class="tool-check"><input type="checkbox" value="Compactor"> Compactor</label>
+        <label class="tool-check"><input type="checkbox" value="Pressure Washer"> Pressure Washer</label>
+        <label class="tool-check"><input type="checkbox" value="Multi-Tool + Blade"> Multi-Tool + Blade</label>
+        <label class="tool-check"><input type="checkbox" value="Shop Vac"> Shop Vac</label>
+        <label class="tool-check"><input type="checkbox" value="Chipping Hammer"> Chipping Hammer</label>
+        <label class="tool-check"><input type="checkbox" value="60 lb. Jack Hammer &amp; Cord"> 60 lb. Jack Hammer &amp; Cord</label>
+        <label class="tool-check"><input type="checkbox" value="Tow-Behind Compressor, 90 lb. Jack Hammer, Hoses, Diesel Fuel &amp; Delivery"> Tow-Behind Compressor, 90 lb. Jack Hammer, Hoses, Diesel Fuel &amp; Delivery</label>
+        <label class="tool-check"><input type="checkbox" value="Cordless Rotary Hammer Drill Set"> Cordless Rotary Hammer Drill Set</label>
+        <label class="tool-check"><input type="checkbox" value="50 ft. 12 Gauge Extension Cord"> 50 ft. 12 Gauge Extension Cord</label>
       </div>
     </div>
     <div class="addon-section" id="logisticsAddonSection">
@@ -969,6 +978,15 @@
         <label class="tool-check"><input type="checkbox" value="Concrete Saw"> Concrete Saw</label>
         <label class="tool-check"><input type="checkbox" value="Generator"> Generator</label>
         <label class="tool-check"><input type="checkbox" value="Cutting Rig"> Cutting Rig</label>
+        <label class="tool-check"><input type="checkbox" value="Compactor"> Compactor</label>
+        <label class="tool-check"><input type="checkbox" value="Pressure Washer"> Pressure Washer</label>
+        <label class="tool-check"><input type="checkbox" value="Multi-Tool + Blade"> Multi-Tool + Blade</label>
+        <label class="tool-check"><input type="checkbox" value="Shop Vac"> Shop Vac</label>
+        <label class="tool-check"><input type="checkbox" value="Chipping Hammer"> Chipping Hammer</label>
+        <label class="tool-check"><input type="checkbox" value="60 lb. Jack Hammer &amp; Cord"> 60 lb. Jack Hammer &amp; Cord</label>
+        <label class="tool-check"><input type="checkbox" value="Tow-Behind Compressor, 90 lb. Jack Hammer, Hoses, Diesel Fuel &amp; Delivery"> Tow-Behind Compressor, 90 lb. Jack Hammer, Hoses, Diesel Fuel &amp; Delivery</label>
+        <label class="tool-check"><input type="checkbox" value="Cordless Rotary Hammer Drill Set"> Cordless Rotary Hammer Drill Set</label>
+        <label class="tool-check"><input type="checkbox" value="50 ft. 12 Gauge Extension Cord"> 50 ft. 12 Gauge Extension Cord</label>
       </div>
     </div>
     <div class="addon-section" id="editLogisticsAddonSection">
@@ -2712,6 +2730,31 @@ document.getElementById('submitBook').addEventListener('click', async () => {
       }
     } catch (readErr) {
       console.warn("Couldn't read create-job webhook response body:", readErr);
+    }
+
+    // CREATE_JOB_URL still persists its copy in Make's Data Store. This
+    // dashboard now reads shared state from Netlify, so write the newly
+    // created job's initial schedule to Netlify as soon as we have its ID.
+    // Having all four time fields is also the durable "locked" signal.
+    if (newJobId) {
+      const sharedPayload = {
+        ...payload,
+        jobId: newJobId,
+        opportunityId: newJobId,
+        active: true,
+        crew: "",
+        assignedWorkers: []
+      };
+      const sharedRes = await fetchWithTimeout(CONFIG.SHARED_STATE_SYNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(sharedPayload)
+      });
+      if (!sharedRes.ok) {
+        throw new Error(`Netlify shared-state returned ${sharedRes.status}: ${(await sharedRes.text()).slice(0, 240)}`);
+      }
+    } else {
+      console.warn("Job was created, but its ID was unavailable; initial locked times could not be synced to Netlify.");
     }
 
     let addonFailures = 0;
