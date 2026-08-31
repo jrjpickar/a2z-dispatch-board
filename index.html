@@ -3429,7 +3429,28 @@ async function setContainerStage(jobId, action, button) {
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 240)}`);
-    showToast(`${isAddon ? 'Add-on' : 'Container'} marked ${action === 'complete' ? 'completed' : 'cancelled'}.`);
+    let assetReleaseFailed = false;
+    const assignedAssets = (logisticsData.assets || []).filter(asset => {
+      const assetMoveId = String(asset.moveId || '');
+      const assetJobId = String(asset.jobId || asset.opportunityId || asset.sourceOpportunityId || '');
+      const directAssetMatch = move.assetId && String(asset.id || asset.assetId || '') === String(move.assetId);
+      return directAssetMatch || (assetMoveId && assetMoveId === completionMoveKey) || (!assetMoveId && assetJobId && assetJobId === String(jobId));
+    });
+    for (const cachedAsset of cachedAssetsForMove(completionMoveKey)) {
+      if (!assignedAssets.some(asset => String(asset.id || asset.assetId || '') === String(cachedAsset.id || cachedAsset.assetId || ''))) assignedAssets.push(cachedAsset);
+    }
+    try {
+      await Promise.all(assignedAssets.filter(asset => asset.id || asset.assetId).map(asset => persistLogisticsAsset('available', move, asset)));
+      delete window.logisticsAssetAssignments[completionMoveKey];
+      assignedAssets.forEach(asset => removeCachedAssetAssignment(asset.id || asset.assetId));
+      persistLogisticsAssetAssignments();
+    } catch (assetErr) {
+      assetReleaseFailed = true;
+      console.warn('Move closed, but vehicle release failed:', assetErr);
+    }
+    showToast(assetReleaseFailed
+      ? `${isAddon ? 'Add-on' : 'Container'} closed, but a vehicle still needs attention.`
+      : `${isAddon ? 'Add-on' : 'Container'} marked ${action === 'complete' ? 'completed' : 'cancelled'}; vehicles released.`, assetReleaseFailed);
     await loadLogistics();
   } catch (err) {
     console.error(`Logistics ${action} failed:`, err);
