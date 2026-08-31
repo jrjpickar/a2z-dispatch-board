@@ -3205,6 +3205,17 @@ function logisticsSourceType(move) {
   return 'other';
 }
 
+// A standalone container may legitimately have a generated moveId that differs
+// from its GHL opportunity ID. Route from explicit source metadata instead of
+// comparing those IDs, otherwise driver assignment can mutate the parent-job
+// add-on branch and make the standalone opportunity disappear on refresh.
+function logisticsTargetType(move) {
+  const addonType = String(move && (move.addonType || move.targetType || move.bookingMode) || '').toLowerCase();
+  if (addonType === 'standalone') return 'standalone';
+  if (addonType === 'job_addon' || addonType === 'addon') return 'job_addon';
+  return logisticsSourceType(move || {}) === 'container' ? 'standalone' : 'job_addon';
+}
+
 function renderLogistics() {
   const drivers = logisticsData.drivers || [], assets = logisticsData.assets || [], moves = logisticsData.moves || [];
   const availableDrivers = drivers.filter(d => String(d.status || 'available').toLowerCase() === 'available').length;
@@ -3446,7 +3457,7 @@ async function resetLogisticsDay(jobId, button) {
   const moveKey = String(move.moveId || move.id || jobId);
   const payload = {
     action: 'reset_dispatch',
-    targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+    targetType: logisticsTargetType(move),
     jobId,
     opportunityId: jobId,
     sourceOpportunityId: move.sourceOpportunityId || move.opportunityId || jobId,
@@ -3490,7 +3501,7 @@ async function resetLogisticsDay(jobId, button) {
     if (driverName) {
       const removePayload = {
         action: 'remove_driver', bookingMode: 'driver_assignment',
-        targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+        targetType: logisticsTargetType(move),
         moveId: move.moveId || move.id || '', jobId, opportunityId: jobId,
         sourceOpportunityId: move.sourceOpportunityId || jobId,
         driverId: payload.driverId, driverName, driverPhone: driver.phone || '', active: true
@@ -3671,7 +3682,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
         action: 'update_schedule', bookingMode: 'schedule_update',
-        targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+        targetType: logisticsTargetType(move),
         moveId, jobId, opportunityId: jobId, sourceOpportunityId: move.sourceOpportunityId || jobId,
         reportDate: date, reportTime: time, requestedDate: date, requestedTime: time,
         scheduledDate: date, scheduledTime: time, active: true
@@ -3692,7 +3703,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
     const jobId = removeButton.dataset.id;
     const payload = {
       action: 'remove_driver', bookingMode: 'driver_assignment',
-      targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+      targetType: logisticsTargetType(move),
       moveId: removeButton.dataset.moveId, jobId, opportunityId: jobId,
       sourceOpportunityId: move.sourceOpportunityId || jobId,
       driverId: removeButton.dataset.driverId || '', driverName, driverPhone: (driver && driver.phone) || '', active: true
@@ -3715,7 +3726,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
     const jobId = assignButton.dataset.id;
     const payload = {
       action: 'assign_driver', bookingMode: 'driver_assignment',
-      targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+      targetType: logisticsTargetType(move),
       moveId: assignButton.dataset.moveId, jobId, opportunityId: jobId,
       sourceOpportunityId: move.sourceOpportunityId || jobId,
       driverId: driver.id || '', driverName: driver.name, driverPhone: driver.phone || '', active: true
