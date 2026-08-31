@@ -2808,6 +2808,10 @@ document.getElementById('submitBook').addEventListener('click', async () => {
       }
     }
 
+    // A previously-opened Logistics tab holds an in-memory snapshot. Force
+    // its next visit to reload so newly-created container/lowboy moves show.
+    if (addonRequests.length) logisticsLoaded = false;
+
     if (addonFailures) showToast(`Job created, but ${addonFailures} logistics add-on(s) need attention.`, true);
     else if (addonRequests.length) showToast(`Job created with ${addonRequests.length} logistics add-on(s).`);
     else showToast(`Job created — ${payload.crewSize} crew slot(s) ready in GHL.`);
@@ -3039,6 +3043,8 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
         if (!addonSyncRes.ok) throw new Error(`Shared-state HTTP ${addonSyncRes.status}: ${(await addonSyncRes.text()).slice(0, 240)}`);
       } catch (addonErr) { editAddonFailures += 1; console.warn('Edit-job logistics add-on failed:', addonErr); }
     }
+
+    if (editAddonRequests.length) logisticsLoaded = false;
 
     if (editAddonFailures) showToast(`Job saved, but ${editAddonFailures} logistics add-on(s) need attention.`, true);
     else if (editAddonRequests.length) showToast(`Job saved with ${editAddonRequests.length} logistics add-on(s).`);
