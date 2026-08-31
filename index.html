@@ -716,6 +716,14 @@
   #logisticsDispatchView table.logistics-table th{position:sticky;top:0;z-index:2;padding:12px;background:linear-gradient(135deg,#17181a,#303237)}
   #logisticsDispatchView table.logistics-table td{padding:13px 12px;line-height:1.45}
   #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):hover td{background:#fff6ef}
+  #logisticsDispatchView .jobs-table-wrap{margin:0 12px 14px;border:1px solid #dde0e3;border-radius:9px;box-shadow:0 4px 16px rgba(21,22,24,.05);background:#fff}
+  #logisticsDispatchView table.logistics-table tr[data-source="container"] td:first-child{box-shadow:inset 4px 0 0 #4f87b7}
+  #logisticsDispatchView table.logistics-table tr[data-source="demo"] td:first-child{box-shadow:inset 4px 0 0 var(--gold)}
+  #logisticsDispatchView .logistics-job-link{font-size:12px;text-decoration-thickness:2px;text-underline-offset:3px}
+  #logisticsDispatchView .logistics-driver-select,#logisticsDispatchView .logistics-asset-select{min-height:30px;border-radius:6px;border-color:#cfd3d7;box-shadow:0 1px 2px rgba(21,22,24,.04)}
+  #logisticsDispatchView .job-stage-btn{min-height:28px;padding:5px 9px;box-shadow:0 1px 2px rgba(21,22,24,.05)}
+  #logisticsDispatchView .logistics-primary-actions .complete{background:#fffaf0}
+  #logisticsDispatchView .logistics-primary-actions .cancel{background:#fff8f7}
   #logisticsDispatchView .job-group-header{background:#e9ebed;color:var(--ink);border-top:1px solid #d6d9dc;border-bottom:1px solid #d6d9dc;padding:9px 12px}
   #logisticsDispatchView .logistics-primary-actions{padding-top:7px;border-top:1px solid var(--stripe);margin-top:7px}
   #logisticsDispatchView .logistics-primary-actions .job-stage-btn{border-radius:5px}
@@ -3245,7 +3253,10 @@ function renderLogistics() {
   }).join('') : '<li class="load-state">No assets returned by the Asset roster webhook.</li>';
 
   const filter = document.getElementById('logisticsSourceFilter').value;
-  const visibleMoves = moves.filter(m => filter === 'all' || logisticsSourceType(m) === filter);
+  // The Logistics board is an active-work queue. Terminal records stay in
+  // GHL/Data Store history but should disappear from this operational view.
+  const isTerminalMove = move => /complete|completed|cancel|cancelled|lost|abandon/i.test(String(move.status || move.stageName || move.pipelineStageName || ''));
+  const visibleMoves = moves.filter(m => !isTerminalMove(m) && (filter === 'all' || logisticsSourceType(m) === filter));
   const logisticsDate = m => {
     const moveKey = String(m.moveId || m.id || m.sourceOpportunityId || m.opportunityId || '');
     const override = window.logisticsScheduleOverride[moveKey];
