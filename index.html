@@ -703,6 +703,23 @@
   .logistics-toolbar{display:flex;gap:8px}.logistics-toolbar select{border:1px solid var(--border);border-radius:var(--radius);padding:7px;background:#fff;font-size:12px}
   table.logistics-table{width:100%;min-width:960px;border-collapse:collapse}table.logistics-table th{background:linear-gradient(90deg,var(--ink),#2c2d30);color:#fff;text-align:left;padding:10px 12px;font-family:'Oswald',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.06em}table.logistics-table td{padding:12px;border-bottom:1px solid var(--stripe);font-size:12px;vertical-align:top}table.logistics-table tr:nth-child(even) td{background:var(--stripe)}
   .logistics-job-link{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);text-decoration:none}.logistics-job-link:hover{color:var(--orange)}.logistics-route{color:var(--ink-soft);max-width:230px}.logistics-note{margin:12px 14px;padding:10px 12px;background:var(--gold-tint-soft);border-left:3px solid var(--gold);color:#655514;font-size:11px}
+  #logisticsDispatchView{background:linear-gradient(180deg,#f3f4f5 0%,#eceeef 100%);min-height:calc(100vh - 104px);padding-bottom:18px}
+  #logisticsDispatchView .logistics-stats{gap:12px;padding:16px 18px;background:transparent;border:0}
+  #logisticsDispatchView .logistics-stat{border:1px solid rgba(21,22,24,.10);border-top-width:4px;border-radius:10px;padding:16px 18px;box-shadow:0 5px 18px rgba(21,22,24,.06)}
+  #logisticsDispatchView .logistics-stat .num{font-size:38px;letter-spacing:-.02em}
+  #logisticsDispatchView .logistics-layout{gap:12px;padding:0 18px;background:transparent;min-height:calc(100vh - 235px)}
+  #logisticsDispatchView .panel{border:1px solid rgba(21,22,24,.10);border-radius:10px;overflow:hidden;box-shadow:0 7px 22px rgba(21,22,24,.07);background:#fff}
+  #logisticsDispatchView .panel-head{background:linear-gradient(180deg,#fff,#fafafa);border-bottom:1px solid var(--border);min-height:58px}
+  #logisticsDispatchView .logistics-resource{transition:background .15s ease,transform .15s ease}
+  #logisticsDispatchView .logistics-resource:hover{background:var(--orange-tint-soft);transform:translateX(2px)}
+  #logisticsDispatchView .logistics-note{border:1px solid #eadca6;border-left:4px solid var(--gold);border-radius:7px;background:linear-gradient(90deg,var(--gold-tint-soft),#fffdf7)}
+  #logisticsDispatchView table.logistics-table th{position:sticky;top:0;z-index:2;padding:12px;background:linear-gradient(135deg,#17181a,#303237)}
+  #logisticsDispatchView table.logistics-table td{padding:13px 12px;line-height:1.45}
+  #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):hover td{background:#fff6ef}
+  #logisticsDispatchView .job-group-header{background:#e9ebed;color:var(--ink);border-top:1px solid #d6d9dc;border-bottom:1px solid #d6d9dc;padding:9px 12px}
+  #logisticsDispatchView .logistics-primary-actions{padding-top:7px;border-top:1px solid var(--stripe);margin-top:7px}
+  #logisticsDispatchView .logistics-primary-actions .job-stage-btn{border-radius:5px}
+  #logisticsDispatchView .logistics-status{padding:4px 8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
   .addon-section{border:1px solid var(--border);border-left:4px solid var(--gold);background:var(--gold-tint-soft);padding:12px;margin-bottom:16px}.addon-section>label{display:block;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:12px;font-weight:600;margin-bottom:9px}.addon-block{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-top:8px}.addon-toggle{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}.addon-toggle input{width:auto}.addon-fields{padding-top:10px}.addon-fields[hidden]{display:none}
   @media(max-width:1150px){.logistics-layout{grid-template-columns:250px minmax(650px,1fr)}.logistics-assets-panel{display:none}}
   @media(max-width:760px){.dispatch-view-tabs{padding:0}.dispatch-view-tab{flex:1}.logistics-stats{grid-template-columns:1fr 1fr}.logistics-layout{grid-template-columns:1fr}.logistics-drivers-panel{display:none}.logistics-toolbar select{display:none}}
@@ -3278,7 +3295,9 @@ function renderLogistics() {
     const removeDriver = assignable && (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
     const driverAssignment = assignable ? `<div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}<div class="driver-break-schedule" data-move-id="${escapeLogisticsHtml(moveKey)}"><label class="driver-break-field">Lunch <input type="time" class="logistics-lunch" aria-label="Lunch time" value="${escapeLogisticsHtml(breakSchedule.lunch || '')}"></label></div></div>` : '';
     const assetAssignment = assignable ? `<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}">Add Vehicle</button></div>` : '';
-    const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" data-id="${escapeLogisticsHtml(oppId)}">Completed</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" data-id="${escapeLogisticsHtml(oppId)}">Cancelled</button><button class="job-stage-btn edit logistics-action" data-action="edit" data-id="${escapeLogisticsHtml(oppId)}">Edit Details</button><button class="job-stage-btn reset logistics-action" data-action="reset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}">Reset Day</button></div>`;
+    const targetType = moveKey && String(moveKey) !== String(oppId) ? 'job_addon' : 'standalone';
+    const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
+    const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
     return `<tr data-source="${sourceType}"><td><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || '—')}</strong></td><td><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td class="logistics-route">${escapeLogisticsHtml(notes || '—')}</td><td class="logistics-route">${escapeLogisticsHtml(pickup)} → ${escapeLogisticsHtml(destination)}</td><td class="mono">${scheduleCell}</td><td>${escapeLogisticsHtml(assignedDriverName || '—')}</td><td>${escapeLogisticsHtml(assignedAssetDisplay || '—')}</td><td><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
   };
   const sectionDefs = [
@@ -3333,24 +3352,56 @@ async function loadLogistics() {
 }
 
 function findLogisticsMove(id) {
-  return (logisticsData.moves || []).find(m => String(m.sourceOpportunityId || m.opportunityId || m.jobId || m.id || '') === String(id));
+  const key = String(id || '');
+  const moves = logisticsData.moves || [];
+  return moves.find(m => String(m.moveId || m.id || '') === key) ||
+    moves.find(m => String(m.sourceOpportunityId || m.opportunityId || m.jobId || m.id || '') === key);
 }
 
 async function setContainerStage(jobId, action, button) {
   if (!jobId || !['complete', 'cancel'].includes(action)) return;
+  const moveId = String((button && button.dataset.moveId) || '');
+  const move = findLogisticsMove(moveId || jobId) || {};
+  const isAddon = String((button && button.dataset.targetType) || '') === 'job_addon' ||
+    Boolean(moveId && String(moveId) !== String(jobId));
+  const noun = isAddon ? 'logistics add-on' : 'standalone container job';
+  if (!confirm(`${action === 'complete' ? 'Complete' : 'Cancel'} this ${noun}?${isAddon ? ' The parent job will not be changed.' : ''}`)) return;
   const original = button.textContent;
   button.disabled = true; button.textContent = action === 'complete' ? 'Completing...' : 'Cancelling...';
   try {
-    const res = await fetchWithTimeout(CONFIG.LOGISTICS_CREATE_URL, {
+    const endpoint = isAddon ? CONFIG.CONTAINER_SHARED_STATE_SYNC_URL : CONFIG.LOGISTICS_CREATE_URL;
+    const payload = isAddon ? {
+      ...move,
+      action,
+      status: action === 'complete' ? 'completed' : 'cancelled',
+      active: action !== 'cancel',
+      targetType: 'job_addon',
+      bookingMode: 'job_addon',
+      moveId,
+      jobId,
+      opportunityId: jobId,
+      sourceOpportunityId: move.sourceOpportunityId || jobId
+    } : {
+      action,
+      jobId,
+      opportunityId: jobId,
+      sourceOpportunityId: jobId,
+      targetType: 'standalone',
+      bookingMode: 'standalone',
+      jobType: 'container',
+      sourceType: 'container',
+      pipelineId: CONTAINER_PIPELINE_ID
+    };
+    const res = await fetchWithTimeout(endpoint, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ action, jobId, opportunityId: jobId, sourceOpportunityId: jobId, jobType: 'container', sourceType: 'container', pipelineId: CONTAINER_PIPELINE_ID })
+      body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 240)}`);
-    showToast(action === 'complete' ? 'Container marked completed.' : 'Container marked cancelled.');
+    showToast(`${isAddon ? 'Add-on' : 'Container'} marked ${action === 'complete' ? 'completed' : 'cancelled'}.`);
     await loadLogistics();
   } catch (err) {
-    console.error(`Container ${action} failed:`, err);
-    showToast(`Could not mark container ${action === 'complete' ? 'completed' : 'cancelled'}.`, true);
+    console.error(`Logistics ${action} failed:`, err);
+    showToast(`Could not mark ${isAddon ? 'add-on' : 'container'} ${action === 'complete' ? 'completed' : 'cancelled'}.`, true);
   } finally { button.disabled = false; button.textContent = original; }
 }
 
@@ -3395,6 +3446,7 @@ async function resetLogisticsDay(jobId, button) {
   const moveKey = String(move.moveId || move.id || jobId);
   const payload = {
     action: 'reset_dispatch',
+    targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
     jobId,
     opportunityId: jobId,
     sourceOpportunityId: move.sourceOpportunityId || move.opportunityId || jobId,
@@ -3492,6 +3544,9 @@ editContainerOverlay.addEventListener('click', closeEditContainerSheetFn);
 document.getElementById('submitEditContainer').addEventListener('click', async () => {
   const button = document.getElementById('submitEditContainer');
   const move = findLogisticsMove(editingContainerId) || {};
+  const moveId = String(move.moveId || move.id || editingContainerId || '');
+  const parentJobId = String(move.sourceOpportunityId || move.opportunityId || move.jobId || editingContainerId || '');
+  const isAddon = Boolean(moveId && parentJobId && moveId !== parentJobId);
   const firstName = document.getElementById('editContainerFirstName').value.trim();
   const lastName = document.getElementById('editContainerLastName').value.trim();
   const clientName = `${firstName} ${lastName}`.trim();
@@ -3502,8 +3557,8 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
   const movementType = document.getElementById('editContainerMovementType').value;
   if (!firstName || !lastName || !jobAddress || !reportDate || !reportTime) return showToast('Client, destination, date, and time are required.', true);
   const payload = {
-    action: 'update_job', jobId: editingContainerId, opportunityId: editingContainerId, sourceOpportunityId: move.sourceOpportunityId || editingContainerId,
-    bookingMode: 'standalone', jobType: 'container', sourceType: 'container', pipelineId: CONTAINER_PIPELINE_ID,
+    action: isAddon ? 'update_addon' : 'update_job', jobId: parentJobId, opportunityId: parentJobId, sourceOpportunityId: parentJobId, moveId,
+    targetType: isAddon ? 'job_addon' : 'standalone', bookingMode: isAddon ? 'job_addon' : 'standalone', jobType: 'container', sourceType: 'container', pipelineId: CONTAINER_PIPELINE_ID,
     locationId: GHL_LOCATION_ID, firstName, lastName, clientName,
     clientPhone: document.getElementById('editContainerPhone').value.trim(),
     jobAddress, deliveryAddress: jobAddress, destinationAddress: jobAddress, pickupAddress: move.pickupAddress || move.pickup || 'A2Z Yard',
@@ -3515,10 +3570,13 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
   };
   button.disabled = true; button.textContent = 'Saving...';
   try {
-    const res = await fetchWithTimeout(CONFIG.LOGISTICS_CREATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload) });
+    const endpoint = isAddon ? CONFIG.CONTAINER_SHARED_STATE_SYNC_URL : CONFIG.LOGISTICS_CREATE_URL;
+    const res = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ ...payload, active: true }) });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 240)}`);
-    try { await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, active: true }) }); } catch (syncErr) { console.warn('Container detail sync failed:', syncErr); }
-    showToast('Container details saved.'); closeEditContainerSheetFn(); await loadLogistics();
+    if (!isAddon) {
+      try { await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, active: true }) }); } catch (syncErr) { console.warn('Container detail sync failed:', syncErr); }
+    }
+    showToast(`${isAddon ? 'Add-on' : 'Container'} details saved.`); closeEditContainerSheetFn(); await loadLogistics();
   } catch (err) { console.error('Container edit failed:', err); showToast('Could not save container details.', true); }
   finally { button.disabled = false; button.textContent = 'Save Changes'; }
 });
@@ -3671,7 +3729,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
   }
   const button = event.target.closest('.logistics-action');
   if (!button) return;
-  if (button.dataset.action === 'edit') openEditContainerSheetFn(button.dataset.id);
+  if (button.dataset.action === 'edit') openEditContainerSheetFn(button.dataset.moveId || button.dataset.id);
   else if (button.dataset.action === 'reset') resetLogisticsDay(button.dataset.id, button);
   else setContainerStage(button.dataset.id, button.dataset.action, button);
 });
