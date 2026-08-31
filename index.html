@@ -1482,6 +1482,20 @@ async function loadDashboard() {
 
     dashboardData.sharedStateByJobId = new Map(normalizedShared.map(r => [r.jobId, r]));
 
+    // Once Netlify returns an explicit crew value, it is authoritative.
+    // Clear this browser's old optimistic crew copy so a worker removed in
+    // another window/device cannot be appended back after the server crew.
+    let crewOverridesChanged = false;
+    normalizedShared.forEach(record => {
+      if (record.crew !== undefined && window.jobCrewOverride && window.jobCrewOverride[record.jobId]) {
+        delete window.jobCrewOverride[record.jobId];
+        crewOverridesChanged = true;
+      }
+    });
+    if (crewOverridesChanged) {
+      persistTimeOverride('jobCrewOverride', window.jobCrewOverride);
+    }
+
     // Reconcile optimistic Complete/Cancel markers only after the backend feed
     // confirms the terminal state or stops returning the job entirely.
     const liveIds = new Set((dashboardData.jobs || []).map(j => j.id).filter(Boolean));
@@ -2160,9 +2174,11 @@ async function removeCrewMember(jobId, phone, name, chipEl) {
     // Same reasoning as assignCrew: send the FULL remaining crew list (not
     // just who got removed) to the Data Store write, so other devices see
     // the removal too instead of only this browser's local override.
-    const remainingCrew = getCrew(job).filter(c => c.name !== name);
+    const removedNameKey = String(name || '').trim().toLowerCase();
+    const isRemovedWorker = worker => String((worker && worker.name) || '').trim().toLowerCase() === removedNameKey;
+    const remainingCrew = getCrew(job).filter(c => !isRemovedWorker(c));
     const remainingOverride = ((window.jobCrewOverride && window.jobCrewOverride[jobId]) || [])
-      .filter(oc => oc.name !== name && !remainingCrew.some(c => c.name === oc.name));
+      .filter(oc => !isRemovedWorker(oc) && !remainingCrew.some(c => String(c.name || '').trim().toLowerCase() === String(oc.name || '').trim().toLowerCase()));
     const fullRemainingCrew = [...remainingCrew, ...remainingOverride];
 
     const sharedPayload = {
@@ -2194,11 +2210,11 @@ async function removeCrewMember(jobId, phone, name, chipEl) {
 
     const backendCrew = getCrew((dashboardData.jobs || []).find(j => (j.id || '') === jobId));
     window.jobCrewOverride[jobId] = (window.jobCrewOverride[jobId] || [])
-      .filter(c => c.name !== name && c.phone !== phone);
+      .filter(c => !isRemovedWorker(c) && c.phone !== resolvedPhone);
 
     if (backendCrew.length) {
       window.jobCrewOverride[jobId] = backendCrew
-        .filter(c => c.name !== name)
+        .filter(c => !isRemovedWorker(c))
         .map(c => ({ name: c.name, phone: c.phone || '' }));
     }
     persistTimeOverride('jobCrewOverride', window.jobCrewOverride);
