@@ -23,6 +23,11 @@
   to = "/.netlify/functions/logistics-state"
   status = 200
 
+[[redirects]]
+  from = "/api/driver-log"
+  to = "/.netlify/functions/driver-log"
+  status = 200
+
 [[headers]]
   for = "/api/*"
   [headers.values]
