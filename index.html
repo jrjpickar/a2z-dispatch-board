@@ -3306,7 +3306,7 @@ function renderLogistics() {
     const removeDriver = assignable && (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
     const driverAssignment = assignable ? `<div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}<div class="driver-break-schedule" data-move-id="${escapeLogisticsHtml(moveKey)}"><label class="driver-break-field">Lunch <input type="time" class="logistics-lunch" aria-label="Lunch time" value="${escapeLogisticsHtml(breakSchedule.lunch || '')}"></label></div></div>` : '';
     const assetAssignment = assignable ? `<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}">Add Vehicle</button></div>` : '';
-    const targetType = moveKey && String(moveKey) !== String(oppId) ? 'job_addon' : 'standalone';
+    const targetType = logisticsTargetType(m);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
     const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
     return `<tr data-source="${sourceType}"><td><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || '—')}</strong></td><td><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td class="logistics-route">${escapeLogisticsHtml(notes || '—')}</td><td class="logistics-route">${escapeLogisticsHtml(pickup)} → ${escapeLogisticsHtml(destination)}</td><td class="mono">${scheduleCell}</td><td>${escapeLogisticsHtml(assignedDriverName || '—')}</td><td>${escapeLogisticsHtml(assignedAssetDisplay || '—')}</td><td><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
@@ -3373,8 +3373,8 @@ async function setContainerStage(jobId, action, button) {
   if (!jobId || !['complete', 'cancel'].includes(action)) return;
   const moveId = String((button && button.dataset.moveId) || '');
   const move = findLogisticsMove(moveId || jobId) || {};
-  const isAddon = String((button && button.dataset.targetType) || '') === 'job_addon' ||
-    Boolean(moveId && String(moveId) !== String(jobId));
+  const buttonTargetType = String((button && button.dataset.targetType) || '');
+  const isAddon = (buttonTargetType || logisticsTargetType(move)) === 'job_addon';
   const noun = isAddon ? 'logistics add-on' : 'standalone container job';
   if (!confirm(`${action === 'complete' ? 'Complete' : 'Cancel'} this ${noun}?${isAddon ? ' The parent job will not be changed.' : ''}`)) return;
   const original = button.textContent;
@@ -3557,7 +3557,7 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
   const move = findLogisticsMove(editingContainerId) || {};
   const moveId = String(move.moveId || move.id || editingContainerId || '');
   const parentJobId = String(move.sourceOpportunityId || move.opportunityId || move.jobId || editingContainerId || '');
-  const isAddon = Boolean(moveId && parentJobId && moveId !== parentJobId);
+  const isAddon = logisticsTargetType(move) === 'job_addon';
   const firstName = document.getElementById('editContainerFirstName').value.trim();
   const lastName = document.getElementById('editContainerLastName').value.trim();
   const clientName = `${firstName} ${lastName}`.trim();
