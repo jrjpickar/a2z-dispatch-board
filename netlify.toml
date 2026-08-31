@@ -18,6 +18,11 @@
   to = "/.netlify/functions/container-action"
   status = 200
 
+[[redirects]]
+  from = "/api/logistics-state"
+  to = "/.netlify/functions/logistics-state"
+  status = 200
+
 [[headers]]
   for = "/api/*"
   [headers.values]

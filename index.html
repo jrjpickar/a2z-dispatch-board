@@ -1076,6 +1076,7 @@ const CONFIG = {
   DRIVER_ROSTER_URL: "https://hook.us2.make.com/r46r61b9ocan2mmwsmvhjl7pq15wixao",
   ASSET_ROSTER_URL: "https://hook.us2.make.com/7gar4ap547v85ixdebnon6kkey5unt1f",
   DRIVER_ASSIGNMENT_URL: "https://hook.us2.make.com/y7ko2j9343i7mvy1zzweq6db25f31t8k",
+  LOGISTICS_STATE_URL: "/api/logistics-state",
   // Clears a Logistics move's daily driver/schedule while preserving its GHL Opportunity.
   LOGISTICS_DAILY_RESET_URL: "https://hook.us2.make.com/p3khi3acpmboqalsy1vpewt52p5uftyo"
 };
@@ -3339,16 +3340,19 @@ async function loadLogistics() {
   document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="10" class="load-state"><div class="spinner"></div>Loading logistics...</td></tr>';
   const errorEl = document.getElementById('logisticsBackendStatus');
   try {
-    const [data, driverData, assetData] = await Promise.all([
+    const [data, driverData, assetData, moveStateData] = await Promise.all([
       fetchJsonStrict(CONFIG.LOGISTICS_DASHBOARD_URL, 'Logistics webhook'),
       fetchJsonStrict(CONFIG.DRIVER_ROSTER_URL, 'Driver roster webhook').catch(err => { console.warn('Driver roster webhook failed:', err); return []; }),
       fetchJsonStrict(CONFIG.ASSET_ROSTER_URL, 'Asset roster webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'refresh', booked: false })
-      }).catch(err => { console.warn('Asset roster webhook failed:', err); return []; })
+      }).catch(err => { console.warn('Asset roster webhook failed:', err); return []; }),
+      fetchJsonStrict(CONFIG.LOGISTICS_STATE_URL, 'Logistics state').catch(err => { console.warn('Logistics state failed:', err); return { states: [] }; })
     ]);
     logisticsData = normalizeLogisticsPayload(data);
+    const moveStates = new Map(((moveStateData && moveStateData.states) || []).map(state => [String(state.moveId || ''), state]));
+    logisticsData.moves = (logisticsData.moves || []).map(move => ({ ...move, ...(moveStates.get(String(move.moveId || move.id || '')) || {}) }));
     logisticsData.drivers = normalizeDriverRoster(driverData);
     const cachedAssignments = Object.values(window.logisticsAssetAssignments || {}).flatMap(item => Array.isArray(item) ? item : [item]);
     logisticsData.assets = normalizeAssetRoster(assetData).map(asset => {
@@ -3648,12 +3652,16 @@ async function persistLogisticsDriver(payload, sharedPayload = payload) {
   });
   if (!assignmentRes.ok) throw new Error(`Driver assignment HTTP ${assignmentRes.status}`);
 
-  // Persist the same change in the shared-state record before refreshing.
-  const sharedRes = await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, {
+  // Driver state is one row per move in Netlify. Never rewrite the parent's
+  // logisticsAddOns array for an assignment/removal.
+  const sharedRes = await fetchWithTimeout(CONFIG.LOGISTICS_STATE_URL, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify(sharedPayload)
+    body: JSON.stringify({
+      ...sharedPayload,
+      status: payload.action === 'assign_driver' ? 'assigned' : 'scheduled'
+    })
   });
-  if (!sharedRes.ok) throw new Error(`Shared-state HTTP ${sharedRes.status}`);
+  if (!sharedRes.ok) throw new Error(`Logistics-state HTTP ${sharedRes.status}`);
 }
 
 function buildDriverLogRows(driverName, currentMove) {
