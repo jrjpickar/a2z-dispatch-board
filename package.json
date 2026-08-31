@@ -1,0 +1,16 @@
+{
+  "name": "a2z-dispatch-netlify",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "node -e \"console.log('Static dashboard ready')\""
+  },
+  "dependencies": {
+    "@netlify/database": "latest",
+    "postgres": "latest"
+  },
+  "devDependencies": {
+    "netlify-cli": "latest"
+  }
+}

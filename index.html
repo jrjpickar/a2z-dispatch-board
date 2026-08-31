@@ -1,0 +1,3744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A2Z Dispatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --grey: #9ea0a3;
+    --grey-dark: #7d7f82;
+    --grey-light: #e4e4e2;
+    --ink: #1c1d1f;
+    --ink-soft: #4a4b4d;
+    --orange: #e8622c;
+    --orange-dark: #c94f1f;
+    --orange-tint: #fbe4d8;
+    --orange-tint-soft: #fdf0e9;
+    --gold: #c9a227;
+    --gold-tint: #f5e9c4;
+    --gold-tint-soft: #faf3df;
+    --bg: #f4f4f2;
+    --card: #ffffff;
+    --stripe: #f0f0ee;
+    --border: #dddddb;
+    --danger: #c0392b;
+    --radius: 3px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, .label-caps {
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* ---------- Header ---------- */
+  .topbar {
+    background: linear-gradient(135deg, var(--ink) 0%, #2c2d30 100%);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 4px solid transparent;
+    border-image: linear-gradient(90deg, var(--orange), var(--gold)) 1;
+  }
+  .topbar .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .topbar .brand h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .topbar .brand span.tag {
+    color: var(--orange);
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .topbar .date {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--grey);
+    font-size: 13px;
+  }
+  .topbar .actions { display: flex; gap: 10px; align-items: center; }
+
+  button {
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    border: none;
+    border-radius: var(--radius);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 18px;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    transition: filter 0.15s ease, transform 0.15s ease;
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--grey);
+    border: 1px solid var(--grey-dark);
+    padding: 9px 14px;
+    font-size: 13px;
+  }
+  .btn-ghost:hover { color: #fff; border-color: #fff; }
+
+  /* ---------- Status strip ---------- */
+  .status-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .status-card {
+    background: var(--card);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 3px solid transparent;
+  }
+  .status-card.available { background: linear-gradient(180deg, #fff 0%, var(--grey-light) 130%); border-top-color: var(--grey-dark); }
+  .status-card.booked { background: linear-gradient(180deg, #fff 0%, var(--orange-tint-soft) 130%); border-top-color: var(--orange); }
+  .status-card.scheduled { background: linear-gradient(180deg, #fff 0%, var(--gold-tint-soft) 130%); border-top-color: var(--gold); }
+  .status-card .num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .status-card.available .num { color: var(--ink); }
+  .status-card.booked .num { color: var(--orange); }
+  .status-card.scheduled .num { color: var(--gold); }
+  .status-card.available, .status-card.booked { cursor: pointer; }
+  .status-card.available:hover, .status-card.booked:hover { filter: brightness(0.97); }
+  .status-card .label-caps { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+
+  /* ---------- Layout ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 160px);
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel { background: var(--card); }
+
+  .panel-head {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+
+  /* ---------- Roster ---------- */
+  .roster-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .roster-tab {
+    flex: 1;
+    background: none;
+    padding: 12px 8px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    border-bottom: 3px solid transparent;
+  }
+  .roster-tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--orange);
+    background: var(--orange-tint-soft);
+  }
+  .roster-search {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .roster-search input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+  }
+  .roster-list { list-style: none; margin: 0; padding: 0; max-height: 640px; overflow-y: auto; }
+  .roster-list li {
+    padding: 11px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--stripe);
+  }
+  .roster-list li:nth-child(even) { background: var(--stripe); }
+  .worker-name { font-weight: 500; }
+  .worker-meta { font-size: 11px; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; }
+  .pill {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+  .pill.avail { background: var(--grey-light); border: 1px solid var(--grey-dark); color: var(--ink-soft); }
+  .pill.booked { background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%); color: #fff; }
+
+  /* ---------- Jobs table ---------- */
+  .jobs-table-wrap { overflow-x: auto; }
+  table.jobs { width: 100%; border-collapse: collapse; }
+  table.jobs th {
+    text-align: left;
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(90deg, var(--ink) 0%, #2c2d30 100%);
+    padding: 10px 16px;
+    white-space: nowrap;
+  }
+  table.jobs td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--stripe);
+    vertical-align: top;
+    font-size: 13px;
+  }
+  table.jobs tr:nth-child(even) td { background: var(--stripe); }
+  .job-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--gold-tint-soft);
+    color: var(--ink);
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+  a.job-id {
+    display: inline-block;
+    color: var(--ink);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  a.job-id:hover {
+    background: var(--orange);
+    color: #fff;
+  }
+  .opp-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold);
+    background: var(--gold-tint-soft);
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .job-group-header {
+    background: linear-gradient(90deg, var(--ink) 0%, #2c2d30 100%) !important;
+    color: #fff;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 8px 16px !important;
+    border-bottom: none !important;
+    border-left: 4px solid var(--gold);
+  }
+  .job-group-count {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--orange);
+    font-weight: 600;
+    letter-spacing: 0;
+    margin-left: 4px;
+  }
+  .job-group-empty {
+    color: var(--ink-soft);
+    font-size: 12px;
+    font-style: italic;
+    padding: 8px 16px !important;
+  }
+  .crew-chip-row { display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px; }
+  .crew-chip {
+    font-size: 11px;
+    background: var(--orange-tint);
+    color: var(--orange-dark);
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .crew-chip.empty-slot { border: 1px dashed var(--grey-dark); color: var(--ink-soft); background: none; }
+  .status-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 10px;
+    display: inline-block;
+  }
+  .status-tag.confirmed { background: linear-gradient(135deg, var(--gold) 0%, #b18e20 100%); color: #fff; }
+  .status-tag.open { border: 1px solid var(--danger); color: var(--danger); }
+
+  /* ---------- Empty / loading states ---------- */
+  .empty-state, .load-state {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  .empty-state .label-caps { font-size: 13px; color: var(--ink); margin-bottom: 6px; }
+  .empty-state p { margin: 0 0 16px; font-size: 13px; }
+  .error-state {
+    margin: 16px 20px;
+    padding: 12px 16px;
+    background: #fbeae7;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+  .spinner {
+    width: 22px; height: 22px;
+    border: 3px solid var(--grey-light);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Slide-over panel ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(28,29,31,0.55);
+    display: none;
+    z-index: 50;
+  }
+  .overlay.open { display: block; }
+  .sheet {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 440px;
+    max-width: 92vw;
+    background: var(--card);
+    box-shadow: -6px 0 24px rgba(0,0,0,0.25);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    z-index: 51;
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet.open { transform: translateX(0); }
+  .sheet-head {
+    background: linear-gradient(135deg, var(--ink) 0%, #2c2d30 100%);
+    color: #fff;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 4px solid transparent;
+    border-image: linear-gradient(90deg, var(--orange), var(--gold)) 1;
+  }
+  .sheet-head h2 { margin: 0; font-size: 16px; }
+  .sheet-head button {
+    background: none; color: var(--grey); font-size: 20px; line-height: 1;
+  }
+  .sheet-body { padding: 20px 22px; overflow-y: auto; flex: 1; }
+  .sheet-foot { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    background: #fff;
+  }
+  .field textarea { min-height: 70px; resize: vertical; }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .tool-check {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .tool-check input { width: auto; }
+
+  .stepper {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .stepper button {
+    width: 32px; height: 32px;
+    background: var(--grey-light);
+    font-weight: 700; font-size: 16px;
+  }
+  .stepper span { font-family: 'IBM Plex Mono', monospace; font-size: 16px; min-width: 24px; text-align: center; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: linear-gradient(135deg, var(--ink) 0%, #2c2d30 100%);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    border-left: 4px solid var(--gold);
+    opacity: 0;
+    transition: all 0.25s ease;
+    pointer-events: none;
+    z-index: 60;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { border-left-color: var(--danger); }
+
+  .label-optional { font-size: 10px; font-weight: 400; color: var(--ink-soft); text-transform: none; }
+  .crew-assign-wrap { position: relative; display: inline-block; }
+  .crew-assign-toggle {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--grey-light);
+    color: var(--ink);
+    border: 1px solid var(--grey-light);
+    border-radius: 8px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .crew-assign-toggle:hover {
+    background: #fff;
+    border-color: var(--orange);
+  }
+  .crew-assign-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    background: #fff;
+    border: 1px solid var(--grey-light);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    padding: 10px;
+    min-width: 190px;
+  }
+  .crew-assign-panel.open { display: block; }
+  .crew-assign-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 4px 2px;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .crew-assign-option:hover { background: var(--grey-light); }
+  .crew-assign-option input { accent-color: var(--orange); }
+  .crew-assign-option.is-booked { display: none; }
+  .crew-assign-panel.include-booked .crew-assign-option.is-booked { display: flex; }
+  .crew-assign-worker-name { flex: 1; min-width: 0; }
+  .crew-booked-badge {
+    flex: none;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--orange-tint-soft);
+    color: var(--orange-dark);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .split-day-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: -2px -2px 8px;
+    padding: 7px 4px 9px;
+    border-bottom: 1px solid var(--grey-light);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .split-day-switch {
+    position: relative;
+    flex: none;
+    width: 34px;
+    height: 18px;
+  }
+  .split-day-switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .split-day-slider {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: var(--grey-dark);
+    transition: background 0.18s ease;
+  }
+  .split-day-slider::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    top: 2px;
+    left: 2px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    transition: transform 0.18s ease;
+  }
+  .split-day-switch input:checked + .split-day-slider { background: var(--orange); }
+  .split-day-switch input:checked + .split-day-slider::after { transform: translateX(16px); }
+  .split-day-empty { display: none; padding: 5px 2px; color: var(--ink-soft); font-size: 11px; }
+  .crew-assign-panel.no-available:not(.include-booked) .split-day-empty { display: block; }
+  .crew-assign-confirm {
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .crew-chip.removable {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .crew-chip-remove {
+    background: none;
+    border: none;
+    color: var(--ink);
+    opacity: 0.5;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    transition: opacity 0.15s ease, color 0.15s ease;
+  }
+  .crew-chip-remove:hover {
+    opacity: 1;
+    color: var(--orange);
+  }
+  .time-edit-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 130px;
+  }
+  .report-date-input, .report-time-input, .end-date-input, .end-time-input {
+    font-size: 11px;
+    border: 1px solid var(--grey-light);
+    border-radius: 6px;
+    padding: 3px 6px;
+    width: 100%;
+  }
+  .end-save, .time-unlock {
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--grey-light);
+    color: var(--ink);
+    border: 1px solid var(--grey-light);
+    border-radius: 6px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .end-save:hover, .time-unlock:hover {
+    background: #fff;
+    border-color: var(--orange);
+  }
+  .time-locked-display {
+    font-size: 11px;
+    padding: 3px 0;
+    display: block;
+  }
+  .job-stage-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .job-stage-btn {
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 3px 7px;
+    background: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .job-stage-btn.complete { border: 1px solid var(--gold); color: var(--gold); }
+  .job-stage-btn.complete:hover { background: var(--gold); color: #fff; }
+  .job-stage-btn.cancel { border: 1px solid var(--danger); color: var(--danger); }
+  .job-stage-btn.cancel:hover { background: var(--danger); color: #fff; }
+  .job-stage-btn.edit { border: 1px solid var(--grey-dark); color: var(--ink-soft); }
+  .job-stage-btn.edit:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .job-stage-btn.reset { border: 1px solid var(--orange); color: var(--orange-dark); }
+  .job-stage-btn.reset:hover { background: var(--orange); color: #fff; }
+  .job-stage-btn:disabled { opacity: 0.55; cursor: wait; }
+  .segmented {
+    display: flex;
+    border: 1px solid var(--grey-light);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .segmented-option {
+    flex: 1;
+    background: #fff;
+    padding: 10px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-right: 1px solid var(--grey-light);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .segmented-option:last-child { border-right: none; }
+  .segmented-option.active { background: linear-gradient(135deg, var(--ink) 0%, #2c2d30 100%); color: #fff; }
+
+  /* ---------- Adaptive layout hardening ---------- */
+  @media (max-width: 1200px) {
+    .layout { grid-template-columns: 280px minmax(0, 1fr); }
+    table.jobs th, table.jobs td { padding-left: 10px; padding-right: 10px; }
+    .crew-chip-row { max-width: 180px; }
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .roster-list { max-height: 320px; }
+    .jobs-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table.jobs { min-width: 900px; }
+  }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
+    .topbar .date { order: 3; width: 100%; }
+    .topbar .actions { margin-left: auto; }
+    .status-card { padding: 14px 12px; }
+    .status-card .num { font-size: 32px; }
+    .panel-head { padding-left: 14px; padding-right: 14px; }
+    .roster-search { padding-left: 12px; padding-right: 12px; }
+    .sheet { width: 100%; max-width: 100vw; }
+    .field-row { flex-direction: column; gap: 0; }
+    .tools-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Dispatch view switcher / Logistics ---------- */
+  .dispatch-view-tabs { display:flex; background:#fff; border-bottom:1px solid var(--border); padding:0 24px; }
+  .dispatch-view-tab { background:none; padding:13px 18px 10px; border-bottom:3px solid transparent; border-radius:0; font-family:'Oswald',sans-serif; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); }
+  .dispatch-view-tab.active { color:var(--ink); border-bottom-color:var(--orange); background:var(--orange-tint-soft); }
+  .dispatch-view[hidden] { display:none !important; }
+  .logistics-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border-bottom:1px solid var(--border); }
+  .logistics-stat { background:#fff; padding:17px 22px; border-top:3px solid var(--grey-dark); }
+  .logistics-stat:nth-child(2){border-top-color:var(--orange)} .logistics-stat:nth-child(3){border-top-color:var(--gold)} .logistics-stat:nth-child(4){border-top-color:#287a54}
+  .logistics-stat .num { display:block; font-family:'Oswald',sans-serif; font-size:34px; font-weight:700; line-height:1.1; }
+  .logistics-stat .label-caps { font-size:11px; color:var(--ink-soft); }
+  .logistics-layout { display:grid; grid-template-columns:280px 280px minmax(650px,1fr); gap:1px; background:var(--border); min-height:calc(100vh - 210px); }
+  .logistics-resource-list { list-style:none; margin:0; padding:0; max-height:650px; overflow:auto; }
+  .logistics-resource { padding:12px 15px; border-bottom:1px solid var(--stripe); }
+  .logistics-resource:nth-child(even){background:var(--stripe)} .logistics-resource-top{display:flex; justify-content:space-between; gap:8px}.logistics-resource-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin-top:3px}
+  .logistics-pill,.logistics-source,.logistics-status{display:inline-block;border-radius:999px;padding:3px 7px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .logistics-pill.available{background:#e4eee9;color:#287a54}.logistics-pill.assigned{background:var(--orange-tint);color:var(--orange-dark)}.logistics-pill.maintenance{background:#f7dfdc;color:var(--danger)}
+  .logistics-source.demo{background:var(--gold-tint);color:#755c08}.logistics-source.container{background:#dceaf7;color:#275c8e}.logistics-source.other{background:var(--grey-light);color:var(--ink-soft)}
+  .logistics-status.scheduled{border:1px solid #287a54;color:#287a54}.logistics-status.en-route{background:var(--orange);color:#fff}.logistics-status.unassigned{border:1px solid var(--danger);color:var(--danger)}.logistics-status.completed{background:var(--grey-light);color:var(--ink-soft)}
+  .logistics-driver-select{max-width:145px;border:1px solid var(--border);border-radius:4px;background:#fff;padding:4px 6px;font-size:10px}
+  .driver-break-schedule{display:flex;flex-wrap:wrap;gap:4px;width:100%;margin-top:2px}.driver-break-field{display:flex;align-items:center;gap:3px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--ink-soft);text-transform:uppercase}.driver-break-field input{width:76px;border:1px solid var(--border);border-radius:4px;padding:3px;font:9px 'IBM Plex Mono',monospace;background:#fff}
+  .logistics-toolbar{display:flex;gap:8px}.logistics-toolbar select{border:1px solid var(--border);border-radius:var(--radius);padding:7px;background:#fff;font-size:12px}
+  table.logistics-table{width:100%;min-width:960px;border-collapse:collapse}table.logistics-table th{background:linear-gradient(90deg,var(--ink),#2c2d30);color:#fff;text-align:left;padding:10px 12px;font-family:'Oswald',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.06em}table.logistics-table td{padding:12px;border-bottom:1px solid var(--stripe);font-size:12px;vertical-align:top}table.logistics-table tr:nth-child(even) td{background:var(--stripe)}
+  .logistics-job-link{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);text-decoration:none}.logistics-job-link:hover{color:var(--orange)}.logistics-route{color:var(--ink-soft);max-width:230px}.logistics-note{margin:12px 14px;padding:10px 12px;background:var(--gold-tint-soft);border-left:3px solid var(--gold);color:#655514;font-size:11px}
+  .addon-section{border:1px solid var(--border);border-left:4px solid var(--gold);background:var(--gold-tint-soft);padding:12px;margin-bottom:16px}.addon-section>label{display:block;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:12px;font-weight:600;margin-bottom:9px}.addon-block{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-top:8px}.addon-toggle{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}.addon-toggle input{width:auto}.addon-fields{padding-top:10px}.addon-fields[hidden]{display:none}
+  @media(max-width:1150px){.logistics-layout{grid-template-columns:250px minmax(650px,1fr)}.logistics-assets-panel{display:none}}
+  @media(max-width:760px){.dispatch-view-tabs{padding:0}.dispatch-view-tab{flex:1}.logistics-stats{grid-template-columns:1fr 1fr}.logistics-layout{grid-template-columns:1fr}.logistics-drivers-panel{display:none}.logistics-toolbar select{display:none}}
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <h1>A2Z <span class="tag">DISPATCH</span></h1>
+  </div>
+  <div class="date mono" id="todayDate"></div>
+  <div class="actions">
+    <button class="btn-ghost" id="refreshBtn">Refresh</button>
+    <button class="btn-primary" id="newJobBtn">+ Book Job</button>
+  </div>
+</div>
+
+<div class="dispatch-view-tabs" role="tablist" aria-label="Dispatch views">
+  <button class="dispatch-view-tab active" id="laborViewTab" data-view="labor" role="tab" aria-selected="true">Labor Dispatch</button>
+  <button class="dispatch-view-tab" id="logisticsViewTab" data-view="logistics" role="tab" aria-selected="false">Logistics</button>
+</div>
+
+<div class="dispatch-view" id="laborDispatchView">
+
+<div id="backendStatus" style="display:none; margin:10px 14px; padding:10px 12px; border:1px solid var(--danger); background:#fbeae7; color:var(--danger); font-size:12px; white-space:pre-wrap;"></div>
+
+<div class="status-strip">
+  <div class="status-card available">
+    <div class="num" id="statAvailable">–</div>
+    <div class="label-caps">Available</div>
+  </div>
+  <div class="status-card booked">
+    <div class="num" id="statBooked">–</div>
+    <div class="label-caps">Booked Today</div>
+  </div>
+  <div class="status-card scheduled">
+    <div class="num" id="statScheduled">–</div>
+    <div class="label-caps">Jobs Scheduled</div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Labor roster -->
+  <div class="panel">
+    <div class="panel-head"><h2>Labor Roster</h2></div>
+    <div class="roster-tabs">
+      <button class="roster-tab active" data-tab="available">Available</button>
+      <button class="roster-tab" data-tab="booked">Booked</button>
+    </div>
+    <div class="roster-search">
+      <input type="text" id="rosterSearch" placeholder="Search by name...">
+    </div>
+    <ul class="roster-list" id="rosterList"></ul>
+  </div>
+
+  <!-- Jobs scheduled -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Jobs Scheduled</h2>
+    </div>
+    <div class="jobs-table-wrap">
+      <table class="jobs" id="jobsTable">
+        <thead>
+          <tr>
+            <th>Job ID</th>
+            <th>Client</th>
+            <th>Value</th>
+            <th>Address</th>
+            <th>Report Time</th>
+            <th>End Date/Time</th>
+            <th>Crew</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="jobsBody"></tbody>
+      </table>
+    </div>
+    <div id="jobsEmpty" class="empty-state" style="display:none;">
+      <div class="label-caps">No jobs on the board</div>
+      <p>Nothing's scheduled for this window yet.</p>
+      <button class="btn-primary" id="emptyBookBtn">+ Book a Job</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="dispatch-view" id="logisticsDispatchView" hidden>
+  <div id="logisticsBackendStatus" style="display:none; margin:10px 14px; padding:10px 12px; border:1px solid var(--danger); background:#fbeae7; color:var(--danger); font-size:12px; white-space:pre-wrap;"></div>
+  <div class="logistics-stats">
+    <div class="logistics-stat"><span class="num" id="logisticsAvailableDrivers">–</span><span class="label-caps">Available Drivers</span></div>
+    <div class="logistics-stat"><span class="num" id="logisticsAvailableAssets">–</span><span class="label-caps">Available Assets</span></div>
+    <div class="logistics-stat"><span class="num" id="logisticsScheduledMoves">–</span><span class="label-caps">Moves Scheduled</span></div>
+    <div class="logistics-stat"><span class="num" id="logisticsEnRoute">–</span><span class="label-caps">Currently En Route</span></div>
+  </div>
+  <div class="logistics-layout">
+    <div class="panel logistics-drivers-panel"><div class="panel-head"><h2>Drivers</h2><span class="mono" id="logisticsDriverCount">0 TOTAL</span></div><ul class="logistics-resource-list" id="logisticsDrivers"></ul></div>
+    <div class="panel logistics-assets-panel"><div class="panel-head"><h2>Assets</h2><span class="mono" id="logisticsAssetCount">0 TOTAL</span></div><div class="logistics-note">Drivers and assets stay independent so either can be reassigned.</div><ul class="logistics-resource-list" id="logisticsAssets"></ul></div>
+    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Move</th><th>Destination</th><th>Monetary Value</th><th>Type / Equipment</th><th>Notes</th><th>Route</th><th>Schedule</th><th>Driver</th><th>Asset</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="10" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
+  </div>
+</div>
+
+<!-- Standalone Container booking — creates via LOGISTICS_CREATE_URL, then syncs shared state. -->
+<div class="overlay" id="containerOverlay"></div>
+<div class="sheet" id="containerSheet">
+  <div class="sheet-head"><h2>Book Standalone Container</h2><button id="closeContainerSheet">&times;</button></div>
+  <div class="sheet-body">
+    <div class="field-row"><div class="field"><label for="containerFirstName">First Name</label><input type="text" id="containerFirstName" placeholder="e.g. Maria"></div><div class="field"><label for="containerLastName">Last Name</label><input type="text" id="containerLastName" placeholder="e.g. Gomez"></div></div>
+    <div class="field"><label for="containerPhone">Client Phone</label><input type="tel" id="containerPhone" placeholder="+15555555555" inputmode="tel" maxlength="12" value="+1"></div>
+    <div class="field"><label for="containerAddress">Delivery Address</label><input type="text" id="containerAddress" placeholder="Street, City"></div>
+    <div class="field-row"><div class="field"><label for="containerSize">Container Size</label><select id="containerSize"><option value="10 Yard">10 Yard</option><option value="20 Yard">20 Yard</option><option value="30 Yard" selected>30 Yard</option><option value="40 Yard">40 Yard</option></select></div><div class="field"><label for="containerMovementType">Movement</label><select id="containerMovementType"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option></select></div></div>
+    <div class="field-row"><div class="field"><label for="containerDate">Report Date</label><input type="date" id="containerDate"></div><div class="field"><label for="containerTime">Report Time</label><input type="time" id="containerTime"></div></div>
+    <div class="field"><label for="containerValue">Job Value <span class="label-optional">(optional)</span></label><input type="number" id="containerValue" min="0" step="1" placeholder="e.g. 650"></div>
+    <div class="field"><label for="containerNotes">Notes / Material</label><textarea id="containerNotes" placeholder="Material type, access instructions, placement notes..."></textarea></div>
+  </div>
+  <div class="sheet-foot"><button class="btn-ghost" id="cancelContainerBook" style="color:var(--ink-soft);border-color:var(--border);">Cancel</button><button class="btn-primary" id="submitContainerBook">Create Container Job</button></div>
+</div>
+
+<div class="overlay" id="editContainerOverlay"></div>
+<div class="sheet" id="editContainerSheet">
+  <div class="sheet-head"><h2>Edit Container Details</h2><button id="closeEditContainerSheet">&times;</button></div>
+  <div class="sheet-body">
+    <div class="field-row"><div class="field"><label for="editContainerFirstName">First Name</label><input type="text" id="editContainerFirstName" placeholder="e.g. Maria"></div><div class="field"><label for="editContainerLastName">Last Name</label><input type="text" id="editContainerLastName" placeholder="e.g. Gomez"></div></div>
+    <div class="field"><label for="editContainerPhone">Client Phone</label><input type="tel" id="editContainerPhone" placeholder="+15555555555" inputmode="tel" maxlength="12"></div>
+    <div class="field"><label for="editContainerAddress">Delivery Address</label><input type="text" id="editContainerAddress" placeholder="Street, City"></div>
+    <div class="field-row"><div class="field"><label for="editContainerSize">Container Size</label><select id="editContainerSize"><option value="10 Yard">10 Yard</option><option value="20 Yard">20 Yard</option><option value="30 Yard">30 Yard</option><option value="40 Yard">40 Yard</option></select></div><div class="field"><label for="editContainerMovementType">Movement</label><select id="editContainerMovementType"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option><option value="container_dispatch">Container Dispatch</option><option value="equipment_delivery">Equipment Delivery</option></select></div></div>
+    <div class="field-row"><div class="field"><label for="editContainerDate">Report Date</label><input type="date" id="editContainerDate"></div><div class="field"><label for="editContainerTime">Report Time</label><input type="time" id="editContainerTime"></div></div>
+    <div class="field"><label for="editContainerValue">Job Value</label><input type="number" id="editContainerValue" min="0" step="1"></div>
+    <div class="field"><label for="editContainerNotes">Notes / Scope</label><textarea id="editContainerNotes"></textarea></div>
+  </div>
+  <div class="sheet-foot"><button class="btn-ghost" id="cancelEditContainer" style="color:var(--ink-soft);border-color:var(--border);">Cancel</button><button class="btn-primary" id="submitEditContainer">Save Changes</button></div>
+</div>
+
+<!-- Book Job slide-over -->
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="bookSheet">
+  <div class="sheet-head">
+    <h2>Book a Job</h2>
+    <button id="closeSheet">&times;</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field-row">
+      <div class="field">
+        <label for="clientFirstName">First Name</label>
+        <input type="text" id="clientFirstName" placeholder="e.g. Maria">
+      </div>
+      <div class="field">
+        <label for="clientLastName">Last Name</label>
+        <input type="text" id="clientLastName" placeholder="e.g. Gomez">
+      </div>
+    </div>
+    <div class="field">
+      <label for="clientPhone">Client Phone</label>
+      <input type="tel" id="clientPhone" placeholder="+15555555555" inputmode="tel" maxlength="12" value="+1">
+    </div>
+    <div class="field">
+      <label for="jobAddress">Job Address</label>
+      <input type="text" id="jobAddress" placeholder="Street, City">
+    </div>
+    <div class="field">
+      <label>Job Type</label>
+      <div class="segmented" id="jobTypeToggle">
+        <button type="button" class="segmented-option active" data-type="hourly">Hourly (Labor)</button>
+        <button type="button" class="segmented-option" data-type="contract">Contract (Demo)</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="jobValue">Job Value <span class="label-optional">(optional — estimated $ value)</span></label>
+      <input type="number" id="jobValue" placeholder="e.g. 2500" min="0" step="1">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="jobDate">Report Date</label>
+        <input type="date" id="jobDate">
+      </div>
+      <div class="field">
+        <label for="jobTime">Report Time</label>
+        <input type="time" id="jobTime">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="jobEndDate">Report End Date <span class="label-optional">(optional — defaults to Report Date)</span></label>
+        <input type="date" id="jobEndDate">
+      </div>
+      <div class="field">
+        <label for="jobEndTime">Report End Time</label>
+        <input type="time" id="jobEndTime">
+      </div>
+    </div>
+    <div class="field">
+      <label for="scopeWork">Scope of Work</label>
+      <textarea id="scopeWork" placeholder="Sequenced scope, work order..."></textarea>
+    </div>
+    <div class="field">
+      <label>Tools / Equipment Required</label>
+      <div class="tools-grid" id="toolsGrid">
+        <label class="tool-check"><input type="checkbox" value="Jackhammer"> Jackhammer</label>
+        <label class="tool-check"><input type="checkbox" value="Skid Steer"> Skid Steer</label>
+        <label class="tool-check"><input type="checkbox" value="Mini Excavator"> Mini Excavator</label>
+        <label class="tool-check"><input type="checkbox" value="Dumpster"> Dumpster</label>
+        <label class="tool-check"><input type="checkbox" value="Dump Trailer"> Dump Trailer</label>
+        <label class="tool-check"><input type="checkbox" value="Concrete Saw"> Concrete Saw</label>
+        <label class="tool-check"><input type="checkbox" value="Generator"> Generator</label>
+        <label class="tool-check"><input type="checkbox" value="Cutting Rig"> Cutting Rig</label>
+      </div>
+    </div>
+    <div class="addon-section" id="logisticsAddonSection">
+      <label>Logistics Add-Ons <span class="label-optional">(optional — intended for Demo/Contract opportunities)</span></label>
+      <div class="addon-block"><label class="addon-toggle"><input type="checkbox" id="addContainerToggle"> Add Container Loads</label><div class="addon-fields" id="containerAddonFields" hidden><div class="field-row"><div class="field"><label for="addonContainerQty">Quantity / Loads</label><input type="number" id="addonContainerQty" min="1" max="20" value="1"></div><div class="field"><label for="addonContainerSize">Container Size</label><select id="addonContainerSize"><option>10 Yard</option><option>20 Yard</option><option selected>30 Yard</option><option>40 Yard</option></select></div></div><div class="field-row"><div class="field"><label for="addonContainerDate">Requested Date</label><input type="date" id="addonContainerDate"></div><div class="field"><label for="addonContainerTime">Requested Time</label><input type="time" id="addonContainerTime"></div></div><div class="field"><label for="addonContainerMovement">Movement</label><select id="addonContainerMovement"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option></select></div></div></div>
+      <div class="addon-block"><label class="addon-toggle"><input type="checkbox" id="addLowboyToggle"> Add Driver / Lowboy Loads</label><div class="addon-fields" id="lowboyAddonFields" hidden><div class="field-row"><div class="field"><label for="addonLowboyQty">Quantity / Loads</label><input type="number" id="addonLowboyQty" min="1" max="20" value="1"></div><div class="field"><label for="addonEquipment">Equipment Being Moved</label><input type="text" id="addonEquipment" placeholder="e.g. CAT 308 Excavator"></div></div><div class="field-row"><div class="field"><label for="addonLowboyDate">Requested Date</label><input type="date" id="addonLowboyDate"></div><div class="field"><label for="addonLowboyTime">Requested Time</label><input type="time" id="addonLowboyTime"></div></div><div class="field-row"><div class="field"><label for="addonPickup">Pickup</label><input type="text" id="addonPickup" value="A2Z Yard"></div><div class="field"><label for="addonDestination">Destination</label><input type="text" id="addonDestination" placeholder="Defaults to job address"></div></div></div></div>
+    </div>
+    <div class="field">
+      <label>Crew Size</label>
+      <div class="stepper">
+        <button type="button" id="crewMinus">–</button>
+        <span id="crewCount">4</span>
+        <button type="button" id="crewPlus">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn-ghost" id="cancelBook" style="color:var(--ink-soft); border-color:var(--border);">Cancel</button>
+    <button class="btn-primary" id="submitBook">Create Job</button>
+  </div>
+</div>
+
+<!-- Edit Job Details slide-over — separate sheet/overlay from Book Job so the
+     two forms never share state or IDs. Only for details that don't have a
+     dedicated flow already (report/end times use the Save/Edit-times flow in
+     the table row; crew uses + Assign Crew / the chip's remove button). -->
+<div class="overlay" id="editOverlay"></div>
+<div class="sheet" id="editJobSheet">
+  <div class="sheet-head">
+    <h2>Edit Job Details</h2>
+    <button id="closeEditSheet">&times;</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field">
+      <label for="editJobAddress">Job Address</label>
+      <input type="text" id="editJobAddress" placeholder="Street, City">
+    </div>
+    <div class="field">
+      <label for="editClientPhone">Client Phone</label>
+      <input type="tel" id="editClientPhone" placeholder="+15555555555" inputmode="tel" maxlength="12">
+    </div>
+    <div class="field">
+      <label for="editJobValue">Job Value <span class="label-optional">(estimated $ value)</span></label>
+      <input type="number" id="editJobValue" placeholder="e.g. 2500" min="0" step="1">
+    </div>
+    <div class="field">
+      <label for="editScopeWork">Scope of Work</label>
+      <textarea id="editScopeWork" placeholder="Sequenced scope, work order..."></textarea>
+    </div>
+    <div class="field">
+      <label>Tools / Equipment Required</label>
+      <div class="tools-grid" id="editToolsGrid">
+        <label class="tool-check"><input type="checkbox" value="Jackhammer"> Jackhammer</label>
+        <label class="tool-check"><input type="checkbox" value="Skid Steer"> Skid Steer</label>
+        <label class="tool-check"><input type="checkbox" value="Mini Excavator"> Mini Excavator</label>
+        <label class="tool-check"><input type="checkbox" value="Dumpster"> Dumpster</label>
+        <label class="tool-check"><input type="checkbox" value="Dump Trailer"> Dump Trailer</label>
+        <label class="tool-check"><input type="checkbox" value="Concrete Saw"> Concrete Saw</label>
+        <label class="tool-check"><input type="checkbox" value="Generator"> Generator</label>
+        <label class="tool-check"><input type="checkbox" value="Cutting Rig"> Cutting Rig</label>
+      </div>
+    </div>
+    <div class="addon-section" id="editLogisticsAddonSection">
+      <label>Add Logistics Request <span class="label-optional">(creates a new add-on under this opportunity)</span></label>
+      <div class="addon-block"><label class="addon-toggle"><input type="checkbox" id="editAddContainerToggle"> Add Container Loads</label><div class="addon-fields" id="editContainerAddonFields" hidden><div class="field-row"><div class="field"><label for="editAddonContainerQty">Quantity / Loads</label><input type="number" id="editAddonContainerQty" min="1" max="20" value="1"></div><div class="field"><label for="editAddonContainerSize">Container Size</label><select id="editAddonContainerSize"><option>10 Yard</option><option>20 Yard</option><option selected>30 Yard</option><option>40 Yard</option></select></div></div><div class="field-row"><div class="field"><label for="editAddonContainerDate">Requested Date</label><input type="date" id="editAddonContainerDate"></div><div class="field"><label for="editAddonContainerTime">Requested Time</label><input type="time" id="editAddonContainerTime"></div></div><div class="field"><label for="editAddonContainerMovement">Movement</label><select id="editAddonContainerMovement"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option></select></div></div></div>
+      <div class="addon-block"><label class="addon-toggle"><input type="checkbox" id="editAddLowboyToggle"> Add Driver / Lowboy Loads</label><div class="addon-fields" id="editLowboyAddonFields" hidden><div class="field-row"><div class="field"><label for="editAddonLowboyQty">Quantity / Loads</label><input type="number" id="editAddonLowboyQty" min="1" max="20" value="1"></div><div class="field"><label for="editAddonEquipment">Equipment Being Moved</label><input type="text" id="editAddonEquipment" placeholder="e.g. CAT 308 Excavator"></div></div><div class="field-row"><div class="field"><label for="editAddonLowboyDate">Requested Date</label><input type="date" id="editAddonLowboyDate"></div><div class="field"><label for="editAddonLowboyTime">Requested Time</label><input type="time" id="editAddonLowboyTime"></div></div><div class="field-row"><div class="field"><label for="editAddonPickup">Pickup</label><input type="text" id="editAddonPickup" value="A2Z Yard"></div><div class="field"><label for="editAddonDestination">Destination</label><input type="text" id="editAddonDestination" placeholder="Defaults to job address"></div></div></div></div>
+    </div>
+    <div class="field">
+      <label>Crew Size <span class="label-optional">(informational — not enforced when assigning crew)</span></label>
+      <div class="stepper">
+        <button type="button" id="editCrewMinus">–</button>
+        <span id="editCrewCount">4</span>
+        <button type="button" id="editCrewPlus">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn-ghost" id="cancelEditJob" style="color:var(--ink-soft); border-color:var(--border);">Cancel</button>
+    <button class="btn-primary" id="submitEditJob">Save Changes</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIG — replace with your live Make.com webhook URLs
+   ============================================================ */
+const CONFIG = {
+  GET_DASHBOARD_DATA_URL: "/api/dashboard-data",
+  LABOR_ROSTER_URL: "https://hook.us2.make.com/3otyoay8td91lhm4u2yuk3gem4d14ajc",
+  CREATE_JOB_URL: "https://hook.us2.make.com/s2ijm77vf023z47b1dncn4jm9yt11w1d",
+  // Make.com scenario needs to: 1) create the Contact<->Opportunity association,
+  // 2) flip the Contact's labor-status custom field from "available" to "booked".
+  // Expects POST body: { jobId: "<opportunityId>", contactId: "<contactId>" }
+  MOVE_WORKER_URL: "https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l",
+  // Also handles Report End Time + Report End Date updates for existing jobs.
+  // Expects POST body: { jobId, reportEndTime, reportEndDate }
+  UPDATE_JOB_URL: "https://hook.us2.make.com/v4uirggw17cnamlym2t5151ohwzonlr6",
+  // The real, load-bearing shared Data Store write — fired on every assign,
+  // remove, save-times, and edit-details action so other devices/browsers
+  // stay in sync in real time. Cloned from "Update Times," with the four
+  // previously-blanked fields (crew, scopeOfWork, toolsRequired,
+  // monetaryValue) now mapped from the payload instead.
+  SHARED_STATE_SYNC_URL: "/api/shared-state",
+  // Edit Job Details sheet (crew size / job value / scope / tools / address /
+  // client phone, post-booking) — a dedicated webhook so this never has to
+  // share routing logic with create/complete/cancel or assign/remove.
+  // Expects POST body: { jobId, action: "update_details", jobAddress,
+  // clientPhone, scopeOfWork, toolsRequired, monetaryValue, crewSize }
+  EDIT_JOB_DETAILS_URL: "https://hook.us2.make.com/urj9p6bifsl1m9s72y8sq02zn2gydv59",
+  // Clears the daily schedule while preserving the underlying GHL Opportunity.
+  // Sends both jobId and opportunityId while the Make scenario is being mapped.
+  DAILY_RESET_URL: "https://hook.us2.make.com/5879hdynfye7ykhi3z1m1y8m9cns461v",
+  // Creates standalone Container opportunities.
+  LOGISTICS_CREATE_URL: "https://hook.us2.make.com/vxli4pwh4i65lpn1lyve65pf1hp1sumb",
+  // Read-only Container Opportunity search, called when Logistics opens or refreshes.
+  LOGISTICS_DASHBOARD_URL: "https://hook.us2.make.com/atjk343135x5zmxhfmtu4113nj9rbcx4",
+  // Container-specific Data Store sync. Receives the complete container record after creation.
+  CONTAINER_SHARED_STATE_SYNC_URL: "https://hook.us2.make.com/hffwq5k0ptgxgzyr6x51w4ecur6akdtq",
+  ADDON_LOGISTICS_URL: "https://hook.us2.make.com/0615v0rpg6isw35ej94h97rstd3qh6y5",
+  DRIVER_ROSTER_URL: "https://hook.us2.make.com/r46r61b9ocan2mmwsmvhjl7pq15wixao",
+  ASSET_ROSTER_URL: "https://hook.us2.make.com/7gar4ap547v85ixdebnon6kkey5unt1f",
+  DRIVER_ASSIGNMENT_URL: "https://hook.us2.make.com/y7ko2j9343i7mvy1zzweq6db25f31t8k",
+  // Clears a Logistics move's daily driver/schedule while preserving its GHL Opportunity.
+  LOGISTICS_DAILY_RESET_URL: "https://hook.us2.make.com/p3khi3acpmboqalsy1vpewt52p5uftyo"
+};
+
+// Guards against a webhook call that never resolves (e.g. a Make scenario
+// with no Webhook Respond module on the branch that gets hit, or a
+// scheduled/interval trigger instead of "run immediately") — without this,
+// a hung fetch leaves buttons stuck on "Saving..." forever with no error.
+function fetchWithTimeout(url, options, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+/* Production mode: no mock fallback. Backend failures are shown visibly. */
+
+let currentTab = "available";
+let dashboardData = { jobs: [], labor: [], sharedStateByJobId: new Map() };
+
+const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
+const START_DATE_FIELD_ID = "rY3IebKlcBhAjWlaSSQm"; // "Report Date" — Single line
+const REPORT_END_TIME_FIELD_ID = "XHoqx1ZNRcNRtwDCb4He"; // "REPORT END TIME" — Single line
+const REPORT_END_DATE_FIELD_ID = "gPo421cmQiTMJP2EpkD4"; // "REPORT END DATE" — Date picker (stores fieldValueDate, a Unix ms timestamp)
+
+function getCustomFieldValue(customFields, fieldId) {
+  if (!Array.isArray(customFields)) return '';
+  const match = customFields.find(field => field && field.id === fieldId);
+  if (!match) return '';
+  // Date-picker fields (like REPORT END DATE) store their value under
+  // fieldValueDate as a Unix ms timestamp instead of fieldValueString —
+  // convert straight to YYYY-MM-DD so it drops right into <input type="date">.
+  if (match.fieldValueDate) {
+    const d = new Date(match.fieldValueDate);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
+  // Multi-select / checkbox fields (like Tools Required) tend to come back
+  // as an array under fieldValueArray or fieldValue instead of a string —
+  // join them into one comma-separated string either way.
+  if (Array.isArray(match.fieldValueArray)) return match.fieldValueArray.join(', ');
+  if (Array.isArray(match.fieldValue)) return match.fieldValue.join(', ');
+  return match.fieldValueString || match.fieldValue || '';
+}
+
+// --- Shared state (Data Store, via GET_DASHBOARD_DATA_URL) -------------
+// This is the real cross-browser/cross-user source of truth now. Every
+// getter below checks this FIRST, then falls back to the local
+// jobTimeOverride/jobEndOverride/jobDetailsOverride/jobCrewOverride objects
+// (kept only as an instant-UI bridge for the brief window between an action
+// and the next refresh), then finally to raw GHL fields for jobs that have
+// never touched this dashboard and have no Data Store record at all.
+function getSharedState(job) {
+  const map = dashboardData.sharedStateByJobId;
+  if (!map || !job || !job.id) return null;
+  const rec = map.get(job.id);
+  if (!rec) return null;
+  if (rec.active === false || rec.active === 'false') return null;
+  return rec;
+}
+
+function cleanCrewName(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/^[\s"'`;,:]+|[\s"'`;,:]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeCrewList(items) {
+  const seen = new Set();
+  return (Array.isArray(items) ? items : [])
+    .map(item => {
+      if (typeof item === 'string') return { name: cleanCrewName(item), phone: '' };
+      if (!item || typeof item !== 'object') return null;
+      return {
+        id: item.id || item.contactId || '',
+        name: cleanCrewName(item.name || item.workerName || item.full_name || item.fullName || ''),
+        phone: item.phone || item.workerPhone || ''
+      };
+    })
+    .filter(item => {
+      if (!item || !item.name) return false;
+      const key = item.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function serializeCrew(items) {
+  return normalizeCrewList(items).map(item => item.name).join(';');
+}
+
+function getSharedCrew(rec) {
+  if (!rec || rec.crew === undefined || rec.crew === null) return null;
+  const raw = rec.crew;
+
+  if (Array.isArray(raw)) return normalizeCrewList(raw);
+
+  if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return normalizeCrewList(parsed);
+    } catch (err) {
+      console.warn('Could not parse shared crew JSON for job', rec.jobId, err);
+    }
+  }
+
+  // Tolerates legacy/bad values such as: "; "; Frank Chavez
+  // Empty separators and quote-only fragments are discarded.
+  if (typeof raw === 'string') {
+    return normalizeCrewList(raw.split(';'));
+  }
+
+  return null;
+}
+
+// --- Scope of Work / Tools Required -----------------------------------
+// Now backed by the shared Data Store record (see getSharedState above),
+// which is what actually makes this sync across browsers/users. The local
+// jobDetailsOverride is kept only as an instant-UI bridge right after
+// booking/assigning, before the next refresh pulls the confirmed shared copy.
+function getScopeOfWork(job) {
+  const shared = getSharedState(job);
+  if (shared && shared.scopeOfWork) return shared.scopeOfWork;
+  const override = window.jobDetailsOverride && window.jobDetailsOverride[job.id];
+  if (override && override.scopeOfWork) return override.scopeOfWork;
+  return job.scopeOfWork || '';
+}
+
+function getToolsRequired(job) {
+  const shared = getSharedState(job);
+  if (shared && shared.toolsRequired) {
+    return Array.isArray(shared.toolsRequired) ? shared.toolsRequired.join(', ') : shared.toolsRequired;
+  }
+  const override = window.jobDetailsOverride && window.jobDetailsOverride[job.id];
+  if (override && override.toolsRequired) {
+    return Array.isArray(override.toolsRequired) ? override.toolsRequired.join(', ') : override.toolsRequired;
+  }
+  return Array.isArray(job.toolsRequired) ? job.toolsRequired.join(', ') : (job.toolsRequired || '');
+}
+
+function getClientName(job) {
+  return (job.contact && job.contact.name) || job.clientName || '';
+}
+
+function getClientPhone(job) {
+  const c = job.contact || {};
+  return c.phone || c.phoneNumber || job.clientPhone || '';
+}
+
+// --- Opportunity value + GHL deep link ---------------------------------
+// monetaryValue is a standard GHL Opportunity field (not a custom field),
+// so it should already be sitting on the raw job object from
+// GET_DASHBOARD_DATA_URL — check your network tab if this comes through
+// blank and the key turns out to be named something else on your account.
+function getOpportunityValue(job) {
+  const shared = getSharedState(job);
+  if (shared && shared.monetaryValue !== undefined && shared.monetaryValue !== null && shared.monetaryValue !== '') {
+    const sharedNum = parseFloat(shared.monetaryValue);
+    if (!isNaN(sharedNum)) return sharedNum;
+  }
+  const override = window.jobDetailsOverride && window.jobDetailsOverride[job.id];
+  if (override && override.monetaryValue !== undefined && override.monetaryValue !== null && override.monetaryValue !== '') {
+    const overrideNum = parseFloat(override.monetaryValue);
+    if (!isNaN(overrideNum)) return overrideNum;
+  }
+  const raw = job.monetaryValue ?? job.value ?? job.opportunityValue;
+  const num = parseFloat(raw);
+  return isNaN(num) ? null : num;
+}
+
+function formatCurrency(num) {
+  if (num === null || num === undefined || isNaN(num)) return '—';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
+}
+
+// Deep link straight to this opportunity's detail view in GHL. Pattern
+// confirmed from an actual GHL browser URL:
+// https://app.gohighlevel.com/v2/location/{locationId}/opportunities/{opportunityId}?tab=Opportunity+details
+const GHL_LOCATION_ID = "QUcu2PEAxPV1sQm1GQCq";
+
+function getGhlOpportunityLink(job) {
+  if (!job.id) return '';
+  return `https://app.gohighlevel.com/v2/location/${GHL_LOCATION_ID}/opportunities/${job.id}?tab=Opportunity+details`;
+}
+
+// GHL's "Report Date"/"Report End Time" custom fields are plain single-line
+// text, not real date/time pickers — so whatever a human typed into them in
+// GHL's UI could be MM-DD-YYYY, MM/DD/YYYY, or 12-hour "hh:mm AM/PM" instead
+// of the strict YYYY-MM-DD / 24-hour HH:mm that <input type="date"> and
+// <input type="time"> require. The browser silently rejects anything else
+// (logs a console warning, leaves the field blank) — these normalize the
+// common alternate formats before they ever reach an input's value.
+function normalizeDateForInput(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // already correct
+  const mdY = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/); // MM-DD-YYYY or MM/DD/YYYY
+  if (mdY) {
+    const [, mo, day, yr] = mdY;
+    return `${yr}-${mo.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  return s; // unrecognized format — leave as-is, browser will just ignore it
+}
+
+function normalizeTimeForInput(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  const ampm = s.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+  if (ampm) {
+    let hours = parseInt(ampm[1], 10) % 12;
+    if (/pm/i.test(ampm[3])) hours += 12;
+    return `${String(hours).padStart(2, '0')}:${ampm[2]}`;
+  }
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0, 5); // already 24h, trim any seconds
+  return s;
+}
+
+function getReportTime(job) {
+  const shared = getSharedState(job);
+  if (shared && shared.reportTime) return normalizeTimeForInput(shared.reportTime);
+  const override = window.jobTimeOverride && window.jobTimeOverride[job.id];
+  if (override && override.time) return override.time;
+  return normalizeTimeForInput(getCustomFieldValue(job.customFields, REPORT_TIME_FIELD_ID) || job.reportTime || '');
+}
+
+function getReportDate(job) {
+  const shared = getSharedState(job);
+  if (shared && shared.reportDate) return normalizeDateForInput(shared.reportDate);
+  const override = window.jobTimeOverride && window.jobTimeOverride[job.id];
+  if (override && override.date) return override.date;
+  // Was previously reading job.reportDate/dateAdded/startTime, none of which
+  // exist on the raw GHL object — this field's real value lives in customFields.
+  return normalizeDateForInput(getCustomFieldValue(job.customFields, START_DATE_FIELD_ID) || '');
+}
+
+function getReportEndTime(job) {
+  const shared = getSharedState(job);
+  if (shared && shared.reportEndTime) return normalizeTimeForInput(shared.reportEndTime);
+  const override = window.jobEndOverride && window.jobEndOverride[job.id];
+  if (override && override.time) return override.time;
+  return normalizeTimeForInput(getCustomFieldValue(job.customFields, REPORT_END_TIME_FIELD_ID) || job.reportEndTime || '');
+}
+
+function getReportEndDate(job) {
+  const shared = getSharedState(job);
+  if (shared && shared.reportEndDate) return normalizeDateForInput(shared.reportEndDate);
+  const override = window.jobEndOverride && window.jobEndOverride[job.id];
+  if (override && override.date) return override.date;
+  // getCustomFieldValue now returns YYYY-MM-DD directly for date-picker fields,
+  // so no extra slicing/parsing needed here anymore.
+  return normalizeDateForInput(getCustomFieldValue(job.customFields, REPORT_END_DATE_FIELD_ID) || job.reportEndDate || '');
+}
+
+// A job's report/end time is "locked" (crew can be assigned) once all four
+// report/end date+time fields are filled in — whether that's because it was
+// explicitly saved here, arrived that way from the Data Store, or already
+// had real report/end times set and was never touched on this dashboard. No
+// separate "locked" flag is tracked in the shared record; presence of all
+// four fields is the only signal, since nothing ever writes them without
+// also having all four. The one exception: an explicit LOCAL unlock (stored
+// === false, the dispatcher just hit Edit) always wins, even if the shared
+// record's times are still filled in — unlocking-to-edit is deliberately
+// never pushed to the shared record, since it's a per-dispatcher, ephemeral
+// "I'm working on this right now" signal, not a durable fact worth syncing.
+function isJobTimeLocked(job) {
+  const jobId = job.id || '';
+  const stored = window.jobTimesLocked ? window.jobTimesLocked[jobId] : undefined;
+  if (stored === false) return false;
+  if (stored === true) return true;
+  return !!(getReportDate(job) && getReportTime(job) && getReportEndDate(job) && getReportEndTime(job));
+}
+
+/* ---------- Utilities ---------- */
+function fmtDateHeader() {
+  const d = new Date();
+  document.getElementById('todayDate').textContent = d.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+  }).toUpperCase();
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ---------- Data fetching ---------- */
+/* Each loader touches ONLY its own key, so jobs and labor can never overwrite
+   each other regardless of which one finishes first. */
+// Some contacts come back with name/phone/status packed into a single JSON
+// custom field instead of top-level properties, e.g.
+//   { customData: { JSON: '{"name":"...","phone":"...","status":"..."}' } }
+// This unpacks that (a plain JSON string on customData also works) so the
+// fields below resolve either way.
+function parseCustomData(raw) {
+  if (!raw) return null;
+  try {
+    if (typeof raw === 'string') return JSON.parse(raw);
+    if (typeof raw === 'object') {
+      if (typeof raw.JSON === 'string') return JSON.parse(raw.JSON);
+      if (typeof raw.json === 'string') return JSON.parse(raw.json);
+      if (raw.name || raw.phone || raw.status) return raw;
+    }
+  } catch (err) {
+    console.warn('Could not parse customData', err);
+  }
+  return null;
+}
+
+function normalizeLabor(data) {
+  let arr = null;
+  if (Array.isArray(data)) arr = data;                         // bare array
+  else if (data && Array.isArray(data.labor)) arr = data.labor; // { labor: [...] }
+  else if (data && Array.isArray(data.laborers)) arr = data.laborers;
+  else if (data && (data.name || data.full_name)) arr = [data]; // single bare object
+  else arr = [];
+  return arr.map(w => {
+    const custom = parseCustomData(w.customData) || {};
+    return {
+      id: w.id || w.contactId || w.contact_id || '',
+      name: w.name || w.full_name || w.fullName || custom.name || 'Unknown',
+      phone: w.phone || custom.phone || '',
+      status: String(w.status || custom.status || 'available').toLowerCase().trim(),
+      jobId: w.jobId || w.job_id || ''
+    };
+  });
+}
+
+// sharedState comes back as one plain delimited string (proved far more
+// reliable to build in Make than a real nested JSON array): records
+// separated by "|||", fields within a record separated by "|", in this
+// fixed order:
+//   jobId|reportDate|reportTime|reportEndTime|reportEndDate|crew|scopeOfWork|toolsRequired|monetaryValue|active
+// No separate "locked" field — every write path (Save Times, Assign Crew)
+// only ever fires once all four report/end date+time fields are filled in,
+// so isJobTimeLocked() below just checks whether all four are present.
+function parseSharedStateString(raw) {
+  if (!raw || typeof raw !== 'string') return [];
+  return raw.split('|||').map(record => {
+    const p = record.split('|');
+    return {
+      jobId: (p[0] || '').trim(),
+      reportDate: (p[1] || '').trim(),
+      reportTime: (p[2] || '').trim(),
+      reportEndTime: (p[3] || '').trim(),
+      reportEndDate: (p[4] || '').trim(),
+      crew: (p[5] || '').trim(),
+      scopeOfWork: (p[6] || '').trim(),
+      toolsRequired: (p[7] || '').trim(),
+      monetaryValue: (p[8] || '').trim(),
+      active: (p[9] || '').trim()
+    };
+  }).filter(r => r.jobId);
+}
+
+
+function setBackendError(source, err) {
+  const el = document.getElementById('backendStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  const message = err && err.message ? err.message : String(err || 'Unknown error');
+  el.textContent = `${source} failed: ${message}`;
+}
+
+function clearBackendError(source) {
+  const el = document.getElementById('backendStatus');
+  if (!el) return;
+  if (!el.textContent || el.textContent.startsWith(source + ' failed:')) {
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+}
+
+async function fetchJsonStrict(url, label, options = {}) {
+  const method = options.method || 'GET';
+  // Cache-buster prevents the hosting layer/browser from serving a stale GET response.
+  const sep = url.includes('?') ? '&' : '?';
+  const requestUrl = method === 'GET' ? `${url}${sep}_=${Date.now()}` : url;
+  const res = await fetch(requestUrl, {
+    method,
+    cache: 'no-store',
+    headers: { 'Accept': 'application/json', ...(options.headers || {}) },
+    ...(options.body === undefined ? {} : { body: options.body })
+  });
+
+  const text = await res.text();
+
+  if (!res.ok) {
+    throw new Error(`${label} returned HTTP ${res.status}: ${text.slice(0, 240)}`);
+  }
+
+  if (!text.trim()) {
+    throw new Error(`${label} returned an empty response`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(`${label} did not return valid JSON. First response bytes: ${text.slice(0, 240)}`);
+  }
+}
+
+async function loadDashboard() {
+  document.getElementById('jobsBody').innerHTML =
+    `<tr><td colspan="8" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
+  try {
+    const data = await fetchJsonStrict(CONFIG.GET_DASHBOARD_DATA_URL, 'Jobs webhook');
+    clearBackendError('Jobs webhook');
+
+    dashboardData.jobs = Array.isArray(data.jobs) ? data.jobs : (Array.isArray(data) ? data : []);
+
+    let normalizedShared;
+    if (typeof data.sharedState === 'string') {
+      normalizedShared = parseSharedStateString(data.sharedState);
+    } else {
+      const sharedList = Array.isArray(data.sharedState) ? data.sharedState : [];
+      normalizedShared = sharedList
+        .map(r => {
+          if (!r) return null;
+          if (r.data && typeof r.data === 'object') {
+            return { jobId: r.data.jobId || r.key || '', ...r.data };
+          }
+          return r;
+        })
+        .filter(r => r && r.jobId);
+    }
+
+    dashboardData.sharedStateByJobId = new Map(normalizedShared.map(r => [r.jobId, r]));
+
+    // Reconcile optimistic Complete/Cancel markers only after the backend feed
+    // confirms the terminal state or stops returning the job entirely.
+    const liveIds = new Set((dashboardData.jobs || []).map(j => j.id).filter(Boolean));
+    let stageOverridesChanged = false;
+    Object.keys(window.jobStageOverride || {}).forEach(id => {
+      const liveJob = (dashboardData.jobs || []).find(j => j.id === id);
+      if (!liveIds.has(id)) {
+        delete window.jobStageOverride[id];
+        stageOverridesChanged = true;
+        return;
+      }
+      const rawStageInfo = STAGE_LABELS[liveJob.pipelineStageId];
+      const rawLabel = String(rawStageInfo ? rawStageInfo.label : (liveJob.status || '')).toLowerCase();
+      if (/complete|cancel/.test(rawLabel)) {
+        delete window.jobStageOverride[id];
+        stageOverridesChanged = true;
+      }
+    });
+    if (stageOverridesChanged) persistTimeOverride('jobStageOverride', window.jobStageOverride);
+  } catch (err) {
+    console.error("Jobs webhook failed:", err);
+    dashboardData.jobs = [];
+    dashboardData.sharedStateByJobId = new Map();
+    setBackendError('Jobs webhook', err);
+  }
+  render();
+}
+
+async function loadLaborRoster() {
+  document.getElementById('rosterList').innerHTML =
+    `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
+  try {
+    const data = await fetchJsonStrict(CONFIG.LABOR_ROSTER_URL, 'Labor webhook');
+    clearBackendError('Labor webhook');
+    dashboardData.labor = normalizeLabor(data);
+  } catch (err) {
+    console.error("Labor roster webhook failed:", err);
+    dashboardData.labor = [];
+    setBackendError('Labor webhook', err);
+  }
+  render();
+}
+
+async function refreshAll() {
+  await Promise.all([loadDashboard(), loadLaborRoster()]);
+}
+
+/* ---------- Rendering ---------- */
+function render() {
+  const labor = dashboardData.labor || [];
+  const jobs = dashboardData.jobs || [];
+
+  const liveBookedStats = getLiveBookedIdentifiers();
+  const available = labor.filter(w => getEffectiveLaborStatus(w, liveBookedStats) === 'available');
+  const booked = labor.filter(w => getEffectiveLaborStatus(w, liveBookedStats) === 'booked');
+
+  document.getElementById('statAvailable').textContent = available.length;
+  document.getElementById('statBooked').textContent = booked.length;
+  document.getElementById('statScheduled').textContent = jobs.length;
+
+  renderRoster();
+  renderJobs(jobs);
+}
+
+function renderRoster() {
+  const search = document.getElementById('rosterSearch').value.toLowerCase();
+  const laborList = (dashboardData.labor || []);
+  const liveBookedRoster = getLiveBookedIdentifiers();
+  const list = laborList.filter(w => getEffectiveLaborStatus(w, liveBookedRoster) === currentTab && (w.name || '').toLowerCase().includes(search));
+  const el = document.getElementById('rosterList');
+
+  if (laborList.length === 0) {
+    el.innerHTML = `<li style="border:none; display:block; text-align:center; padding:32px 20px; color:var(--ink-soft);">
+      Labor roster isn't connected yet — the Contacts search hasn't been wired into this webhook.
+    </li>`;
+    return;
+  }
+
+  if (list.length === 0) {
+    el.innerHTML = `<li style="border:none; display:block; text-align:center; padding:32px 20px; color:var(--ink-soft);">
+      No ${currentTab} workers${search ? ' matching "' + search + '"' : ''}.
+    </li>`;
+    return;
+  }
+
+  el.innerHTML = list.map(w => {
+    const effectiveStatus = getEffectiveLaborStatus(w, liveBookedRoster);
+    return `
+    <li>
+      <div>
+        <div class="worker-name">${w.name}</div>
+        <div class="worker-meta">${w.phone || ''}${w.jobId ? ' · ' + w.jobId : ''}</div>
+      </div>
+      <span class="pill ${effectiveStatus === 'available' ? 'avail' : 'booked'}">${effectiveStatus}</span>
+    </li>
+  `;
+  }).join('');
+}
+
+// Maps raw GHL pipelineStageId -> a friendly label + status-tag class.
+// Fill in your real "Completed" stage IDs here once you have them handy;
+// anything not listed just falls through to showing the raw status.
+const STAGE_LABELS = {
+  // "773c6ea5-0d64-4954-9cd5-27e26d2f730e": { label: "Scheduled", cls: "confirmed" },
+  // "bb901617-1ec6-4f3c-8c77-27ccafb96404": { label: "In Progress", cls: "open" },
+};
+
+// Reads associated crew off a job/opportunity once the Make.com scenario for
+// GET_DASHBOARD_DATA_URL includes them. Expected shape (any of these works):
+//   job.associations: [{ contactId, name }, ...]
+//   job.contacts:      [{ id, name }, ...]
+//   job.crew:          [{ id, name }, ...]  or  ["Name One", "Name Two"]
+// Returns [] (not an error) if none of these are present yet, so the UI keeps
+// working with the "not linked yet" placeholder until the backend catches up.
+function getCrew(job) {
+  // A daily reset intentionally severs the crew for scheduling purposes even
+  // though GHL may still return the old Contact/Opportunity association. Do
+  // not let that legacy fallback repopulate the crew when times are saved.
+  if (job && window.jobCrewCleared && window.jobCrewCleared[job.id]) return [];
+
+  const shared = getSharedState(job);
+  const sharedCrew = shared ? getSharedCrew(shared) : null;
+  if (sharedCrew !== null) return normalizeCrewList(sharedCrew);
+
+  const raw = job.associations || job.contacts || job.crew || [];
+  if (Array.isArray(raw)) return normalizeCrewList(raw);
+
+  // Be forgiving if a backend returns a single object or a delimited string.
+  if (typeof raw === 'string') return normalizeCrewList(raw.split(';'));
+  if (raw && typeof raw === 'object') return normalizeCrewList([raw]);
+
+  return [];
+}
+
+// ---------- Live Available/Booked status ----------
+// A worker's Available/Booked state is computed fresh on every render from
+// whether they're assigned to a job whose report start/end window covers
+// right now, instead of trusting a static status field — so it flips
+// automatically the moment a job starts or ends, no manual action needed.
+
+function normalizePhoneForMatch(raw) {
+  if (!raw) return '';
+  const digits = String(raw).replace(/[^\d]/g, '');
+  if (digits.length === 11 && digits.startsWith('1')) return digits.slice(1);
+  return digits;
+}
+
+function parseJobDateTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  const dateMatch = String(dateStr).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!dateMatch) return null;
+  const [, y, mo, d] = dateMatch;
+
+  let hours, minutes;
+  const ampm = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+  if (ampm) {
+    hours = parseInt(ampm[1], 10) % 12;
+    minutes = parseInt(ampm[2], 10);
+    if (/pm/i.test(ampm[3])) hours += 12;
+  } else {
+    const t24 = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})/);
+    if (!t24) return null;
+    hours = parseInt(t24[1], 10);
+    minutes = parseInt(t24[2], 10);
+  }
+
+  const dt = new Date(parseInt(y, 10), parseInt(mo, 10) - 1, parseInt(d, 10), hours, minutes, 0, 0);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+function isJobActiveNow(job) {
+  const start = parseJobDateTime(getReportDate(job), getReportTime(job));
+  const end = parseJobDateTime(getReportEndDate(job), getReportEndTime(job));
+  if (!start || !end) return false;
+  const now = new Date();
+  return now >= start && now <= end;
+}
+
+function getOptimisticJobStage(job) {
+  if (!job || !job.id) return null;
+  const rec = window.jobStageOverride && window.jobStageOverride[job.id];
+  if (!rec) return null;
+  // Keep optimistic state for up to 30 minutes so a slow backend refresh cannot
+  // visually resurrect a job that the dispatcher just completed/cancelled.
+  if (rec.at && (Date.now() - rec.at) > 30 * 60 * 1000) {
+    delete window.jobStageOverride[job.id];
+    persistTimeOverride('jobStageOverride', window.jobStageOverride);
+    return null;
+  }
+  return rec.action || null;
+}
+
+function getEffectiveStageLabel(job) {
+  const optimistic = getOptimisticJobStage(job);
+  if (optimistic === 'complete') return 'Completed';
+  if (optimistic === 'cancel') return 'Cancelled';
+  const stageInfo = STAGE_LABELS[job.pipelineStageId];
+  return String(stageInfo ? stageInfo.label : (job.status || ''));
+}
+
+// A job counts as "open" (still holding its crew) unless its status/stage
+// label reads as Completed or Cancelled. Once setJobStage() moves a job to
+// either of those, its crew should fall back to Available even though the
+// job may still be sitting in the fetched list for a moment.
+function isJobOpen(job) {
+  const label = getEffectiveStageLabel(job).toLowerCase();
+  return !/complete|cancel/.test(label);
+}
+
+// Scans every open job (not Completed/Cancelled) — regardless of whether its
+// report window has started yet — and collects who's on it, so a worker
+// moves to "Booked" the moment they're assigned rather than only while the
+// job happens to be actively running right now. Matched by phone via the
+// crew-assignment override (the reliable source right now) and by name via
+// the backend crew fields too, in case those get wired up later.
+function getLiveBookedIdentifiers() {
+  const bookedPhones = new Set();
+  const bookedNames = new Set();
+  (dashboardData.jobs || []).forEach(job => {
+    if (!isJobOpen(job)) return;
+    const jobId = job.id || '';
+    const overrideCrew = (window.jobCrewOverride && window.jobCrewOverride[jobId]) || [];
+    overrideCrew.forEach(c => {
+      const p = normalizePhoneForMatch(c.phone);
+      if (p) bookedPhones.add(p);
+      if (c.name) bookedNames.add(String(c.name).toLowerCase().trim());
+    });
+    getCrew(job).forEach(c => {
+      if (c.name) bookedNames.add(String(c.name).toLowerCase().trim());
+    });
+  });
+  return { bookedPhones, bookedNames };
+}
+
+function getEffectiveLaborStatus(worker, liveBooked) {
+  const phoneKey = normalizePhoneForMatch(worker.phone);
+  const nameKey = (worker.name || '').toLowerCase().trim();
+  if ((phoneKey && liveBooked.bookedPhones.has(phoneKey)) || (nameKey && liveBooked.bookedNames.has(nameKey))) {
+    return 'booked';
+  }
+  return 'available';
+}
+
+// Local (not UTC) YYYY-MM-DD, matching the format getReportDate() and the
+// <input type="date"> fields already use, so string comparisons line up.
+function toLocalYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Purely client-side grouping — no GHL field, no backend change.
+//
+// "Never confirmed" (truly Unscheduled) means: this job has never been
+// locked on this dashboard (no explicit true/false in jobTimesLocked) AND
+// it didn't arrive with a complete report/end date+time already filled in
+// either. That's what actually filters out stray/partial/leftover custom
+// field values that were never confirmed via Save — without that check, an
+// unconfirmed value that happens to sort <= today (a malformed or non-ISO
+// leftover string) lands in Today by accident.
+//
+// Explicitly UNLOCKED (stored === false, i.e. the dispatcher clicked Edit on
+// a previously-locked job) is deliberately NOT treated as unconfirmed here —
+// unlocking to tweak a time shouldn't yank the job out of its date section
+// into Unscheduled mid-edit. It keeps bucketing by its last-known date until
+// Save is hit again (or the date is actually cleared out).
+function getJobDateBucket(job, todayStr, tomorrowStr) {
+  const jobId = job.id || '';
+  const stored = window.jobTimesLocked ? window.jobTimesLocked[jobId] : undefined;
+  const neverConfirmed = stored === undefined && !isJobTimeLocked(job);
+  if (neverConfirmed) return 'unscheduled';
+
+  const d = getReportDate(job);
+  if (!d) return 'unscheduled';
+  if (d <= todayStr) return 'today';
+  if (d === tomorrowStr) return 'tomorrow';
+  return 'future';
+}
+
+function renderJobs(jobs) {
+  const body = document.getElementById('jobsBody');
+  const emptyState = document.getElementById('jobsEmpty');
+  const table = document.getElementById('jobsTable');
+
+  if (!jobs || jobs.length === 0) {
+    table.style.display = 'none';
+    emptyState.style.display = 'block';
+    return;
+  }
+  table.style.display = 'table';
+  emptyState.style.display = 'none';
+
+  // Within each date group, jobs with a locked (saved & confirmed) report
+  // time float to the top, soonest first — unlocked jobs (no confirmed time
+  // yet) stay below them in whatever order they arrived in.
+  function sortGroup(list) {
+    return list.slice().sort((a, b) => {
+      const aLocked = isJobTimeLocked(a);
+      const bLocked = isJobTimeLocked(b);
+      if (aLocked !== bLocked) return aLocked ? -1 : 1;
+      if (!aLocked) return 0;
+      const aTime = parseJobDateTime(getReportDate(a), getReportTime(a));
+      const bTime = parseJobDateTime(getReportDate(b), getReportTime(b));
+      if (!aTime && !bTime) return 0;
+      if (!aTime) return 1;
+      if (!bTime) return -1;
+      return aTime - bTime;
+    });
+  }
+
+  const todayStr = toLocalYMD(new Date());
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = toLocalYMD(tomorrowDate);
+
+  const groups = { today: [], tomorrow: [], future: [], unscheduled: [] };
+  jobs.forEach(j => groups[getJobDateBucket(j, todayStr, tomorrowStr)].push(j));
+
+  const liveBookedJobs = getLiveBookedIdentifiers();
+  const laborWithBookingStatus = (dashboardData.labor || []).map(w => ({
+    ...w,
+    effectiveStatus: getEffectiveLaborStatus(w, liveBookedJobs)
+  }));
+
+  function normalizePhone(raw) {
+    if (!raw) return '';
+    const digits = String(raw).replace(/[^\d]/g, '');
+    if (digits.length === 10) return '+1' + digits;
+    if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+    if (String(raw).startsWith('+')) return raw;
+    return digits ? '+' + digits : '';
+  }
+
+  function buildJobRow(j) {
+    const client = (j.contact && j.contact.name) ? j.contact.name : '—';
+    const address = j.name || '—';
+    const stageInfo = STAGE_LABELS[j.pipelineStageId];
+    const optimisticStage = getOptimisticJobStage(j);
+    const statusLabel = optimisticStage === 'complete'
+      ? 'Completed'
+      : optimisticStage === 'cancel'
+        ? 'Cancelled'
+        : (stageInfo ? stageInfo.label : (j.status || '—'));
+    const statusClass = optimisticStage ? 'confirmed' : (stageInfo ? stageInfo.cls : 'open');
+    const jobId = j.id || '';
+    const terminalLocally = optimisticStage === 'complete' || optimisticStage === 'cancel';
+
+    const crew = getCrew(j);
+
+    const overrideCrew = ((window.jobCrewOverride && window.jobCrewOverride[jobId]) || [])
+      .filter(oc => !crew.some(c => c.name === oc.name));
+    const overrideChips = overrideCrew.map(c => `
+      <span class="crew-chip removable" data-job-id="${jobId}" data-phone="${c.phone}" data-name="${c.name}">
+        ${c.name}
+        <button type="button" class="crew-chip-remove" title="Remove ${c.name}">&times;</button>
+      </span>
+    `).join('');
+
+    const backendCrewChips = crew.map(c => `
+      <span class="crew-chip removable" data-job-id="${jobId}" data-phone="${c.phone || ''}" data-name="${c.name}">
+        ${c.name}
+        <button type="button" class="crew-chip-remove" title="Remove ${c.name}">&times;</button>
+      </span>
+    `).join('');
+
+    // Every roster worker not already assigned to THIS job is a candidate.
+    // Booked workers stay hidden until this job's split-day toggle is enabled.
+    const assignedNames = new Set([
+      ...crew.map(c => c.name),
+      ...overrideCrew.map(c => c.name)
+    ].map(name => String(name || '').toLowerCase().trim()));
+    const assignableWorkers = laborWithBookingStatus.filter(w =>
+      !assignedNames.has(String(w.name || '').toLowerCase().trim())
+    );
+    const hasAvailableWorkers = assignableWorkers.some(w => w.effectiveStatus === 'available');
+
+    const timesLocked = isJobTimeLocked(j);
+
+    const assignChecklist = !timesLocked
+      ? `<span class="crew-chip empty-slot" title="Save and lock report/end time before assigning crew">save &amp; lock times first</span>`
+      : (assignableWorkers.length
+        ? `<div class="crew-assign-wrap" data-job-id="${jobId}">
+             <button type="button" class="crew-assign-toggle">+ Assign crew</button>
+             <div class="crew-assign-panel${hasAvailableWorkers ? '' : ' no-available'}">
+               <label class="split-day-control" title="Allow workers booked on another job to be assigned here too">
+                 <span>Split day · Include booked</span>
+                 <span class="split-day-switch">
+                   <input type="checkbox" class="include-booked-toggle">
+                   <span class="split-day-slider"></span>
+                 </span>
+               </label>
+               <div class="split-day-empty">No available workers. Turn on Split day to include booked workers.</div>
+               ${assignableWorkers.map(w => {
+                 const phone = normalizePhone(w.phone);
+                 return `
+                   <label class="crew-assign-option${w.effectiveStatus === 'booked' ? ' is-booked' : ''}">
+                     <input type="checkbox" class="crew-worker-select" value="${phone}" data-name="${w.name}">
+                     <span class="crew-assign-worker-name">${w.name}</span>
+                     ${w.effectiveStatus === 'booked' ? '<span class="crew-booked-badge">booked</span>' : ''}
+                   </label>
+                 `;
+               }).join('')}
+               <button type="button" class="btn btn-primary crew-assign-confirm">Assign selected</button>
+             </div>
+           </div>`
+        : `<span class="crew-chip empty-slot">no one available</span>`);
+
+    const reportDateVal = getReportDate(j);
+    const reportTimeVal = getReportTime(j);
+    const endDateVal = getReportEndDate(j);
+    const endTimeVal = getReportEndTime(j);
+
+    const reportCell = timesLocked
+      ? `
+      <div class="time-edit-wrap locked" data-job-id="${jobId}">
+        <span class="time-locked-display mono">${reportDateVal || '—'} ${reportTimeVal || ''}</span>
+      </div>
+    `
+      : `
+      <div class="time-edit-wrap" data-job-id="${jobId}">
+        <input type="date" class="report-date-input mono" value="${reportDateVal}">
+        <input type="time" class="report-time-input mono" value="${reportTimeVal}">
+      </div>
+    `;
+
+    const endCell = timesLocked
+      ? `
+      <div class="time-edit-wrap locked" data-job-id="${jobId}">
+        <span class="time-locked-display mono">${endDateVal || '—'} ${endTimeVal || ''}</span>
+        <button type="button" class="time-unlock" title="Unlock to edit report/end time">Edit</button>
+      </div>
+    `
+      : `
+      <div class="time-edit-wrap" data-job-id="${jobId}">
+        <input type="date" class="end-date-input mono" value="${endDateVal}">
+        <input type="time" class="end-time-input mono" value="${endTimeVal}">
+        <button type="button" class="end-save" title="Save report and end date/time">Save</button>
+      </div>
+    `;
+
+    const ghlLink = getGhlOpportunityLink(j);
+    const jobIdCell = ghlLink
+      ? `<a class="job-id" href="${ghlLink}" target="_blank" rel="noopener" title="Open in GHL">${(j.id || '').slice(-8)}</a>`
+      : `<span class="job-id">${(j.id || '').slice(-8)}</span>`;
+    const valueCell = `<span class="opp-value">${formatCurrency(getOpportunityValue(j))}</span>`;
+
+    return `
+      <tr>
+        <td>${jobIdCell}</td>
+        <td>${client}</td>
+        <td>${valueCell}</td>
+        <td>${address}</td>
+        <td>${reportCell}</td>
+        <td>${endCell}</td>
+        <td><div class="crew-chip-row">${backendCrewChips}${overrideChips}${assignChecklist}${(!crew.length && !overrideCrew.length && job_associationsMissing(j)) ? '<span class="crew-chip empty-slot">crew not linked yet</span>' : ''}</div></td>
+        <td>
+          <span class="status-tag ${statusClass}">${statusLabel}</span>
+          ${terminalLocally ? '' : `<div class="job-stage-actions">
+            <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">Edit Details</button>
+            <button type="button" class="job-stage-btn reset" data-job-id="${jobId}">Reset Day</button>
+            <button type="button" class="job-stage-btn complete" data-job-id="${jobId}">Completed</button>
+            <button type="button" class="job-stage-btn cancel" data-job-id="${jobId}">Cancelled</button>
+          </div>`}
+        </td>
+      </tr>
+    `;
+  }
+
+  // Today/Tomorrow/Future/Unscheduled, in that order, each as its own labeled
+  // section within the same table — always shown, even empty, so "nothing
+  // booked today" is a visible fact rather than a section that just vanishes.
+  const sectionDefs = [
+    { key: 'today', label: 'Today' },
+    { key: 'tomorrow', label: 'Tomorrow' },
+    { key: 'future', label: 'Future' },
+    { key: 'unscheduled', label: 'Unscheduled' }
+  ];
+
+  body.innerHTML = sectionDefs.map(({ key, label }) => {
+    const groupJobs = sortGroup(groups[key]);
+    const headerRow = `
+      <tr class="job-group-header-row">
+        <td colspan="8" class="job-group-header">${label} <span class="job-group-count">${groupJobs.length}</span></td>
+      </tr>
+    `;
+    const rows = groupJobs.length
+      ? groupJobs.map(buildJobRow).join('')
+      : `<tr class="job-group-empty-row"><td colspan="8" class="job-group-empty">No jobs</td></tr>`;
+    return headerRow + rows;
+  }).join('');
+}
+
+// True when the backend hasn't started sending associations at all (vs. a job
+// that legitimately has zero crew assigned yet) — keeps the honest placeholder
+// showing until your Make.com scenario adds the field.
+function job_associationsMissing(job) {
+  return !job.associations && !job.contacts && !job.crew;
+}
+
+// Report/end time edits are saved to localStorage so they survive a page
+// refresh even if GHL/Make hasn't caught up to the write yet — still fully
+// editable afterward, saving again just overwrites the stored values.
+function loadTimeOverridesFromStorage(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || '{}') || {};
+  } catch (err) {
+    console.warn('Couldn\'t parse stored ' + key, err);
+    return {};
+  }
+}
+function persistTimeOverride(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn('Couldn\'t persist ' + key, err);
+  }
+}
+
+window.jobEndOverride = loadTimeOverridesFromStorage('jobEndOverride');
+window.jobTimeOverride = loadTimeOverridesFromStorage('jobTimeOverride');
+window.jobCrewOverride = loadTimeOverridesFromStorage('jobCrewOverride');
+window.jobCrewCleared = loadTimeOverridesFromStorage('jobCrewCleared');
+window.jobTimesLocked = loadTimeOverridesFromStorage('jobTimesLocked');
+window.jobDetailsOverride = loadTimeOverridesFromStorage('jobDetailsOverride');
+window.logisticsScheduleOverride = loadTimeOverridesFromStorage('logisticsScheduleOverride');
+window.logisticsBreakSchedule = loadTimeOverridesFromStorage('logisticsBreakSchedule');
+// Optimistic terminal-stage cache: makes Complete/Cancel feel instant even if
+// Make/GHL takes several seconds to answer. Cleared automatically once the
+// backend catches up or the job disappears from the active jobs feed.
+window.jobStageOverride = loadTimeOverridesFromStorage('jobStageOverride');
+
+async function assignCrew(jobId, workers, confirmBtn) {
+  if (!jobId || !workers.length) return;
+
+  const validWorkers = workers.filter(w => w.phone && w.phone.trim() !== "");
+  if (!validWorkers.length) {
+    showToast("Selected workers are missing a phone number — check labor webhook data.", true);
+    return;
+  }
+
+  confirmBtn.disabled = true;
+  const originalLabel = confirmBtn.textContent;
+  confirmBtn.textContent = "Assigning...";
+
+  // Pull the job's current date/time straight from the same getters the
+  // table uses to display them — includes any unsaved override values too,
+  // so the payload matches exactly what's on screen right now.
+  const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId) || {};
+
+  const payload = {
+    jobId: jobId,
+    action: "assign",
+    jobAddress: job.name || "",
+    clientName: getClientName(job),
+    clientPhone: getClientPhone(job),
+    scopeOfWork: getScopeOfWork(job),
+    toolsRequired: getToolsRequired(job),
+    monetaryValue: getOpportunityValue(job),
+    reportDate: getReportDate(job),
+    reportTime: getReportTime(job),
+    reportEndDate: getReportEndDate(job),
+    reportEndTime: getReportEndTime(job),
+    // Only the newly-selected worker(s) — MOVE_WORKER_URL is what triggers
+    // per-worker side effects (e.g. notifications), so it should only ever
+    // see who's actually new, not re-process people already on the job.
+    assignedWorkers: validWorkers.map(w => ({
+      workerPhone: w.phone,
+      workerName: w.name
+    }))
+  };
+
+  try {
+    const res = await fetch(CONFIG.MOVE_WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    // Build the FULL crew list (existing + newly assigned) client-side and
+    // send that as the source of truth for the Data Store write — Make kept
+    // breaking trying to merge "existing crew" + "new worker" itself (typing
+    // literal "+" as if it were doing string concatenation, and losing the
+    // existing names in the process). Sending the complete list here means
+    // Make's write module never needs to look up or merge anything — it just
+    // writes exactly what's in this payload.
+    const existingCrew = getCrew(job);
+    const existingOverride = ((window.jobCrewOverride && window.jobCrewOverride[jobId]) || [])
+      .filter(oc => !existingCrew.some(c => c.name === oc.name));
+    const fullCrew = [...existingCrew, ...existingOverride];
+    validWorkers.forEach(w => {
+      if (!fullCrew.some(c => c.phone === w.phone || c.name === w.name)) {
+        fullCrew.push({ name: w.name, phone: w.phone });
+      }
+    });
+    const sharedPayload = {
+      ...payload,
+      crew: serializeCrew(fullCrew),
+      assignedWorkers: fullCrew.map(w => ({ workerPhone: w.phone || "", workerName: w.name }))
+    };
+
+    // This is the call that actually writes the shared Data Store record —
+    // it's load-bearing now, not just a log. Awaited (but errors swallowed,
+    // so a hiccup here doesn't fail the crew assignment itself, which already
+    // succeeded via MOVE_WORKER_URL above) so refreshAll() below can't race
+    // ahead of Make actually finishing the write.
+    try {
+      const logRes = await fetch(CONFIG.SHARED_STATE_SYNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sharedPayload)
+      });
+      if (!logRes.ok) console.warn("Assignment log webhook returned " + logRes.status);
+    } catch (logErr) {
+      console.warn("Assignment log webhook failed (crew assignment itself still succeeded):", logErr);
+    }
+
+    window.jobCrewOverride[jobId] = window.jobCrewOverride[jobId] || [];
+    validWorkers.forEach(w => {
+      const exists = window.jobCrewOverride[jobId].some(c => c.phone === w.phone);
+      if (!exists) window.jobCrewOverride[jobId].push({ name: w.name, phone: w.phone });
+    });
+    persistTimeOverride('jobCrewOverride', window.jobCrewOverride);
+
+    // A deliberate new assignment ends the reset suppression only after the
+    // complete new crew has been written to shared state. Clearing it earlier
+    // would let the old GHL association sneak back into fullCrew above.
+    delete window.jobCrewCleared[jobId];
+    persistTimeOverride('jobCrewCleared', window.jobCrewCleared);
+
+    const names = validWorkers.map(w => w.name);
+    showToast(`${names.join(", ")} assigned to job.`);
+    renderJobs(dashboardData.jobs || []);
+    await refreshAll();
+  } catch (err) {
+    console.warn(err);
+    showToast("Couldn't assign crew. Check CONFIG.MOVE_WORKER_URL.", true);
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = originalLabel;
+  }
+}
+
+async function removeCrewMember(jobId, phone, name, chipEl) {
+  chipEl.style.opacity = "0.5";
+  const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId) || {};
+
+  // Crew synced in from the shared Data Store only ever carries plain names,
+  // no phone numbers (that's a known limitation of the delimited-string
+  // format) — so a chip built from synced crew has an empty phone. Fall back
+  // to looking the worker up by name in the labor roster, which does have
+  // phone numbers, so the removal webhook still gets one.
+  let resolvedPhone = phone || "";
+  if (!resolvedPhone && name) {
+    const match = (dashboardData.labor || []).find(
+      w => (w.name || "").trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if (match && match.phone) resolvedPhone = match.phone;
+  }
+
+  const payload = {
+    jobId: jobId,
+    action: "remove",
+    jobAddress: job.name || "",
+    removedWorkers: [{ workerPhone: resolvedPhone, workerName: name }]
+  };
+
+  try {
+    const res = await fetch(CONFIG.MOVE_WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    // Same reasoning as assignCrew: send the FULL remaining crew list (not
+    // just who got removed) to the Data Store write, so other devices see
+    // the removal too instead of only this browser's local override.
+    const remainingCrew = getCrew(job).filter(c => c.name !== name);
+    const remainingOverride = ((window.jobCrewOverride && window.jobCrewOverride[jobId]) || [])
+      .filter(oc => oc.name !== name && !remainingCrew.some(c => c.name === oc.name));
+    const fullRemainingCrew = [...remainingCrew, ...remainingOverride];
+
+    const sharedPayload = {
+      jobId: jobId,
+      action: "remove",
+      jobAddress: job.name || "",
+      clientName: getClientName(job),
+      clientPhone: getClientPhone(job),
+      scopeOfWork: getScopeOfWork(job),
+      toolsRequired: getToolsRequired(job),
+      monetaryValue: getOpportunityValue(job),
+      reportDate: getReportDate(job),
+      reportTime: getReportTime(job),
+      reportEndDate: getReportEndDate(job),
+      reportEndTime: getReportEndTime(job),
+      crew: serializeCrew(fullRemainingCrew),
+      assignedWorkers: fullRemainingCrew.map(w => ({ workerPhone: w.phone || "", workerName: w.name }))
+    };
+    try {
+      const logRes = await fetch(CONFIG.SHARED_STATE_SYNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sharedPayload)
+      });
+      if (!logRes.ok) console.warn("Assignment log webhook returned " + logRes.status);
+    } catch (logErr) {
+      console.warn("Assignment log webhook failed (removal itself still succeeded):", logErr);
+    }
+
+    const backendCrew = getCrew((dashboardData.jobs || []).find(j => (j.id || '') === jobId));
+    window.jobCrewOverride[jobId] = (window.jobCrewOverride[jobId] || [])
+      .filter(c => c.name !== name && c.phone !== phone);
+
+    if (backendCrew.length) {
+      window.jobCrewOverride[jobId] = backendCrew
+        .filter(c => c.name !== name)
+        .map(c => ({ name: c.name, phone: c.phone || '' }));
+    }
+    persistTimeOverride('jobCrewOverride', window.jobCrewOverride);
+
+    chipEl.remove();
+    showToast(`${name} removed from job.`);
+    renderJobs(dashboardData.jobs || []);
+    await refreshAll();
+  } catch (err) {
+    console.warn(err);
+    showToast("Couldn't remove crew member. Check CONFIG.MOVE_WORKER_URL.", true);
+    chipEl.style.opacity = "1";
+  }
+}
+
+// Moves a job to the Completed or Cancelled pipeline stage in GHL. Reuses
+// CREATE_JOB_URL — the Make scenario behind it routes on the `action` field
+// (same pattern as MOVE_WORKER_URL's assign/remove) to tell create/complete/
+// cancel apart.
+async function setJobStage(jobId, action, btn) {
+  if (!jobId) return;
+  const label = action === 'complete' ? 'Completed' : 'Cancelled';
+  if (!confirm(`Mark this job as ${label}? This moves it to the ${label} stage in GHL.`)) return;
+
+  const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId) || {};
+
+  // OPTIMISTIC UI: consider the job terminal immediately. This releases its
+  // crew in getLiveBookedIdentifiers(), updates the status chip, and removes
+  // the action buttons without waiting for Make/GHL to finish.
+  window.jobStageOverride[jobId] = { action, at: Date.now() };
+  persistTimeOverride('jobStageOverride', window.jobStageOverride);
+  render();
+  showToast(`Job marked ${label.toLowerCase()}. Syncing in background...`);
+
+  // The backend write is deliberately fire-and-forget from the UI's point of
+  // view. We still await it inside this function for logging/refresh, but a slow
+  // webhook can no longer keep the dispatcher waiting or keep crew booked.
+  try {
+    const res = await fetchWithTimeout(CONFIG.CREATE_JOB_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, jobId, opportunityId: jobId })
+    }, 20000);
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    // Refresh after the backend has had a chance to catch up. The optimistic
+    // override remains active if the feed is still stale, so the job won't pop
+    // back to open just because Make/GHL is a few seconds behind.
+    await refreshAll();
+  } catch (err) {
+    console.warn(`${label} backend sync failed; keeping optimistic UI state:`, err);
+    showToast(`${label} is reflected on this dashboard; backend sync is still pending/failed.`, true);
+  }
+}
+
+// Sends the complete current dispatch snapshot so Make can map every field,
+// then clears only the daily schedule in the browser. The Opportunity and its
+// permanent details remain untouched.
+async function resetJobDay(jobId, btn) {
+  if (!jobId) return;
+  const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId);
+  if (!job) {
+    showToast("Couldn't find that job — refresh and try again.", true);
+    return;
+  }
+
+  if (!confirm("Reset this job's report/end times and crew? The Opportunity and job details will be kept.")) return;
+
+  const currentCrew = getCrew(job);
+  const payload = {
+    action: "reset_dispatch",
+    jobId,
+    opportunityId: jobId,
+    jobType: isHourlyJob(job) ? "hourly" : "contract",
+    jobAddress: job.name || job.address || job.jobAddress || "",
+    clientName: getClientName(job),
+    clientPhone: getClientPhone(job),
+    scopeOfWork: getScopeOfWork(job),
+    toolsRequired: getToolsRequired(job),
+    monetaryValue: getOpportunityValue(job),
+    reportDate: getReportDate(job),
+    reportTime: getReportTime(job),
+    reportEndDate: getReportEndDate(job),
+    reportEndTime: getReportEndTime(job),
+    crew: serializeCrew(currentCrew),
+    assignedWorkers: currentCrew.map(w => ({
+      workerPhone: w.phone || "",
+      workerName: w.name
+    }))
+  };
+
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Resetting...";
+
+  try {
+    const res = await fetchWithTimeout(CONFIG.DAILY_RESET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }, 20000);
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    delete window.jobTimeOverride[jobId];
+    delete window.jobEndOverride[jobId];
+    delete window.jobCrewOverride[jobId];
+    delete window.jobTimesLocked[jobId];
+    window.jobCrewCleared[jobId] = { at: Date.now() };
+    persistTimeOverride('jobTimeOverride', window.jobTimeOverride);
+    persistTimeOverride('jobEndOverride', window.jobEndOverride);
+    persistTimeOverride('jobCrewOverride', window.jobCrewOverride);
+    persistTimeOverride('jobTimesLocked', window.jobTimesLocked);
+    persistTimeOverride('jobCrewCleared', window.jobCrewCleared);
+
+    const shared = dashboardData.sharedStateByJobId.get(jobId);
+    if (shared) {
+      Object.assign(shared, {
+        reportDate: "",
+        reportTime: "",
+        reportEndDate: "",
+        reportEndTime: "",
+        crew: ""
+      });
+    }
+
+    render();
+    showToast("Daily schedule reset — Opportunity and job details preserved.");
+  } catch (err) {
+    console.warn(err);
+    const msg = err && err.name === "AbortError"
+      ? "No response from the daily-reset webhook after 20s."
+      : "Couldn't reset the daily schedule. Check CONFIG.DAILY_RESET_URL.";
+    showToast(msg, true);
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+async function saveJobTimes(jobId, reportDate, reportTime, endDate, endTime, saveBtn) {
+  if (!jobId || !reportDate || !reportTime || !endDate || !endTime) {
+    showToast("Pick report date/time and end date/time first.", true);
+    return;
+  }
+  const startDT = parseJobDateTime(reportDate, reportTime);
+  const endDT = parseJobDateTime(endDate, endTime);
+  if (startDT && endDT && endDT <= startDT) {
+    showToast("End time must be after the report start time.", true);
+    return;
+  }
+  saveBtn.disabled = true;
+  const originalLabel = saveBtn.textContent;
+  saveBtn.textContent = "Saving...";
+
+  try {
+    const res = await fetch(CONFIG.UPDATE_JOB_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jobId,
+        reportDate,
+        reportTime,
+        reportEndDate: endDate,
+        reportEndTime: endTime
+      })
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    // UPDATE_JOB_URL only ever wrote to the GHL custom fields — it never
+    // touched the Data Store, so a locked time only "stuck" on the browser
+    // that saved it (local overrides) until someone happened to also assign
+    // crew (which does write the shared record, via SHARED_STATE_SYNC_URL).
+    // Fire the same full-record shape at SHARED_STATE_SYNC_URL here too, with
+    // the currently-assigned crew carried over unchanged, so the shared
+    // Data Store record gets the new times immediately — best-effort,
+    // doesn't block the save if it fails.
+    const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId) || {};
+    const backendCrew = getCrew(job);
+    const overrideCrew = ((window.jobCrewOverride && window.jobCrewOverride[jobId]) || [])
+      .filter(oc => !backendCrew.some(c => c.name === oc.name));
+    const currentCrew = [...backendCrew, ...overrideCrew];
+
+    const sharedPayload = {
+      jobId: jobId,
+      action: "save_times",
+      jobAddress: job.name || "",
+      clientName: getClientName(job),
+      clientPhone: getClientPhone(job),
+      scopeOfWork: getScopeOfWork(job),
+      toolsRequired: getToolsRequired(job),
+      monetaryValue: getOpportunityValue(job),
+      reportDate,
+      reportTime,
+      reportEndDate: endDate,
+      reportEndTime: endTime,
+      crew: serializeCrew(currentCrew),
+      assignedWorkers: currentCrew.map(w => ({ workerPhone: w.phone || "", workerName: w.name }))
+    };
+    try {
+      const sharedRes = await fetch(CONFIG.SHARED_STATE_SYNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sharedPayload)
+      });
+      if (!sharedRes.ok) console.warn("Shared-state time sync webhook returned " + sharedRes.status);
+    } catch (sharedErr) {
+      console.warn("Shared-state time sync failed (local save still succeeded):", sharedErr);
+    }
+
+    window.jobTimeOverride[jobId] = { date: reportDate, time: reportTime };
+    window.jobEndOverride[jobId] = { date: endDate, time: endTime };
+    window.jobTimesLocked[jobId] = true;
+    persistTimeOverride('jobTimeOverride', window.jobTimeOverride);
+    persistTimeOverride('jobEndOverride', window.jobEndOverride);
+    persistTimeOverride('jobTimesLocked', window.jobTimesLocked);
+    showToast("Report and end times saved and locked — crew can now be assigned.");
+    saveBtn.textContent = "Saved";
+    await refreshAll();
+  } catch (err) {
+    console.warn(err);
+    showToast("Couldn't save report/end times. Check CONFIG.UPDATE_JOB_URL.", true);
+    saveBtn.textContent = originalLabel;
+    saveBtn.disabled = false;
+  }
+}
+
+document.getElementById('jobsBody').addEventListener('click', (e) => {
+  const removeBtn = e.target.closest('.crew-chip-remove');
+  if (removeBtn) {
+    const chip = removeBtn.closest('.crew-chip');
+    const jobId = chip.dataset.jobId;
+    const phone = chip.dataset.phone;
+    const name = chip.dataset.name;
+    removeCrewMember(jobId, phone, name, chip);
+    return;
+  }
+
+  const toggle = e.target.closest('.crew-assign-toggle');
+  if (toggle) {
+    const panel = toggle.parentElement.querySelector('.crew-assign-panel');
+    document.querySelectorAll('.crew-assign-panel.open').forEach(p => {
+      if (p !== panel) p.classList.remove('open');
+    });
+    panel.classList.toggle('open');
+    return;
+  }
+
+  const confirmBtn = e.target.closest('.crew-assign-confirm');
+  if (confirmBtn) {
+    const wrap = confirmBtn.closest('.crew-assign-wrap');
+    const jobId = wrap.dataset.jobId;
+    const existingNames = Array.from(document.querySelectorAll(`.crew-chip[data-job-id="${jobId}"]`)).map(chip => chip.dataset.name);
+    const checked = Array.from(wrap.querySelectorAll('.crew-worker-select:checked'));
+    const workers = checked
+      .map(cb => ({ phone: cb.value, name: cb.dataset.name }))
+      .filter(worker => !existingNames.includes(worker.name));
+    if (!workers.length) {
+      showToast("Select at least one new worker.", true);
+      return;
+    }
+    assignCrew(jobId, workers, confirmBtn);
+    return;
+  }
+
+  const editDetailsBtn = e.target.closest('.job-stage-btn.edit');
+  if (editDetailsBtn) {
+    openEditJobSheet(editDetailsBtn.dataset.jobId);
+    return;
+  }
+
+  const resetBtn = e.target.closest('.job-stage-btn.reset');
+  if (resetBtn) {
+    resetJobDay(resetBtn.dataset.jobId, resetBtn);
+    return;
+  }
+
+  const completeBtn = e.target.closest('.job-stage-btn.complete');
+  if (completeBtn) {
+    setJobStage(completeBtn.dataset.jobId, 'complete', completeBtn);
+    return;
+  }
+
+  const cancelBtn = e.target.closest('.job-stage-btn.cancel');
+  if (cancelBtn) {
+    setJobStage(cancelBtn.dataset.jobId, 'cancel', cancelBtn);
+    return;
+  }
+
+  const unlockBtn = e.target.closest('.time-unlock');
+  if (unlockBtn) {
+    const wrap = unlockBtn.closest('.time-edit-wrap');
+    const jobId = wrap.dataset.jobId;
+    window.jobTimesLocked[jobId] = false;
+    persistTimeOverride('jobTimesLocked', window.jobTimesLocked);
+    renderJobs(dashboardData.jobs || []);
+    return;
+  }
+
+  const endSaveBtn = e.target.closest('.end-save');
+  if (endSaveBtn) {
+    const endWrap = endSaveBtn.closest('.time-edit-wrap');
+    const row = endSaveBtn.closest('tr');
+    const reportWrap = row.querySelector('td:nth-child(5) .time-edit-wrap');
+    const jobId = endWrap.dataset.jobId;
+    const reportDateInput = reportWrap.querySelector('.report-date-input');
+    const reportTimeInput = reportWrap.querySelector('.report-time-input');
+    const endDateInput = endWrap.querySelector('.end-date-input');
+    const endTimeInput = endWrap.querySelector('.end-time-input');
+    saveJobTimes(jobId, reportDateInput.value, reportTimeInput.value, endDateInput.value, endTimeInput.value, endSaveBtn);
+    return;
+  }
+
+  if (!e.target.closest('.crew-assign-wrap')) {
+    document.querySelectorAll('.crew-assign-panel.open').forEach(p => p.classList.remove('open'));
+  }
+});
+
+document.getElementById('jobsBody').addEventListener('change', (e) => {
+  const splitDayToggle = e.target.closest('.include-booked-toggle');
+  if (!splitDayToggle) return;
+  const panel = splitDayToggle.closest('.crew-assign-panel');
+  panel.classList.toggle('include-booked', splitDayToggle.checked);
+  if (!splitDayToggle.checked) {
+    panel.querySelectorAll('.crew-assign-option.is-booked .crew-worker-select').forEach(cb => {
+      cb.checked = false;
+    });
+  }
+});
+
+/* ---------- Roster tabs / search ---------- */
+document.querySelectorAll('.roster-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.roster-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    renderRoster();
+  });
+});
+document.getElementById('rosterSearch').addEventListener('input', renderRoster);
+
+// The Available/Booked Today stat cards up top act as shortcuts into the
+// same roster tabs below — click one and it switches the roster tab,
+// updates the active state, and scrolls the roster panel into view.
+document.querySelectorAll('.status-card.available, .status-card.booked').forEach(card => {
+  card.addEventListener('click', () => {
+    const targetTab = card.classList.contains('available') ? 'available' : 'booked';
+    const tabBtn = document.querySelector(`.roster-tab[data-tab="${targetTab}"]`);
+    if (tabBtn) tabBtn.click();
+    document.getElementById('rosterSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+});
+
+/* ---------- Book Job sheet ---------- */
+const overlay = document.getElementById('overlay');
+const sheet = document.getElementById('bookSheet');
+let crewSize = 4;
+let jobType = 'hourly';
+const JOB_PIPELINE_IDS = {
+  hourly: "RAP4Cqc1jKRTHaakYTL4",   // Hourly (Labor) pipeline
+  contract: "d5Ix1SlN3YpZ5gQewZUo"  // Contract (Demo) pipeline
+};
+// Job objects from GET_DASHBOARD_DATA_URL carry pipelineStageId, not
+// pipelineId, so hourly-vs-contract can't be read off JOB_PIPELINE_IDS
+// directly once a job exists. These are the two "won" stage IDs each
+// pipeline's jobs sit at (same constants the Create/Update Jobs-Opportunities
+// scenario uses to place a job into "won" at creation) — good enough to tell
+// the two apart for an existing job without needing a new Data Store column.
+const WON_STAGE_IDS = {
+  hourly: "6cfb3e15-0954-4f94-9f27-29f8f45b185d",
+  contract: "bb901617-1ec6-4f3c-8c77-27ccafb96404"
+};
+function isHourlyJob(job) {
+  if (job && job.pipelineStageId === WON_STAGE_IDS.contract) return false;
+  return true; // default true (hourly) — matches WON_STAGE_IDS.hourly and any unrecognized stage
+}
+
+function openSheet() {
+  overlay.classList.add('open');
+  sheet.classList.add('open');
+}
+function closeSheetFn() {
+  overlay.classList.remove('open');
+  sheet.classList.remove('open');
+}
+
+document.getElementById('newJobBtn').addEventListener('click', openSheet);
+document.getElementById('emptyBookBtn').addEventListener('click', openSheet);
+document.getElementById('closeSheet').addEventListener('click', closeSheetFn);
+document.getElementById('cancelBook').addEventListener('click', closeSheetFn);
+overlay.addEventListener('click', closeSheetFn);
+
+document.querySelectorAll('#jobTypeToggle .segmented-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#jobTypeToggle .segmented-option').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    jobType = btn.dataset.type;
+  });
+});
+
+document.getElementById('addContainerToggle').addEventListener('change', event => {
+  document.getElementById('containerAddonFields').hidden = !event.target.checked;
+});
+document.getElementById('addLowboyToggle').addEventListener('change', event => {
+  document.getElementById('lowboyAddonFields').hidden = !event.target.checked;
+});
+document.getElementById('editAddContainerToggle').addEventListener('change', event => {
+  document.getElementById('editContainerAddonFields').hidden = !event.target.checked;
+});
+document.getElementById('editAddLowboyToggle').addEventListener('change', event => {
+  document.getElementById('editLowboyAddonFields').hidden = !event.target.checked;
+});
+
+document.getElementById('crewMinus').addEventListener('click', () => {
+  crewSize = Math.max(1, crewSize - 1);
+  document.getElementById('crewCount').textContent = crewSize;
+});
+document.getElementById('crewPlus').addEventListener('click', () => {
+  crewSize = Math.min(30, crewSize + 1);
+  document.getElementById('crewCount').textContent = crewSize;
+});
+
+// Best-effort match for a job just created via the booking sheet, used when
+// the Create Job webhook doesn't echo the new record's ID back to us. Matches
+// on address (job.name) plus client name, preferring a candidate that isn't
+// already time-locked (a brand-new job usually won't be yet).
+document.getElementById('submitBook').addEventListener('click', async () => {
+  const reportDateVal = document.getElementById('jobDate').value;
+  const jobEndDateVal = document.getElementById('jobEndDate').value;
+
+  const payload = {
+    action: "create",
+    firstName: document.getElementById('clientFirstName').value.trim(),
+    lastName: document.getElementById('clientLastName').value.trim(),
+    clientName: (document.getElementById('clientFirstName').value.trim() + ' ' + document.getElementById('clientLastName').value.trim()).trim(),
+    clientPhone: document.getElementById('clientPhone').value.trim(),
+    jobAddress: document.getElementById('jobAddress').value.trim(),
+    jobType: jobType,
+    pipelineId: JOB_PIPELINE_IDS[jobType],
+    reportDate: reportDateVal,
+    reportTime: document.getElementById('jobTime').value,
+    reportEndDate: jobEndDateVal || reportDateVal,
+    reportEndTime: document.getElementById('jobEndTime').value,
+    scopeOfWork: document.getElementById('scopeWork').value.trim(),
+    toolsRequired: Array.from(document.querySelectorAll('#toolsGrid input:checked')).map(c => c.value),
+    // Sent under the same key GHL uses natively on the Opportunity object,
+    // so the Make "Create Opportunity" module can map it straight across.
+    monetaryValue: document.getElementById('jobValue').value === '' ? null : parseFloat(document.getElementById('jobValue').value),
+    crewSize: crewSize
+  };
+
+  const addonRequests = [];
+  if (jobType !== 'contract' && document.getElementById('addLowboyToggle').checked) {
+    showToast('Driver / Lowboy add-ons require Contract (Demo) job type.', true);
+    return;
+  }
+  if (document.getElementById('addContainerToggle').checked) {
+    const containerSize = document.getElementById('addonContainerSize').value;
+    const loadCount = Math.max(1, Math.min(20, parseInt(document.getElementById('addonContainerQty').value, 10) || 1));
+    const requestedDate = document.getElementById('addonContainerDate').value || payload.reportDate;
+    const requestedTime = document.getElementById('addonContainerTime').value || payload.reportTime;
+    for (let loadNumber = 1; loadNumber <= loadCount; loadNumber++) addonRequests.push({ addonType: 'container', loadNumber, loadCount, movementType: document.getElementById('addonContainerMovement').value, containerSize, equipment: `${containerSize} Container`, pickupAddress: 'A2Z Yard', destinationAddress: payload.jobAddress, requestedDate, requestedTime, reportDate: requestedDate, reportTime: requestedTime });
+  }
+  if (jobType === 'contract' && document.getElementById('addLowboyToggle').checked) {
+    const equipment = document.getElementById('addonEquipment').value.trim();
+    const pickupAddress = document.getElementById('addonPickup').value.trim() || 'A2Z Yard';
+    if (!equipment || !pickupAddress) {
+      showToast('Equipment and pickup are required for a Driver / Lowboy add-on.', true);
+      return;
+    }
+    const loadCount = Math.max(1, Math.min(20, parseInt(document.getElementById('addonLowboyQty').value, 10) || 1));
+    const requestedDate = document.getElementById('addonLowboyDate').value || payload.reportDate;
+    const requestedTime = document.getElementById('addonLowboyTime').value || payload.reportTime;
+    for (let loadNumber = 1; loadNumber <= loadCount; loadNumber++) addonRequests.push({ addonType: 'lowboy', loadNumber, loadCount, movementType: 'equipment_delivery', equipment, pickupAddress, destinationAddress: document.getElementById('addonDestination').value.trim() || payload.jobAddress, driverRequested: true, lowboyRequested: true, requestedDate, requestedTime, reportDate: requestedDate, reportTime: requestedTime });
+  }
+
+  if (!payload.firstName || !payload.lastName || !payload.jobAddress || !payload.reportDate || !payload.reportTime) {
+    showToast("Client, address, date, and time are required.", true);
+    return;
+  }
+
+  const bookStartDT = parseJobDateTime(payload.reportDate, payload.reportTime);
+  const bookEndDT = parseJobDateTime(payload.reportEndDate, payload.reportEndTime);
+  if (bookStartDT && bookEndDT && bookEndDT <= bookStartDT) {
+    showToast("End time must be after the report start time.", true);
+    return;
+  }
+
+  if (!payload.clientPhone || !/^\+1\d{10}$/.test(payload.clientPhone)) {
+    showToast("Client phone must be in +15555555555 format.", true);
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitBook');
+  submitBtn.textContent = "Creating...";
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch(CONFIG.CREATE_JOB_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    // The Data Store write for this job happens natively inside the
+    // CREATE_JOB_URL scenario itself now (right after its Create Opportunity
+    // module) — no second browser-side webhook call needed, and no
+    // round-tripping the new ID back to the browser just to re-send it.
+    // Awaiting this fetch already means that write has finished by the time
+    // we get here. The ID is only parsed below so the retry loop can confirm
+    // the shared record actually shows up before giving up.
+    // The webhook response here has turned out to just be the bare ID as
+    // plain text (e.g. "zJ2vRfBwQvhkkby5S4aG"), not JSON — so read it as
+    // text first and only try JSON.parse as a bonus in case that ever
+    // changes, falling back to using the raw text itself as the ID.
+    let newJobId = '';
+    try {
+      const raw = (await res.text()).trim();
+      try {
+        const data = JSON.parse(raw);
+        newJobId = (data && (data.id || data.opportunityId || (data.opportunity && data.opportunity.id))) || '';
+      } catch (parseErr) {
+        // Not JSON — GHL/Opportunity IDs are alphanumeric, ~20 chars, no
+        // spaces or punctuation, so a bare ID response passes this check.
+        if (/^[A-Za-z0-9_-]{10,40}$/.test(raw)) {
+          newJobId = raw;
+        } else {
+          console.warn("Create-job webhook response wasn't JSON and didn't look like a bare ID:", raw);
+        }
+      }
+    } catch (readErr) {
+      console.warn("Couldn't read create-job webhook response body:", readErr);
+    }
+
+    let addonFailures = 0;
+    if (addonRequests.length && !newJobId) {
+      addonFailures = addonRequests.length;
+      console.warn('Primary job was created, but its response did not include an opportunity ID; add-ons were not sent.');
+    } else if (addonRequests.length) {
+      for (const addon of addonRequests) {
+        const addonPayload = {
+          action: 'create_addon', bookingMode: 'job_addon', sourceOpportunityId: newJobId,
+          opportunityId: newJobId, jobId: newJobId, sourcePipelineId: payload.pipelineId,
+          sourceType: payload.jobType === 'contract' ? 'demo' : 'labor', jobType: payload.jobType, status: 'requested', active: true,
+          clientName: payload.clientName, clientPhone: payload.clientPhone, jobAddress: payload.jobAddress,
+          reportDate: payload.reportDate, reportTime: payload.reportTime,
+          reportEndDate: payload.reportEndDate, reportEndTime: payload.reportEndTime,
+          scopeOfWork: payload.scopeOfWork, toolsRequired: payload.toolsRequired,
+          ...addon, moveId: addon.moveId || createLogisticsMoveId(),
+          driverId: addon.driverId || '', driverName: addon.driverName || '',
+          assetId: addon.assetId || '', assetName: addon.assetName || '',
+          notes: addon.notes || payload.notes || ''
+        };
+        try {
+          const addonRes = await fetchWithTimeout(CONFIG.ADDON_LOGISTICS_URL, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload)
+          });
+          if (!addonRes.ok) throw new Error(`HTTP ${addonRes.status}: ${(await addonRes.text()).slice(0, 240)}`);
+          const addonSyncRes = await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload)
+          });
+          if (!addonSyncRes.ok) throw new Error(`Shared-state HTTP ${addonSyncRes.status}: ${(await addonSyncRes.text()).slice(0, 240)}`);
+        } catch (addonErr) {
+          addonFailures += 1;
+          console.warn('Logistics add-on failed:', addonErr);
+        }
+      }
+    }
+
+    if (addonFailures) showToast(`Job created, but ${addonFailures} logistics add-on(s) need attention.`, true);
+    else if (addonRequests.length) showToast(`Job created with ${addonRequests.length} logistics add-on(s).`);
+    else showToast(`Job created — ${payload.crewSize} crew slot(s) ready in GHL.`);
+    closeSheetFn();
+
+    await refreshAll();
+
+    // Button is done the moment the sheet closes and the board has its first
+    // refresh — nothing below should keep "Creating..." on screen. GHL's
+    // /opportunities/search endpoint (what the dashboard-data scenario reads
+    // job lists from) is index-backed and can lag a beat right after a brand
+    // new opportunity is created, separate from the Data Store write itself
+    // (which is synchronous). That lag is real and outside our control, so
+    // instead of blocking the button on it, poll for it quietly in the
+    // background and just let the board update in place once it catches up.
+    submitBtn.textContent = "Create Job";
+    submitBtn.disabled = false;
+
+    (async () => {
+      for (let attempt = 0; attempt < 3 && newJobId; attempt++) {
+        const seenJob = (dashboardData.jobs || []).some(j => j.id === newJobId);
+        const sharedRec = dashboardData.sharedStateByJobId && dashboardData.sharedStateByJobId.get(newJobId);
+        const seenTimes = !!(sharedRec && sharedRec.reportDate);
+        if (seenJob && seenTimes) break;
+        await new Promise(r => setTimeout(r, 1500));
+        await refreshAll();
+      }
+    })();
+  } catch (err) {
+    console.warn(err);
+    showToast("Couldn't reach the booking webhook. Check CONFIG.CREATE_JOB_URL.", true);
+  } finally {
+    submitBtn.textContent = "Create Job";
+    submitBtn.disabled = false;
+  }
+});
+
+/* ---------- Edit Job Details sheet ---------- */
+// Separate overlay/sheet from Book Job, its own state — never touches the
+// booking form's fields, and posts to a dedicated webhook so it can't
+// interfere with create/complete/cancel (CREATE_JOB_URL), assign/remove
+// (MOVE_WORKER_URL), or the report/end time Save/Edit flow (UPDATE_JOB_URL).
+const editOverlay = document.getElementById('editOverlay');
+const editSheet = document.getElementById('editJobSheet');
+let editCrewSize = 4;
+let currentEditJobId = '';
+
+function openEditJobSheet(jobId) {
+  const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId);
+  if (!job) {
+    showToast("Couldn't find that job — try refreshing.", true);
+    return;
+  }
+  currentEditJobId = jobId;
+
+  document.getElementById('editJobAddress').value = job.name || '';
+  document.getElementById('editClientPhone').value = getClientPhone(job) || '';
+  const currentValue = getOpportunityValue(job);
+  document.getElementById('editJobValue').value = (currentValue === null || currentValue === undefined) ? '' : currentValue;
+  document.getElementById('editScopeWork').value = getScopeOfWork(job) || '';
+
+  const currentTools = getToolsRequired(job).split(',').map(t => t.trim()).filter(Boolean);
+  document.querySelectorAll('#editToolsGrid input[type="checkbox"]').forEach(cb => {
+    cb.checked = currentTools.includes(cb.value);
+  });
+  document.getElementById('editAddContainerToggle').checked = false;
+  document.getElementById('editAddLowboyToggle').checked = false;
+  document.getElementById('editContainerAddonFields').hidden = true;
+  document.getElementById('editLowboyAddonFields').hidden = true;
+  document.getElementById('editAddonEquipment').value = '';
+  document.getElementById('editAddonPickup').value = 'A2Z Yard';
+  document.getElementById('editAddonDestination').value = '';
+  document.getElementById('editAddonContainerQty').value = '1';
+  document.getElementById('editAddonLowboyQty').value = '1';
+  document.getElementById('editAddonContainerDate').value = getReportDate(job) || '';
+  document.getElementById('editAddonContainerTime').value = getReportTime(job) || '';
+  document.getElementById('editAddonLowboyDate').value = getReportDate(job) || '';
+  document.getElementById('editAddonLowboyTime').value = getReportTime(job) || '';
+
+  // Crew size isn't tracked/displayed anywhere on the board today (it's only
+  // ever sent once, at booking) — default to the actual current crew count
+  // as the closest available starting point, since there's no stored value
+  // to read back.
+  const currentCrewCount = getCrew(job).length;
+  editCrewSize = currentCrewCount > 0 ? currentCrewCount : 4;
+  document.getElementById('editCrewCount').textContent = editCrewSize;
+
+  editOverlay.classList.add('open');
+  editSheet.classList.add('open');
+}
+
+function closeEditSheetFn() {
+  editOverlay.classList.remove('open');
+  editSheet.classList.remove('open');
+  currentEditJobId = '';
+}
+
+document.getElementById('closeEditSheet').addEventListener('click', closeEditSheetFn);
+document.getElementById('cancelEditJob').addEventListener('click', closeEditSheetFn);
+editOverlay.addEventListener('click', closeEditSheetFn);
+
+document.getElementById('editCrewMinus').addEventListener('click', () => {
+  editCrewSize = Math.max(1, editCrewSize - 1);
+  document.getElementById('editCrewCount').textContent = editCrewSize;
+});
+document.getElementById('editCrewPlus').addEventListener('click', () => {
+  editCrewSize = Math.min(30, editCrewSize + 1);
+  document.getElementById('editCrewCount').textContent = editCrewSize;
+});
+
+document.getElementById('submitEditJob').addEventListener('click', async () => {
+  if (!currentEditJobId) return;
+  const jobId = currentEditJobId;
+  const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId) || {};
+
+  const jobAddress = document.getElementById('editJobAddress').value.trim();
+  const clientPhone = document.getElementById('editClientPhone').value.trim();
+  const scopeOfWork = document.getElementById('editScopeWork').value.trim();
+  const toolsRequired = Array.from(document.querySelectorAll('#editToolsGrid input:checked')).map(c => c.value);
+  const monetaryValueRaw = document.getElementById('editJobValue').value;
+  const monetaryValue = monetaryValueRaw === '' ? null : parseFloat(monetaryValueRaw);
+  const editAddonRequests = [];
+  if (document.getElementById('editAddLowboyToggle').checked && isHourlyJob(job)) {
+    showToast('Driver / Lowboy add-ons require a Contract (Demo) job.', true);
+    return;
+  }
+  if (document.getElementById('editAddContainerToggle').checked) {
+    const containerSize = document.getElementById('editAddonContainerSize').value;
+    const loadCount = Math.max(1, Math.min(20, parseInt(document.getElementById('editAddonContainerQty').value, 10) || 1));
+    const requestedDate = document.getElementById('editAddonContainerDate').value || getReportDate(job);
+    const requestedTime = document.getElementById('editAddonContainerTime').value || getReportTime(job);
+    for (let loadNumber = 1; loadNumber <= loadCount; loadNumber++) editAddonRequests.push({ addonType: 'container', loadNumber, loadCount, movementType: document.getElementById('editAddonContainerMovement').value, containerSize, equipment: `${containerSize} Container`, pickupAddress: 'A2Z Yard', destinationAddress: jobAddress, requestedDate, requestedTime, reportDate: requestedDate, reportTime: requestedTime });
+  }
+  if (document.getElementById('editAddLowboyToggle').checked) {
+    const equipment = document.getElementById('editAddonEquipment').value.trim();
+    const pickupAddress = document.getElementById('editAddonPickup').value.trim() || 'A2Z Yard';
+    if (!equipment || !pickupAddress) {
+      showToast('Equipment and pickup are required for a Driver / Lowboy add-on.', true);
+      return;
+    }
+    const loadCount = Math.max(1, Math.min(20, parseInt(document.getElementById('editAddonLowboyQty').value, 10) || 1));
+    const requestedDate = document.getElementById('editAddonLowboyDate').value || getReportDate(job);
+    const requestedTime = document.getElementById('editAddonLowboyTime').value || getReportTime(job);
+    for (let loadNumber = 1; loadNumber <= loadCount; loadNumber++) editAddonRequests.push({ addonType: 'lowboy', loadNumber, loadCount, movementType: 'equipment_delivery', equipment, pickupAddress, destinationAddress: document.getElementById('editAddonDestination').value.trim() || jobAddress, driverRequested: true, lowboyRequested: true, requestedDate, requestedTime, reportDate: requestedDate, reportTime: requestedTime });
+  }
+
+  if (clientPhone && !/^\+1\d{10}$/.test(clientPhone)) {
+    showToast("Client phone must be in +15555555555 format.", true);
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitEditJob');
+  submitBtn.textContent = "Saving...";
+  submitBtn.disabled = true;
+
+  const payload = {
+    jobId,
+    action: "update_details",
+    jobAddress,
+    clientPhone,
+    scopeOfWork,
+    toolsRequired,
+    monetaryValue,
+    crewSize: editCrewSize
+  };
+
+  try {
+    const res = await fetchWithTimeout(CONFIG.EDIT_JOB_DETAILS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Webhook returned " + res.status);
+
+    // Keep the Data Store record fully in sync — send the complete current
+    // picture (existing times + crew, plus the just-edited scope/tools/value)
+    // so this doesn't get clobbered by, or clobber, any other write. Same
+    // pattern as saveJobTimes/assignCrew: awaited so refreshAll() below can't
+    // race ahead of the write actually landing.
+    const currentCrew = getCrew(job);
+    const sharedPayload = {
+      jobId,
+      action: "update_details",
+      jobAddress,
+      clientName: getClientName(job),
+      clientPhone: clientPhone || getClientPhone(job),
+      scopeOfWork,
+      toolsRequired,
+      monetaryValue,
+      reportDate: getReportDate(job),
+      reportTime: getReportTime(job),
+      reportEndDate: getReportEndDate(job),
+      reportEndTime: getReportEndTime(job),
+      crew: serializeCrew(currentCrew),
+      assignedWorkers: currentCrew.map(w => ({ workerPhone: w.phone || "", workerName: w.name }))
+    };
+    try {
+      const logRes = await fetchWithTimeout(CONFIG.SHARED_STATE_SYNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sharedPayload)
+      });
+      if (!logRes.ok) console.warn("Assignment log webhook returned " + logRes.status);
+    } catch (logErr) {
+      console.warn("Shared-state sync on edit failed (job details still saved):", logErr);
+    }
+
+    window.jobDetailsOverride[jobId] = { scopeOfWork, toolsRequired, monetaryValue };
+    persistTimeOverride('jobDetailsOverride', window.jobDetailsOverride);
+
+    let editAddonFailures = 0;
+    for (const addon of editAddonRequests) {
+      const addonPayload = {
+        action: 'create_addon', bookingMode: 'job_addon', sourceOpportunityId: jobId,
+        opportunityId: jobId, jobId, sourcePipelineId: JOB_PIPELINE_IDS.contract,
+        sourceType: isHourlyJob(job) ? 'labor' : 'demo', jobType: isHourlyJob(job) ? 'hourly' : 'contract', status: 'requested', active: true,
+        clientName: getClientName(job), clientPhone: clientPhone || getClientPhone(job), jobAddress,
+        reportDate: getReportDate(job), reportTime: getReportTime(job),
+        reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
+        scopeOfWork, toolsRequired, ...addon, moveId: addon.moveId || createLogisticsMoveId(),
+        driverId: addon.driverId || '', driverName: addon.driverName || '',
+        assetId: addon.assetId || '', assetName: addon.assetName || '',
+        notes: addon.notes || scopeOfWork || ''
+      };
+      try {
+        const addonRes = await fetchWithTimeout(CONFIG.ADDON_LOGISTICS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload) });
+        if (!addonRes.ok) throw new Error(`HTTP ${addonRes.status}: ${(await addonRes.text()).slice(0, 240)}`);
+        const addonSyncRes = await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload) });
+        if (!addonSyncRes.ok) throw new Error(`Shared-state HTTP ${addonSyncRes.status}: ${(await addonSyncRes.text()).slice(0, 240)}`);
+      } catch (addonErr) { editAddonFailures += 1; console.warn('Edit-job logistics add-on failed:', addonErr); }
+    }
+
+    if (editAddonFailures) showToast(`Job saved, but ${editAddonFailures} logistics add-on(s) need attention.`, true);
+    else if (editAddonRequests.length) showToast(`Job saved with ${editAddonRequests.length} logistics add-on(s).`);
+    else showToast("Job details saved.");
+    closeEditSheetFn();
+    await refreshAll();
+  } catch (err) {
+    console.warn(err);
+    const msg = err && err.name === "AbortError"
+      ? "No response from the Edit Details webhook after 15s — check the Make scenario has a Webhook Respond module on every branch."
+      : "Couldn't save job details. Check CONFIG.EDIT_JOB_DETAILS_URL.";
+    showToast(msg, true);
+  } finally {
+    submitBtn.textContent = "Save Changes";
+    submitBtn.disabled = false;
+  }
+});
+
+/* ---------- Logistics dispatch ---------- */
+let logisticsLoaded = false;
+let logisticsData = { drivers: [], assets: [], moves: [] };
+const CONTAINER_PIPELINE_ID = "F8i8hB7E5xHrJbJUXFr4";
+try { window.logisticsAssetAssignments = JSON.parse(localStorage.getItem('logisticsAssetAssignments') || '{}'); } catch (_) { window.logisticsAssetAssignments = {}; }
+function persistLogisticsAssetAssignments() { localStorage.setItem('logisticsAssetAssignments', JSON.stringify(window.logisticsAssetAssignments || {})); }
+function cachedAssetsForMove(moveKey) {
+  const cached = window.logisticsAssetAssignments[String(moveKey)] || [];
+  return Array.isArray(cached) ? cached : (cached && typeof cached === 'object' ? [cached] : []);
+}
+function removeCachedAssetAssignment(assetId) {
+  for (const [moveKey, value] of Object.entries(window.logisticsAssetAssignments || {})) {
+    const remaining = (Array.isArray(value) ? value : [value]).filter(asset => String(asset && (asset.assetId || asset.id) || '') !== String(assetId));
+    if (remaining.length) window.logisticsAssetAssignments[moveKey] = remaining;
+    else delete window.logisticsAssetAssignments[moveKey];
+  }
+}
+
+function normalizeDriverRoster(data) {
+  const raw = Array.isArray(data) ? data : logisticsArray(data, ['drivers', 'driverRoster', 'labor', 'contacts']);
+  return raw.map(driver => ({
+    id: driver.id || driver.contactId || driver.contact_id || '',
+    name: driver.name || driver.fullName || driver.full_name || driver.driverName || 'Unnamed Driver',
+    phone: driver.phone || '', license: driver.license || driver.cdl || '', hours: driver.hours || driver.totalHours || '',
+    status: String(driver.status || driver.driverStatus || 'available').toLowerCase().trim(),
+    moveId: driver.moveId || driver.jobId || ''
+  }));
+}
+
+function normalizeAssetRoster(data) {
+  const raw = Array.isArray(data) ? data : logisticsArray(data, ['assets', 'assetRoster', 'equipment', 'lowboys']);
+  const flattened = raw.flatMap(record => {
+    const nested = record && record.data && Array.isArray(record.data.assets) ? record.data.assets : null;
+    if (!nested) return [record];
+    return nested.map(asset => ({ ...asset, id: asset.id || asset.assetId || record.key || '', booked: asset.booked ?? record.booked }));
+  });
+  return flattened.map(asset => ({
+    ...asset,
+    id: asset.id || asset.assetId || asset.asset_id || '',
+    name: asset.name || asset.assetName || asset.asset_name || asset.unitName || asset.unit || asset.assetId || asset.id || 'Unnamed Asset',
+    status: String(asset.status || asset.assetStatus || (asset.booked ? 'assigned' : 'available')).toLowerCase().trim()
+  }));
+}
+
+function logisticsDriverKey(driver) {
+  if (!driver) return '';
+  return String(driver.name || '');
+}
+
+function createLogisticsMoveId() {
+  if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') return globalThis.crypto.randomUUID();
+  return `move-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function escapeLogisticsHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function logisticsArray(data, keys) {
+  for (const key of keys) {
+    if (data && Array.isArray(data[key])) return data[key];
+    if (data && data.data && Array.isArray(data.data[key])) return data.data[key];
+  }
+  return [];
+}
+
+// Driver display intentionally needs only a name. IDs/assets are optional
+// backend metadata and must not prevent an assignment from appearing.
+function getLogisticsDriverName(move) {
+  if (!move) return '';
+  return move.driverName || move.driver_name || move.assignedDriverName ||
+    move.assigned_driver_name || (move.driver && (move.driver.name || move.driver.fullName)) || '';
+}
+
+function normalizeLogisticsPayload(data) {
+  const directMoves = Array.isArray(data) ? data : logisticsArray(data, ['moves', 'logisticsMoves', 'dispatches']);
+  const standalone = Array.isArray(data) ? [] : logisticsArray(data, ['standalone', 'opportunities', 'jobs']).map(job => ({
+    ...job,
+    moveId: job.moveId || job.id || '',
+    sourceOpportunityId: job.sourceOpportunityId || job.opportunityId || job.id || '',
+    sourceType: job.sourceType || 'container',
+    addonType: job.addonType || 'container',
+    destinationAddress: job.destinationAddress || job.jobAddress || job.address || job.name || ''
+  }));
+  const keyed = new Map();
+  standalone.forEach(move => keyed.set(String(move.moveId || move.sourceOpportunityId || move.id || ''), move));
+  directMoves.forEach(move => {
+    const key = String(move.moveId || move.id || '');
+    const standaloneKey = String(move.sourceOpportunityId || '');
+    const mergeKey = String(move.addonType || '').toLowerCase() === 'standalone' && keyed.has(standaloneKey) ? standaloneKey : key;
+    if (keyed.has(mergeKey)) {
+      const existing = keyed.get(mergeKey);
+      const merged = { ...existing, ...move, sourceType: 'container' };
+      merged.driverName = getLogisticsDriverName(move) || getLogisticsDriverName(existing);
+      keyed.set(mergeKey, merged);
+    } else {
+      keyed.set(mergeKey || `move-${keyed.size}`, { ...move, driverName: getLogisticsDriverName(move) });
+    }
+  });
+  const moves = Array.from(keyed.values());
+  return {
+    drivers: logisticsArray(data, ['drivers', 'driverRoster']),
+    assets: logisticsArray(data, ['assets', 'lowboys', 'equipment']),
+    moves
+  };
+}
+
+function logisticsStatusClass(status) {
+  const value = String(status || 'unassigned').toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-');
+  if (value === 'en-route' || value === 'in-transit') return 'en-route';
+  if (value === 'scheduled' || value === 'ready' || value === 'assigned') return 'scheduled';
+  if (value === 'completed' || value === 'delivered') return 'completed';
+  return 'unassigned';
+}
+
+function logisticsSourceType(move) {
+  if (String(move.pipelineId || '') === CONTAINER_PIPELINE_ID) return 'container';
+  const raw = String(move.sourceType || move.pipelineType || move.sourcePipeline || move.pipelineName || '').toLowerCase();
+  if (raw.includes('demo') || raw.includes('contract')) return 'demo';
+  if (raw.includes('container')) return 'container';
+  return 'other';
+}
+
+function renderLogistics() {
+  const drivers = logisticsData.drivers || [], assets = logisticsData.assets || [], moves = logisticsData.moves || [];
+  const availableDrivers = drivers.filter(d => String(d.status || 'available').toLowerCase() === 'available').length;
+  const availableAssets = assets.filter(a => String(a.status || 'available').toLowerCase() === 'available').length;
+  const scheduled = moves.filter(m => ['scheduled','ready','assigned'].includes(String(m.status || '').toLowerCase())).length;
+  const enRoute = moves.filter(m => ['en_route','en route','in_transit','in transit'].includes(String(m.status || '').toLowerCase())).length;
+  document.getElementById('logisticsAvailableDrivers').textContent = availableDrivers;
+  document.getElementById('logisticsAvailableAssets').textContent = availableAssets;
+  document.getElementById('logisticsScheduledMoves').textContent = scheduled;
+  document.getElementById('logisticsEnRoute').textContent = enRoute;
+  document.getElementById('logisticsDriverCount').textContent = `${drivers.length} TOTAL`;
+  document.getElementById('logisticsAssetCount').textContent = `${assets.length} TOTAL`;
+
+  document.getElementById('logisticsDrivers').innerHTML = drivers.length ? drivers.map(d => {
+    const status = String(d.status || 'available').toLowerCase();
+    const cls = status === 'available' ? 'available' : (status.includes('maint') || status.includes('service') ? 'maintenance' : 'assigned');
+    return `<li class="logistics-resource"><div class="logistics-resource-top"><strong>${escapeLogisticsHtml(d.name || d.driverName || 'Unnamed Driver')}</strong><span class="logistics-pill ${cls}">${escapeLogisticsHtml(status)}</span></div><div class="logistics-resource-meta">${escapeLogisticsHtml(d.license || d.cdl || '')}${(d.phone || d.moveId) ? ' · ' + escapeLogisticsHtml(d.phone || d.moveId) : ''}</div></li>`;
+  }).join('') : '<li class="load-state">No drivers returned by the Logistics webhook.</li>';
+
+  document.getElementById('logisticsAssets').innerHTML = assets.length ? assets.map(a => {
+    const status = String(a.status || 'available').toLowerCase();
+    const cls = status === 'available' ? 'available' : (status.includes('maint') || status.includes('service') ? 'maintenance' : 'assigned');
+    const title = a.name || a.assetName || a.assetId || a.id || 'Unnamed Asset';
+    const assignment = a.moveId || a.jobId || a.sourceOpportunityId || '';
+    const meta = [a.configuration || a.type || a.assetType || a.capacity || '', assignment ? `Job: ${assignment}` : ''].filter(Boolean).join(' · ');
+    return `<li class="logistics-resource"><div class="logistics-resource-top"><strong>${escapeLogisticsHtml(title)}</strong><span class="logistics-pill ${cls}">${escapeLogisticsHtml(status)}</span></div><div class="logistics-resource-meta">${escapeLogisticsHtml(meta)}</div></li>`;
+  }).join('') : '<li class="load-state">No assets returned by the Asset roster webhook.</li>';
+
+  const filter = document.getElementById('logisticsSourceFilter').value;
+  const visibleMoves = moves.filter(m => filter === 'all' || logisticsSourceType(m) === filter);
+  const logisticsDate = m => {
+    const moveKey = String(m.moveId || m.id || m.sourceOpportunityId || m.opportunityId || '');
+    const override = window.logisticsScheduleOverride[moveKey];
+    return (override && override.date) || m.scheduledDate || m.requestedDate || m.reportDate || m.date || (m.scheduledStart ? String(m.scheduledStart).slice(0, 10) : '');
+  };
+  const todayStr = toLocalYMD(new Date());
+  const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = toLocalYMD(tomorrowDate);
+  const groups = { today: [], tomorrow: [], future: [], unscheduled: [] };
+  visibleMoves.forEach(m => {
+    const date = logisticsDate(m);
+    const key = !date ? 'unscheduled' : (date <= todayStr ? 'today' : (date === tomorrowStr ? 'tomorrow' : 'future'));
+    groups[key].push(m);
+  });
+  const buildLogisticsRow = m => {
+    const sourceType = logisticsSourceType(m);
+    const oppId = m.sourceOpportunityId || m.opportunityId || m.jobId || m.id || '';
+    const sourceLabel = m.jobAddress || m.deliveryAddress || m.destinationAddress || m.address || m.name || m.sourceDisplayId || m.opportunityName || m.jobName || oppId || '—';
+    const link = oppId ? getGhlOpportunityLink({ id: oppId }) : '';
+    const movement = m.movementType || m.moveType || m.type || (sourceType === 'container' ? 'Container Dispatch' : 'Logistics Move');
+    const equipment = m.equipment || m.container || m.assetDescription || '';
+    const notes = m.notes || m.scopeOfWork || m.description || '';
+    const pickup = m.pickupAddress || m.pickup || 'A2Z Yard', destination = m.destinationAddress || m.deliveryAddress || m.jobAddress || m.address || m.destination || m.dropoff || m.name || '—';
+    const moveKey = String(m.moveId || m.id || oppId);
+    const scheduleOverride = window.logisticsScheduleOverride[moveKey];
+    const breakSchedule = window.logisticsBreakSchedule[moveKey] || {};
+    const date = (scheduleOverride && scheduleOverride.date) || m.scheduledDate || m.requestedDate || m.reportDate || m.date || (m.scheduledStart ? String(m.scheduledStart).slice(0,10) : '');
+    const time = (scheduleOverride && scheduleOverride.time) || m.scheduledTime || m.requestedTime || m.reportTime || m.time || (m.scheduledStart && String(m.scheduledStart).includes('T') ? String(m.scheduledStart).split('T')[1].slice(0,5) : '');
+    const backendScheduleLocked = ['scheduled', 'assigned', 'ready', 'en_route', 'en route', 'in_transit', 'in transit'].includes(String(m.status || '').toLowerCase()) && date && time;
+    const scheduleLocked = Boolean((scheduleOverride && scheduleOverride.locked) || backendScheduleLocked || (m.scheduledDate && m.scheduledTime));
+    const scheduleCell = scheduleLocked
+      ? `<div class="time-edit-wrap locked"><span>${escapeLogisticsHtml(date || '—')}<br>${escapeLogisticsHtml(time || '—')}</span><button type="button" class="time-unlock logistics-schedule-edit" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit</button></div>`
+      : `<div class="time-edit-wrap"><input type="date" class="report-date-input mono logistics-date-input" value="${escapeLogisticsHtml(date)}"><input type="time" class="report-time-input mono logistics-time-input" value="${escapeLogisticsHtml(time)}"><button type="button" class="end-save logistics-schedule-lock" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Lock</button></div>`;
+    const status = m.status || 'Unassigned', statusCls = logisticsStatusClass(status);
+    const contact = m.contact || {};
+    const contactName = contact.companyName || m.companyName || contact.name || m.clientName || '';
+    const contactSecondary = contact.companyName && contact.name ? contact.name : '';
+    const standaloneValue = sourceType === 'container' ? getOpportunityValue(m) : null;
+    const standaloneValueDisplay = standaloneValue === null ? '—' : formatCurrency(standaloneValue);
+    const terminal = /complete|cancel|lost|abandon/i.test(String(status));
+    const assignable = !terminal && (m.moveId || m.addonType);
+    const assignedDriverId = m.driverId || (m.driver && m.driver.id) || '';
+    const assignedDriverName = getLogisticsDriverName(m);
+    const relatedAssets = assets.filter(asset => {
+      const assetMoveId = String(asset.moveId || '');
+      const assetJobId = String(asset.jobId || asset.opportunityId || asset.sourceOpportunityId || '');
+      return (assetMoveId && assetMoveId === moveKey) || (!assetMoveId && assetJobId && assetJobId === String(oppId));
+    });
+    const assignedAssets = [...relatedAssets, ...cachedAssetsForMove(moveKey)].filter((asset, index, list) => {
+      const id = String(asset.id || asset.assetId || '');
+      return id && list.findIndex(item => String(item.id || item.assetId || '') === id) === index;
+    });
+    const availableDriverOptions = drivers.filter(d => d.status === 'available').map(d => `<option value="${escapeLogisticsHtml(logisticsDriverKey(d))}">${escapeLogisticsHtml(d.name)}</option>`).join('');
+    if ((m.assetId || m.lowboyId || (m.asset && m.asset.id)) && !assignedAssets.some(asset => String(asset.id || asset.assetId || '') === String(m.assetId || m.lowboyId || (m.asset && m.asset.id)))) assignedAssets.unshift({ id: m.assetId || m.lowboyId || (m.asset && m.asset.id), name: m.assetName || (m.asset && m.asset.name) || '' });
+    const assignedAssetIds = new Set(assignedAssets.map(asset => String(asset.id || asset.assetId || '')));
+    const assignedAssetDisplay = assignedAssets.map(asset => asset.name || asset.assetName || asset.id || asset.assetId).filter(Boolean).join(', ');
+    const availableAssetOptions = assets.filter(a => String(a.status || 'available').toLowerCase() === 'available' && !assignedAssetIds.has(String(a.id || a.assetId || ''))).map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
+    const removeDriver = assignable && (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
+    const driverAssignment = assignable ? `<div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}<div class="driver-break-schedule" data-move-id="${escapeLogisticsHtml(moveKey)}"><label class="driver-break-field">Lunch <input type="time" class="logistics-lunch" aria-label="Lunch time" value="${escapeLogisticsHtml(breakSchedule.lunch || '')}"></label></div></div>` : '';
+    const assetAssignment = assignable ? `<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}">Add Vehicle</button></div>` : '';
+    const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" data-id="${escapeLogisticsHtml(oppId)}">Completed</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" data-id="${escapeLogisticsHtml(oppId)}">Cancelled</button><button class="job-stage-btn edit logistics-action" data-action="edit" data-id="${escapeLogisticsHtml(oppId)}">Edit Details</button><button class="job-stage-btn reset logistics-action" data-action="reset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}">Reset Day</button></div>`;
+    return `<tr data-source="${sourceType}"><td><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || '—')}</strong></td><td><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td class="logistics-route">${escapeLogisticsHtml(notes || '—')}</td><td class="logistics-route">${escapeLogisticsHtml(pickup)} → ${escapeLogisticsHtml(destination)}</td><td class="mono">${scheduleCell}</td><td>${escapeLogisticsHtml(assignedDriverName || '—')}</td><td>${escapeLogisticsHtml(assignedAssetDisplay || '—')}</td><td><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
+  };
+  const sectionDefs = [
+    { key: 'today', label: 'Today' },
+    { key: 'tomorrow', label: 'Tomorrow' },
+    { key: 'future', label: 'Future' },
+    { key: 'unscheduled', label: 'Unscheduled' }
+  ];
+  document.getElementById('logisticsMoves').innerHTML = visibleMoves.length ? sectionDefs.map(({ key, label }) => {
+    const groupMoves = groups[key].slice().sort((a, b) => String(a.scheduledTime || a.requestedTime || a.reportTime || '').localeCompare(String(b.scheduledTime || b.requestedTime || b.reportTime || '')));
+    return `<tr class="job-group-header-row"><td colspan="10" class="job-group-header">${label} <span class="job-group-count">${groupMoves.length}</span></td></tr>` +
+      (groupMoves.length ? groupMoves.map(buildLogisticsRow).join('') : `<tr class="job-group-empty-row"><td colspan="10" class="job-group-empty">No moves</td></tr>`);
+  }).join('') : '<tr><td colspan="10" class="empty-state">No logistics moves returned for this view.</td></tr>';
+}
+
+async function loadLogistics() {
+  document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="10" class="load-state"><div class="spinner"></div>Loading logistics...</td></tr>';
+  const errorEl = document.getElementById('logisticsBackendStatus');
+  try {
+    const [data, driverData, assetData] = await Promise.all([
+      fetchJsonStrict(CONFIG.LOGISTICS_DASHBOARD_URL, 'Logistics webhook'),
+      fetchJsonStrict(CONFIG.DRIVER_ROSTER_URL, 'Driver roster webhook').catch(err => { console.warn('Driver roster webhook failed:', err); return []; }),
+      fetchJsonStrict(CONFIG.ASSET_ROSTER_URL, 'Asset roster webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'refresh', booked: false })
+      }).catch(err => { console.warn('Asset roster webhook failed:', err); return []; })
+    ]);
+    logisticsData = normalizeLogisticsPayload(data);
+    logisticsData.drivers = normalizeDriverRoster(driverData);
+    const cachedAssignments = Object.values(window.logisticsAssetAssignments || {}).flatMap(item => Array.isArray(item) ? item : [item]);
+    logisticsData.assets = normalizeAssetRoster(assetData).map(asset => {
+      const cached = cachedAssignments.find(item => item && String(item.assetId || item.id || '') === String(asset.id || asset.assetId || ''));
+      const backendBooked = asset.booked === true || String(asset.status || '').toLowerCase() === 'assigned';
+      const pending = cached && Number(cached._pendingUntil || 0) > Date.now();
+      if (!backendBooked && !pending) {
+        removeCachedAssetAssignment(asset.id || asset.assetId || '');
+        return { ...asset, booked: false, status: 'available' };
+      }
+      return cached ? { ...asset, ...cached, booked: true, status: 'assigned' } : asset;
+    });
+    persistLogisticsAssetAssignments();
+    logisticsLoaded = true;
+    errorEl.style.display = 'none'; errorEl.textContent = '';
+    renderLogistics();
+  } catch (err) {
+    console.error('Logistics webhook failed:', err);
+    errorEl.style.display = 'block';
+    errorEl.textContent = `Logistics webhook failed: ${err && err.message ? err.message : err}`;
+    document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="10" class="empty-state">Logistics data could not be loaded.</td></tr>';
+  }
+}
+
+function findLogisticsMove(id) {
+  return (logisticsData.moves || []).find(m => String(m.sourceOpportunityId || m.opportunityId || m.jobId || m.id || '') === String(id));
+}
+
+async function setContainerStage(jobId, action, button) {
+  if (!jobId || !['complete', 'cancel'].includes(action)) return;
+  const original = button.textContent;
+  button.disabled = true; button.textContent = action === 'complete' ? 'Completing...' : 'Cancelling...';
+  try {
+    const res = await fetchWithTimeout(CONFIG.LOGISTICS_CREATE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ action, jobId, opportunityId: jobId, sourceOpportunityId: jobId, jobType: 'container', sourceType: 'container', pipelineId: CONTAINER_PIPELINE_ID })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 240)}`);
+    showToast(action === 'complete' ? 'Container marked completed.' : 'Container marked cancelled.');
+    await loadLogistics();
+  } catch (err) {
+    console.error(`Container ${action} failed:`, err);
+    showToast(`Could not mark container ${action === 'complete' ? 'completed' : 'cancelled'}.`, true);
+  } finally { button.disabled = false; button.textContent = original; }
+}
+
+async function persistLogisticsAsset(action, move, asset) {
+  const jobId = move.sourceOpportunityId || move.opportunityId || move.jobId || move.id || '';
+  const assetId = asset.id || asset.assetId || move.assetId || move.lowboyId || '';
+  const payload = {
+    action,
+    booked: action === 'booked',
+    id: assetId,
+    assetId,
+    assetName: asset.name || asset.assetName || move.assetName || '',
+    assetType: asset.assetType || asset.type || move.assetType || '',
+    configuration: asset.configuration || '',
+    capacity: asset.capacity || '',
+    moveId: move.moveId || move.id || '',
+    jobId,
+    opportunityId: move.opportunityId || jobId,
+    sourceOpportunityId: move.sourceOpportunityId || jobId,
+    requestedDate: move.scheduledDate || move.requestedDate || move.reportDate || move.date || '',
+    requestedTime: move.scheduledTime || move.requestedTime || move.reportTime || move.time || ''
+  };
+  const res = await fetchWithTimeout(CONFIG.ASSET_ROSTER_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload)
+  }, 20000);
+  if (!res.ok) throw new Error(`Asset webhook HTTP ${res.status}: ${(await res.text()).slice(0, 240)}`);
+  return payload;
+}
+
+async function resetLogisticsDay(jobId, button) {
+  const requestedMoveId = button && button.dataset ? button.dataset.moveId : '';
+  const move = (logisticsData.moves || []).find(item => requestedMoveId && String(item.moveId || item.id || '') === String(requestedMoveId)) || findLogisticsMove(jobId);
+  if (!move) return showToast('Logistics move could not be found.', true);
+  if (!confirm("Reset this move's schedule and driver? The GHL Opportunity and move details will be kept.")) return;
+  const original = button.textContent;
+  button.disabled = true; button.textContent = 'Resetting...';
+  const row = button.closest('tr');
+  const driverName = getLogisticsDriverName(move);
+  const driver = (logisticsData.drivers || []).find(item => item.name === driverName) || {};
+  const lunch = row?.querySelector('.logistics-lunch')?.value || '';
+  const logDate = move.scheduledDate || move.requestedDate || move.reportDate || move.date || '';
+  const moveKey = String(move.moveId || move.id || jobId);
+  const payload = {
+    action: 'reset_dispatch',
+    jobId,
+    opportunityId: jobId,
+    sourceOpportunityId: move.sourceOpportunityId || move.opportunityId || jobId,
+    moveId: move.moveId || move.id || '',
+    jobType: move.jobType || 'container',
+    sourceType: logisticsSourceType(move),
+    pipelineId: move.pipelineId || (logisticsSourceType(move) === 'container' ? CONTAINER_PIPELINE_ID : ''),
+    jobAddress: move.jobAddress || move.deliveryAddress || move.destinationAddress || move.address || move.name || '',
+    pickupAddress: move.pickupAddress || move.pickup || 'A2Z Yard',
+    destinationAddress: move.destinationAddress || move.deliveryAddress || move.jobAddress || move.address || move.destination || move.dropoff || '',
+    movementType: move.movementType || move.moveType || move.type || '',
+    equipment: move.equipment || move.container || move.assetDescription || '',
+    reportDate: move.reportDate || move.scheduledDate || move.date || '',
+    reportTime: move.reportTime || move.scheduledTime || move.time || '',
+    driverId: move.driverId || (move.driver && move.driver.id) || '',
+    driverName,
+    assetId: move.assetId || move.lowboyId || '',
+    assetName: move.assetName || '',
+    date: logDate,
+    employee: driverName,
+    hours: driver.hours || move.hours || '',
+    signature: driverName,
+    lunch,
+    rows: buildDriverLogRows(driverName, move)
+  };
+  try {
+    const res = await fetchWithTimeout(CONFIG.LOGISTICS_DAILY_RESET_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload)
+    }, 20000);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 240)}`);
+    const assignedAssets = (logisticsData.assets || []).filter(asset => {
+      if (payload.assetId && String(asset.id || asset.assetId || '') === String(payload.assetId)) return true;
+      const assetMoveId = String(asset.moveId || '');
+      const assetJobId = String(asset.jobId || asset.opportunityId || asset.sourceOpportunityId || '');
+      return (assetMoveId && assetMoveId === String(payload.moveId)) || (!assetMoveId && assetJobId && assetJobId === String(jobId));
+    });
+    for (const cachedAsset of cachedAssetsForMove(moveKey)) {
+      if (!assignedAssets.some(asset => String(asset.id || asset.assetId || '') === String(cachedAsset.id || cachedAsset.assetId || ''))) assignedAssets.push(cachedAsset);
+    }
+    await Promise.all(assignedAssets.filter(asset => asset.id || asset.assetId).map(asset => persistLogisticsAsset('available', move, asset)));
+    if (driverName) {
+      const removePayload = {
+        action: 'remove_driver', bookingMode: 'driver_assignment',
+        targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+        moveId: move.moveId || move.id || '', jobId, opportunityId: jobId,
+        sourceOpportunityId: move.sourceOpportunityId || jobId,
+        driverId: payload.driverId, driverName, driverPhone: driver.phone || '', active: true
+      };
+      await persistLogisticsDriver(removePayload, { ...removePayload, driverId: '', driverName: '', driverPhone: '' });
+    }
+    delete window.logisticsScheduleOverride[moveKey];
+    delete window.logisticsBreakSchedule[moveKey];
+    delete window.logisticsAssetAssignments[moveKey];
+    persistTimeOverride('logisticsScheduleOverride', window.logisticsScheduleOverride);
+    persistTimeOverride('logisticsBreakSchedule', window.logisticsBreakSchedule);
+    persistLogisticsAssetAssignments();
+    showToast('Logistics day reset — Opportunity and move details preserved.');
+    await loadLogistics();
+  } catch (err) {
+    console.error('Logistics daily reset failed:', err);
+    showToast(err && err.name === 'AbortError' ? 'No response from the Logistics reset webhook after 20s.' : 'Could not reset the Logistics day.', true);
+  } finally { button.disabled = false; button.textContent = original; }
+}
+
+const editContainerOverlay = document.getElementById('editContainerOverlay');
+const editContainerSheet = document.getElementById('editContainerSheet');
+let editingContainerId = '';
+function closeEditContainerSheetFn() { editContainerOverlay.classList.remove('open'); editContainerSheet.classList.remove('open'); editingContainerId = ''; }
+function openEditContainerSheetFn(jobId) {
+  const move = findLogisticsMove(jobId);
+  if (!move) return showToast('Container record could not be found.', true);
+  editingContainerId = jobId;
+  const contact = move.contact || {};
+  const fullName = contact.name || move.clientName || '';
+  const nameParts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  document.getElementById('editContainerFirstName').value = move.firstName || contact.firstName || nameParts.shift() || '';
+  document.getElementById('editContainerLastName').value = move.lastName || contact.lastName || nameParts.join(' ') || '';
+  document.getElementById('editContainerPhone').value = contact.phone || move.clientPhone || move.phone || '';
+  document.getElementById('editContainerAddress').value = move.destinationAddress || move.deliveryAddress || move.jobAddress || move.address || move.name || '';
+  const sizeMatch = String(move.equipment || '').match(/^(10|20|30|40) Yard/i);
+  document.getElementById('editContainerSize').value = move.containerSize || (sizeMatch ? `${sizeMatch[1]} Yard` : '30 Yard');
+  if (!document.getElementById('editContainerSize').value) document.getElementById('editContainerSize').value = '30 Yard';
+  document.getElementById('editContainerMovementType').value = move.movementType || move.moveType || 'container_drop';
+  if (!document.getElementById('editContainerMovementType').value) document.getElementById('editContainerMovementType').value = 'container_drop';
+  document.getElementById('editContainerDate').value = move.scheduledDate || move.requestedDate || move.reportDate || move.date || '';
+  document.getElementById('editContainerTime').value = move.scheduledTime || move.requestedTime || move.reportTime || move.time || '';
+  document.getElementById('editContainerValue').value = move.monetaryValue == null ? '' : move.monetaryValue;
+  document.getElementById('editContainerNotes').value = move.notes || move.scopeOfWork || '';
+  editContainerOverlay.classList.add('open'); editContainerSheet.classList.add('open');
+}
+document.getElementById('closeEditContainerSheet').addEventListener('click', closeEditContainerSheetFn);
+document.getElementById('cancelEditContainer').addEventListener('click', closeEditContainerSheetFn);
+editContainerOverlay.addEventListener('click', closeEditContainerSheetFn);
+
+document.getElementById('submitEditContainer').addEventListener('click', async () => {
+  const button = document.getElementById('submitEditContainer');
+  const move = findLogisticsMove(editingContainerId) || {};
+  const firstName = document.getElementById('editContainerFirstName').value.trim();
+  const lastName = document.getElementById('editContainerLastName').value.trim();
+  const clientName = `${firstName} ${lastName}`.trim();
+  const jobAddress = document.getElementById('editContainerAddress').value.trim();
+  const reportDate = document.getElementById('editContainerDate').value;
+  const reportTime = document.getElementById('editContainerTime').value;
+  const containerSize = document.getElementById('editContainerSize').value;
+  const movementType = document.getElementById('editContainerMovementType').value;
+  if (!firstName || !lastName || !jobAddress || !reportDate || !reportTime) return showToast('Client, destination, date, and time are required.', true);
+  const payload = {
+    action: 'update_job', jobId: editingContainerId, opportunityId: editingContainerId, sourceOpportunityId: move.sourceOpportunityId || editingContainerId,
+    bookingMode: 'standalone', jobType: 'container', sourceType: 'container', pipelineId: CONTAINER_PIPELINE_ID,
+    locationId: GHL_LOCATION_ID, firstName, lastName, clientName,
+    clientPhone: document.getElementById('editContainerPhone').value.trim(),
+    jobAddress, deliveryAddress: jobAddress, destinationAddress: jobAddress, pickupAddress: move.pickupAddress || move.pickup || 'A2Z Yard',
+    reportDate, reportTime, requestedDate: reportDate, requestedTime: reportTime,
+    reportEndDate: reportDate, reportEndTime: move.reportEndTime || '',
+    monetaryValue: document.getElementById('editContainerValue').value === '' ? null : parseFloat(document.getElementById('editContainerValue').value),
+    scopeOfWork: document.getElementById('editContainerNotes').value.trim(), notes: document.getElementById('editContainerNotes').value.trim(),
+    toolsRequired: [`${containerSize} Container`], containerSize, movementType, equipment: `${containerSize} Container`
+  };
+  button.disabled = true; button.textContent = 'Saving...';
+  try {
+    const res = await fetchWithTimeout(CONFIG.LOGISTICS_CREATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 240)}`);
+    try { await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, active: true }) }); } catch (syncErr) { console.warn('Container detail sync failed:', syncErr); }
+    showToast('Container details saved.'); closeEditContainerSheetFn(); await loadLogistics();
+  } catch (err) { console.error('Container edit failed:', err); showToast('Could not save container details.', true); }
+  finally { button.disabled = false; button.textContent = 'Save Changes'; }
+});
+
+async function persistLogisticsDriver(payload, sharedPayload = payload) {
+  const assignmentRes = await fetchWithTimeout(CONFIG.DRIVER_ASSIGNMENT_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!assignmentRes.ok) throw new Error(`Driver assignment HTTP ${assignmentRes.status}`);
+
+  // Persist the same change in the shared-state record before refreshing.
+  const sharedRes = await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(sharedPayload)
+  });
+  if (!sharedRes.ok) throw new Error(`Shared-state HTTP ${sharedRes.status}`);
+}
+
+function buildDriverLogRows(driverName, currentMove) {
+  const moveDate = move => move.scheduledDate || move.requestedDate || move.reportDate || move.date || '';
+  const targetDate = moveDate(currentMove);
+  const candidates = [...(logisticsData.moves || []).filter(move => getLogisticsDriverName(move) === driverName && (!targetDate || moveDate(move) === targetDate)), currentMove];
+  const unique = new Map();
+  candidates.forEach(move => {
+    const key = String(move.moveId || move.id || move.sourceOpportunityId || unique.size);
+    if (move && !unique.has(key)) unique.set(key, move);
+  });
+  return Array.from(unique.values()).slice(0, 13).map(move => {
+    const movement = String(move.movementType || move.moveType || '').toLowerCase();
+    const contact = move.contact || {};
+    return {
+      containerType: move.containerSize || move.equipment || move.assetName || '',
+      address: move.destinationAddress || move.jobAddress || move.address || move.name || '',
+      customer: contact.companyName || move.companyName || contact.name || move.clientName || '',
+      dropOff: /drop|deliver/.test(movement) ? 'X' : '',
+      swap: movement.includes('swap') ? 'X' : '',
+      pickUp: /pick|remove/.test(movement) ? 'X' : '',
+      checkNumber: move.checkNumber || move.checkNo || '',
+      tons: move.tons || move.tonnage || '',
+      dumpFee: move.dumpFee || move.dumpFeeAmount || ''
+    };
+  });
+}
+
+document.getElementById('logisticsMoves').addEventListener('click', event => {
+  const assignAssetButton = event.target.closest('.logistics-assign-asset');
+  if (assignAssetButton) {
+    const row = assignAssetButton.closest('tr');
+    const select = row.querySelector('.logistics-asset-select');
+    const asset = (logisticsData.assets || []).find(item => String(item.id || item.assetId || '') === String(select.value));
+    if (!asset) return showToast('Select an available vehicle.', true);
+    const move = (logisticsData.moves || []).find(item => String(item.moveId || item.id || '') === String(assignAssetButton.dataset.moveId)) || findLogisticsMove(assignAssetButton.dataset.id) || {};
+    const moveKey = String(move.moveId || move.id || move.sourceOpportunityId || move.opportunityId || assignAssetButton.dataset.id);
+    const existingAssets = cachedAssetsForMove(moveKey);
+    if (existingAssets.some(item => String(item.assetId || item.id || '') === String(asset.id || asset.assetId || ''))) return showToast('That vehicle is already assigned to this move.', true);
+    assignAssetButton.disabled = true; assignAssetButton.textContent = 'Assigning...';
+    persistLogisticsAsset('booked', move, asset)
+      .then(payload => {
+        window.logisticsAssetAssignments[moveKey] = [...existingAssets, { ...asset, ...payload, id: payload.assetId, status: 'assigned', booked: true, _pendingUntil: Date.now() + 10000 }];
+        persistLogisticsAssetAssignments();
+        showToast(`${asset.name || asset.assetName || asset.id} assigned.`);
+        return loadLogistics();
+      })
+      .catch(err => { console.error('Vehicle assignment failed:', err); showToast('Could not assign vehicle.', true); })
+      .finally(() => { assignAssetButton.disabled = false; assignAssetButton.textContent = 'Add Vehicle'; });
+    return;
+  }
+  const scheduleEditButton = event.target.closest('.logistics-schedule-edit');
+  if (scheduleEditButton) {
+    const moveId = scheduleEditButton.dataset.moveId;
+    const current = window.logisticsScheduleOverride[moveId] || {};
+    window.logisticsScheduleOverride[moveId] = { ...current, locked: false };
+    persistTimeOverride('logisticsScheduleOverride', window.logisticsScheduleOverride);
+    renderLogistics();
+    return;
+  }
+  const scheduleLockButton = event.target.closest('.logistics-schedule-lock');
+  if (scheduleLockButton) {
+    const row = scheduleLockButton.closest('tr');
+    const date = row.querySelector('.logistics-date-input').value;
+    const time = row.querySelector('.logistics-time-input').value;
+    if (!date || !time) return showToast('Choose a Logistics date and time first.', true);
+    const moveId = scheduleLockButton.dataset.moveId;
+    const jobId = scheduleLockButton.dataset.id;
+    const move = (logisticsData.moves || []).find(m => String(m.moveId || m.id || '') === String(moveId)) || {};
+    window.logisticsScheduleOverride[moveId] = { date, time, locked: true };
+    persistTimeOverride('logisticsScheduleOverride', window.logisticsScheduleOverride);
+    renderLogistics();
+    showToast('Logistics schedule locked — driver assignment enabled.');
+    fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        action: 'update_schedule', bookingMode: 'schedule_update',
+        targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+        moveId, jobId, opportunityId: jobId, sourceOpportunityId: move.sourceOpportunityId || jobId,
+        reportDate: date, reportTime: time, requestedDate: date, requestedTime: time,
+        scheduledDate: date, scheduledTime: time, active: true
+      })
+    }, 20000).then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    }).catch(err => {
+      console.warn('Logistics schedule backend sync failed:', err);
+      showToast('Schedule is locked here; backend sync still needs attention.', true);
+    });
+    return;
+  }
+  const removeButton = event.target.closest('.logistics-remove-driver');
+  if (removeButton) {
+    const driver = (logisticsData.drivers || []).find(d => String(d.id) === String(removeButton.dataset.driverId));
+    const driverName = removeButton.dataset.driverName || (driver && driver.name) || '';
+    const move = (logisticsData.moves || []).find(m => String(m.moveId || m.id || '') === String(removeButton.dataset.moveId)) || {};
+    const jobId = removeButton.dataset.id;
+    const payload = {
+      action: 'remove_driver', bookingMode: 'driver_assignment',
+      targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+      moveId: removeButton.dataset.moveId, jobId, opportunityId: jobId,
+      sourceOpportunityId: move.sourceOpportunityId || jobId,
+      driverId: removeButton.dataset.driverId || '', driverName, driverPhone: (driver && driver.phone) || '', active: true
+    };
+    const clearedPayload = { ...payload, driverId: '', driverName: '', driverPhone: '' };
+    removeButton.disabled = true; removeButton.textContent = 'Removing...';
+    persistLogisticsDriver(payload, clearedPayload)
+      .then(() => { showToast(`${driverName || 'Driver'} removed.`); return loadLogistics(); })
+      .catch(err => { console.error('Driver removal failed:', err); showToast('Could not remove driver.', true); })
+      .finally(() => { removeButton.disabled = false; removeButton.textContent = 'Remove Driver'; });
+    return;
+  }
+  const assignButton = event.target.closest('.logistics-assign-driver');
+  if (assignButton) {
+    const row = assignButton.closest('tr');
+    const select = row.querySelector('.logistics-driver-select');
+    const driver = (logisticsData.drivers || []).find(d => logisticsDriverKey(d) === select.value);
+    if (!driver) return showToast('Select an available driver.', true);
+    const move = (logisticsData.moves || []).find(m => String(m.moveId || m.id || '') === String(assignButton.dataset.moveId)) || {};
+    const jobId = assignButton.dataset.id;
+    const payload = {
+      action: 'assign_driver', bookingMode: 'driver_assignment',
+      targetType: (move.moveId && String(move.moveId) !== String(jobId)) ? 'job_addon' : 'standalone',
+      moveId: assignButton.dataset.moveId, jobId, opportunityId: jobId,
+      sourceOpportunityId: move.sourceOpportunityId || jobId,
+      driverId: driver.id || '', driverName: driver.name, driverPhone: driver.phone || '', active: true
+    };
+    assignButton.disabled = true; assignButton.textContent = 'Assigning...';
+    persistLogisticsDriver(payload)
+      .then(() => { showToast(`${driver.name} assigned.`); return loadLogistics(); })
+      .catch(err => { console.error('Driver assignment failed:', err); showToast('Could not assign driver.', true); })
+      .finally(() => { assignButton.disabled = false; assignButton.textContent = 'Assign'; });
+    return;
+  }
+  const button = event.target.closest('.logistics-action');
+  if (!button) return;
+  if (button.dataset.action === 'edit') openEditContainerSheetFn(button.dataset.id);
+  else if (button.dataset.action === 'reset') resetLogisticsDay(button.dataset.id, button);
+  else setContainerStage(button.dataset.id, button.dataset.action, button);
+});
+
+document.getElementById('logisticsMoves').addEventListener('change', event => {
+  if (!event.target.matches('.logistics-lunch')) return;
+  const schedule = event.target.closest('.driver-break-schedule');
+  const moveId = schedule && schedule.dataset.moveId;
+  if (!moveId) return;
+  window.logisticsBreakSchedule[moveId] = {
+    lunch: schedule.querySelector('.logistics-lunch')?.value || ''
+  };
+  persistTimeOverride('logisticsBreakSchedule', window.logisticsBreakSchedule);
+});
+
+const containerOverlay = document.getElementById('containerOverlay');
+const containerSheet = document.getElementById('containerSheet');
+function closeContainerSheetFn() { containerOverlay.classList.remove('open'); containerSheet.classList.remove('open'); }
+function openContainerSheetFn() {
+  if (!document.getElementById('containerDate').value) document.getElementById('containerDate').value = new Date().toISOString().slice(0, 10);
+  containerOverlay.classList.add('open'); containerSheet.classList.add('open');
+}
+document.getElementById('newContainerBtn').addEventListener('click', openContainerSheetFn);
+document.getElementById('closeContainerSheet').addEventListener('click', closeContainerSheetFn);
+document.getElementById('cancelContainerBook').addEventListener('click', closeContainerSheetFn);
+containerOverlay.addEventListener('click', closeContainerSheetFn);
+
+document.getElementById('submitContainerBook').addEventListener('click', async () => {
+  const submitBtn = document.getElementById('submitContainerBook');
+  const firstName = document.getElementById('containerFirstName').value.trim();
+  const lastName = document.getElementById('containerLastName').value.trim();
+  const reportDate = document.getElementById('containerDate').value;
+  const reportTime = document.getElementById('containerTime').value;
+  const jobAddress = document.getElementById('containerAddress').value.trim();
+  const containerSize = document.getElementById('containerSize').value;
+  const movementType = document.getElementById('containerMovementType').value;
+  const notes = document.getElementById('containerNotes').value.trim();
+  if (!firstName || !lastName || !jobAddress || !reportDate || !reportTime) {
+    showToast('Client, delivery address, date, and time are required.', true);
+    return;
+  }
+  const payload = {
+    action: 'create',
+    bookingMode: 'standalone',
+    jobType: 'container',
+    sourceType: 'container',
+    pipelineId: CONTAINER_PIPELINE_ID,
+    locationId: GHL_LOCATION_ID,
+    firstName,
+    lastName,
+    clientName: `${firstName} ${lastName}`.trim(),
+    clientPhone: document.getElementById('containerPhone').value.trim(),
+    jobAddress,
+    deliveryAddress: jobAddress,
+    pickupAddress: 'A2Z Yard',
+    reportDate,
+    reportTime,
+    reportEndDate: reportDate,
+    reportEndTime: '',
+    movementType,
+    containerSize,
+    equipment: `${containerSize} Container`,
+    scopeOfWork: notes,
+    toolsRequired: [`${containerSize} Container`],
+    monetaryValue: document.getElementById('containerValue').value === '' ? null : parseFloat(document.getElementById('containerValue').value),
+    notes
+  };
+  submitBtn.disabled = true; submitBtn.textContent = 'Creating...';
+  try {
+    const res = await fetchWithTimeout(CONFIG.LOGISTICS_CREATE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const responseText = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${responseText.slice(0, 240)}`);
+    let createResult = {};
+    try { createResult = responseText.trim() ? JSON.parse(responseText) : {}; } catch (parseErr) { createResult = { opportunityId: responseText.trim() }; }
+    const opportunityId = createResult.opportunityId || createResult.jobId || createResult.id ||
+      (createResult.opportunity && createResult.opportunity.id) ||
+      (createResult.data && (createResult.data.opportunityId || createResult.data.jobId || createResult.data.id)) || '';
+
+    if (opportunityId) {
+      const sharedPayload = {
+        ...payload,
+        jobId: String(opportunityId),
+        opportunityId: String(opportunityId),
+        sourceOpportunityId: String(opportunityId),
+        action: 'create',
+        status: 'unassigned',
+        active: true,
+        crew: '',
+        assignedWorkers: []
+      };
+      try {
+        const sharedRes = await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(sharedPayload)
+        });
+        if (!sharedRes.ok) console.warn(`Container shared-state webhook returned ${sharedRes.status}`);
+      } catch (sharedErr) {
+        console.warn('Container created, but shared-state sync failed:', sharedErr);
+      }
+      showToast('Container job created and synced.');
+    } else {
+      console.warn('Container create response did not include an opportunity ID:', createResult);
+      showToast('Container created, but Make must return opportunityId to sync shared state.', true);
+    }
+    closeContainerSheetFn();
+    ['containerFirstName','containerLastName','containerAddress','containerValue','containerNotes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('containerPhone').value = '+1';
+    await loadLogistics();
+  } catch (err) {
+    console.error('Container create failed:', err);
+    showToast(err && err.name === 'AbortError' ? 'No response from the Container webhook after 15s.' : 'Could not create the container job. Check the Logistics Make scenario.', true);
+  } finally {
+    submitBtn.disabled = false; submitBtn.textContent = 'Create Container Job';
+  }
+});
+
+document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListener('click', () => {
+  const logistics = tab.dataset.view === 'logistics';
+  document.querySelectorAll('.dispatch-view-tab').forEach(btn => { btn.classList.toggle('active', btn === tab); btn.setAttribute('aria-selected', btn === tab ? 'true' : 'false'); });
+  document.getElementById('laborDispatchView').hidden = logistics;
+  document.getElementById('logisticsDispatchView').hidden = !logistics;
+  if (logistics && !logisticsLoaded) loadLogistics();
+}));
+document.getElementById('logisticsSourceFilter').addEventListener('change', renderLogistics);
+document.getElementById('refreshBtn').addEventListener('click', () => document.getElementById('logisticsDispatchView').hidden ? refreshAll() : loadLogistics());
+
+/* ---------- Init ---------- */
+fmtDateHeader();
+loadDashboard();
+loadLaborRoster();
+</script>
+
+</body>
+</html>
