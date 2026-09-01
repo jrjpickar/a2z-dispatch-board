@@ -1070,8 +1070,6 @@ const CONFIG = {
   LOGISTICS_CREATE_URL: "/api/container-action",
   // Read-only Container Opportunity search, called when Logistics opens or refreshes.
   LOGISTICS_DASHBOARD_URL: "https://hook.us2.make.com/atjk343135x5zmxhfmtu4113nj9rbcx4",
-  // Container-specific Data Store sync. Receives the complete container record after creation.
-  CONTAINER_SHARED_STATE_SYNC_URL: "https://hook.us2.make.com/hffwq5k0ptgxgzyr6x51w4ecur6akdtq",
   ADDON_LOGISTICS_URL: "https://hook.us2.make.com/0615v0rpg6isw35ej94h97rstd3qh6y5",
   DRIVER_ROSTER_URL: "https://hook.us2.make.com/r46r61b9ocan2mmwsmvhjl7pq15wixao",
   ASSET_ROSTER_URL: "https://hook.us2.make.com/7gar4ap547v85ixdebnon6kkey5unt1f",
@@ -2824,7 +2822,7 @@ document.getElementById('submitBook').addEventListener('click', async () => {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload)
           });
           if (!addonRes.ok) throw new Error(`HTTP ${addonRes.status}: ${(await addonRes.text()).slice(0, 240)}`);
-          const addonSyncRes = await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, {
+          const addonSyncRes = await fetchWithTimeout(CONFIG.LOGISTICS_STATE_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload)
           });
           if (!addonSyncRes.ok) throw new Error(`Shared-state HTTP ${addonSyncRes.status}: ${(await addonSyncRes.text()).slice(0, 240)}`);
@@ -3066,7 +3064,7 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
       try {
         const addonRes = await fetchWithTimeout(CONFIG.ADDON_LOGISTICS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload) });
         if (!addonRes.ok) throw new Error(`HTTP ${addonRes.status}: ${(await addonRes.text()).slice(0, 240)}`);
-        const addonSyncRes = await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload) });
+        const addonSyncRes = await fetchWithTimeout(CONFIG.LOGISTICS_STATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload) });
         if (!addonSyncRes.ok) throw new Error(`Shared-state HTTP ${addonSyncRes.status}: ${(await addonSyncRes.text()).slice(0, 240)}`);
       } catch (addonErr) { editAddonFailures += 1; console.warn('Edit-job logistics add-on failed:', addonErr); }
     }
@@ -3646,7 +3644,7 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
     const res = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ ...payload, active: true }) });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 240)}`);
     if (!isAddon) {
-      try { await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, active: true }) }); } catch (syncErr) { console.warn('Container detail sync failed:', syncErr); }
+      try { await fetchWithTimeout(CONFIG.LOGISTICS_STATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, active: true }) }); } catch (syncErr) { console.warn('Container detail sync failed:', syncErr); }
     }
     showToast(`${isAddon ? 'Add-on' : 'Container'} details saved.`); closeEditContainerSheetFn(); await loadLogistics();
   } catch (err) { console.error('Container edit failed:', err); showToast('Could not save container details.', true); }
@@ -3899,7 +3897,7 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
         assignedWorkers: []
       };
       try {
-        const sharedRes = await fetchWithTimeout(CONFIG.CONTAINER_SHARED_STATE_SYNC_URL, {
+        const sharedRes = await fetchWithTimeout(CONFIG.LOGISTICS_STATE_URL, {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(sharedPayload)
         });
         if (!sharedRes.ok) console.warn(`Container shared-state webhook returned ${sharedRes.status}`);
