@@ -24,6 +24,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/logistics-data"
+  to = "/.netlify/functions/logistics-data"
+  status = 200
+
+[[redirects]]
   from = "/api/driver-log"
   to = "/.netlify/functions/driver-log"
   status = 200
