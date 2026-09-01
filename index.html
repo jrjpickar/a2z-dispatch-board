@@ -733,7 +733,22 @@
   .assignment-edit-panel{margin-top:7px;padding:8px;border:1px solid #d5d9dc;border-radius:7px;background:#f7f8f8}.assignment-edit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font:700 9px 'IBM Plex Mono',monospace;text-transform:uppercase;color:var(--ink-soft)}.assignment-edit-items{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}.assignment-edit-item{display:flex;align-items:center;gap:5px;padding:4px 6px;border:1px solid #d9dcdf;border-radius:5px;background:#fff;font-size:10px}
   .addon-section{border:1px solid var(--border);border-left:4px solid var(--gold);background:var(--gold-tint-soft);padding:12px;margin-bottom:16px}.addon-section>label{display:block;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:12px;font-weight:600;margin-bottom:9px}.addon-block{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-top:8px}.addon-toggle{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}.addon-toggle input{width:auto}.addon-fields{padding-top:10px}.addon-fields[hidden]{display:none}
   @media(max-width:1150px){.logistics-layout{grid-template-columns:250px minmax(650px,1fr)}.logistics-assets-panel{display:none}}
-  @media(max-width:760px){.dispatch-view-tabs{padding:0}.dispatch-view-tab{flex:1}.logistics-stats{grid-template-columns:1fr 1fr}.logistics-layout{grid-template-columns:1fr}.logistics-drivers-panel{display:none}.logistics-toolbar select{display:none}}
+  @media(max-width:760px){
+    body{font-size:13px}.topbar{padding:11px 12px}.topbar .brand h1,.topbar .brand span.tag{font-size:17px}.topbar .date{font-size:10px}.topbar .actions{gap:6px}.topbar .btn-ghost,.topbar .btn-primary{min-height:40px;padding:8px 11px}
+    .dispatch-view-tabs{position:sticky;top:0;z-index:20;padding:0}.dispatch-view-tab{flex:1;min-height:44px;padding:11px 6px;font-size:11px;background:#fff}
+    .status-strip{grid-template-columns:repeat(3,1fr)}.status-card{padding:12px 9px}.status-card .num{font-size:28px}.status-card .label-caps{font-size:9px}
+    .layout{display:block;background:transparent}.layout>.panel{margin:10px;border:1px solid var(--border);border-radius:9px;overflow:hidden}.roster-list{max-height:235px}
+    .logistics-stats{grid-template-columns:1fr 1fr;gap:8px;padding:10px!important}.logistics-stat{padding:11px 12px!important}.logistics-stat .num,#logisticsDispatchView .logistics-stat .num{font-size:27px}.logistics-stat .label-caps{font-size:9px}
+    .logistics-layout{display:block;padding:0 10px!important;min-height:0}.logistics-layout>.panel{margin-bottom:10px}.logistics-drivers-panel,.logistics-assets-panel{display:none}.logistics-toolbar{width:100%;align-items:stretch}.logistics-toolbar select{display:block;flex:1;min-width:0}.logistics-toolbar .btn-primary{white-space:nowrap;padding:8px 10px}.logistics-layout>.panel>.panel-head{align-items:flex-start;flex-direction:column;gap:8px;padding:12px}.logistics-note{margin:9px 10px;font-size:10px}
+    .jobs-table-wrap,#logisticsDispatchView .jobs-table-wrap{overflow:visible;margin:8px!important;border:0!important;box-shadow:none!important;background:transparent!important}
+    table.jobs,table.logistics-table{display:block!important;min-width:0!important;width:100%}table.jobs thead,table.logistics-table thead{display:none}table.jobs tbody,table.logistics-table tbody{display:block}
+    table.jobs tr:not(.job-group-header-row):not(.job-group-empty-row),table.logistics-table tr:not(.job-group-header-row):not(.job-group-empty-row){display:block;margin:0 0 11px;border:1px solid #d8dcdf;border-radius:9px;background:#fff;box-shadow:0 3px 12px rgba(21,22,24,.07);overflow:hidden}
+    table.jobs td,table.logistics-table td,#logisticsDispatchView table.logistics-table td{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;padding:9px 10px!important;border-bottom:1px solid #eceeef!important;background:#fff!important;font-size:12px;overflow-wrap:anywhere}
+    table.jobs td::before,table.logistics-table td::before{content:attr(data-label);font:700 9px 'IBM Plex Mono',monospace;letter-spacing:.04em;text-transform:uppercase;color:#74797e;padding-top:2px}
+    table.jobs td:last-child,table.logistics-table td:last-child{border-bottom:0!important}table.jobs .job-group-header-row,table.jobs .job-group-empty-row,table.logistics-table .job-group-header-row,table.logistics-table .job-group-empty-row{display:table;width:100%;margin:5px 0 8px}table.jobs .job-group-header-row td,table.jobs .job-group-empty-row td,table.logistics-table .job-group-header-row td,table.logistics-table .job-group-empty-row td{display:table-cell;width:100%}table.jobs .job-group-header-row td::before,table.jobs .job-group-empty-row td::before,table.logistics-table .job-group-header-row td::before,table.logistics-table .job-group-empty-row td::before{display:none}
+    .crew-chip-row{max-width:none}.time-edit-wrap{max-width:none}.time-edit-wrap input{min-height:40px}.job-stage-actions{gap:6px}.job-stage-btn{min-height:38px!important;padding:8px 10px!important}.assignment-lock{margin-top:0;padding:9px}.assignment-lock .job-stage-btn{flex:0 0 auto}.assignment-edit-panel{margin-top:0}.assignment-edit-panel select{min-height:40px;max-width:none!important;flex:1}.assignment-edit-items{display:block}.assignment-edit-item{justify-content:space-between;margin-bottom:5px}
+    .sheet{width:100%;max-width:100vw}.sheet-body{padding:14px}.field-row{display:block}.sheet-foot{padding:10px 14px}.sheet-foot button{min-height:44px}
+  }
 
 </style>
 </head>
@@ -1973,14 +1988,14 @@ function renderJobs(jobs) {
 
     return `
       <tr>
-        <td>${jobIdCell}</td>
-        <td>${client}</td>
-        <td>${valueCell}</td>
-        <td>${address}</td>
-        <td>${reportCell}</td>
-        <td>${endCell}</td>
-        <td><div class="crew-chip-row">${backendCrewChips}${overrideChips}${assignChecklist}${(!crew.length && !overrideCrew.length && job_associationsMissing(j)) ? '<span class="crew-chip empty-slot">crew not linked yet</span>' : ''}</div></td>
-        <td>
+        <td data-label="Job ID">${jobIdCell}</td>
+        <td data-label="Client">${client}</td>
+        <td data-label="Value">${valueCell}</td>
+        <td data-label="Address">${address}</td>
+        <td data-label="Report time">${reportCell}</td>
+        <td data-label="End date/time">${endCell}</td>
+        <td data-label="Crew"><div class="crew-chip-row">${backendCrewChips}${overrideChips}${assignChecklist}${(!crew.length && !overrideCrew.length && job_associationsMissing(j)) ? '<span class="crew-chip empty-slot">crew not linked yet</span>' : ''}</div></td>
+        <td data-label="Status">
           <span class="status-tag ${statusClass}">${statusLabel}</span>
           ${terminalLocally ? '' : `<div class="job-stage-actions">
             <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">Edit Details</button>
@@ -3330,7 +3345,7 @@ function renderLogistics() {
     const targetType = logisticsTargetType(m);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
     const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
-    return `<tr data-source="${sourceType}"><td><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || '—')}</strong></td><td><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td class="logistics-route">${escapeLogisticsHtml(notes || '—')}</td><td class="logistics-route">${escapeLogisticsHtml(pickup)} → ${escapeLogisticsHtml(destination)}</td><td class="mono">${scheduleCell}</td><td>${escapeLogisticsHtml(assignedDriverName || '—')}</td><td>${escapeLogisticsHtml(assignedAssetDisplay || '—')}</td><td><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
+    return `<tr data-source="${sourceType}"><td data-label="Move"><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || '—')}</strong></td><td data-label="Destination"><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td data-label="Value"><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td data-label="Type / equipment"><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td data-label="Notes" class="logistics-route">${escapeLogisticsHtml(notes || '—')}</td><td data-label="Route" class="logistics-route">${escapeLogisticsHtml(pickup)} → ${escapeLogisticsHtml(destination)}</td><td data-label="Schedule" class="mono">${scheduleCell}</td><td data-label="Driver">${escapeLogisticsHtml(assignedDriverName || '—')}</td><td data-label="Vehicle">${escapeLogisticsHtml(assignedAssetDisplay || '—')}</td><td data-label="Status"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
   };
   const sectionDefs = [
     { key: 'today', label: 'Today' },
