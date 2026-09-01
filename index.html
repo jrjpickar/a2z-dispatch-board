@@ -20,7 +20,7 @@
     --gold: #c9a227;
     --gold-tint: #f5e9c4;
     --gold-tint-soft: #faf3df;
-    --bg: #f4f4f2;
+    --bg: #e9ebed;
     --card: #ffffff;
     --stripe: #f0f0ee;
     --border: #dddddb;
@@ -728,6 +728,9 @@
   #logisticsDispatchView .logistics-primary-actions{padding-top:7px;border-top:1px solid var(--stripe);margin-top:7px}
   #logisticsDispatchView .logistics-primary-actions .job-stage-btn{border-radius:5px}
   #logisticsDispatchView .logistics-status{padding:4px 8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+  .assignment-lock{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:8px 9px;border:1px solid #d5d9dc;border-radius:7px;background:#f1f3f4}
+  .assignment-lock-copy{min-width:0}.assignment-lock-label{display:block;font:700 8px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#6b7075}.assignment-lock-value{display:block;margin-top:2px;font-size:11px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+  .assignment-edit-panel{margin-top:7px;padding:8px;border:1px solid #d5d9dc;border-radius:7px;background:#f7f8f8}.assignment-edit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font:700 9px 'IBM Plex Mono',monospace;text-transform:uppercase;color:var(--ink-soft)}.assignment-edit-items{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}.assignment-edit-item{display:flex;align-items:center;gap:5px;padding:4px 6px;border:1px solid #d9dcdf;border-radius:5px;background:#fff;font-size:10px}
   .addon-section{border:1px solid var(--border);border-left:4px solid var(--gold);background:var(--gold-tint-soft);padding:12px;margin-bottom:16px}.addon-section>label{display:block;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:12px;font-weight:600;margin-bottom:9px}.addon-block{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-top:8px}.addon-toggle{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}.addon-toggle input{width:auto}.addon-fields{padding-top:10px}.addon-fields[hidden]{display:none}
   @media(max-width:1150px){.logistics-layout{grid-template-columns:250px minmax(650px,1fr)}.logistics-assets-panel{display:none}}
   @media(max-width:760px){.dispatch-view-tabs{padding:0}.dispatch-view-tab{flex:1}.logistics-stats{grid-template-columns:1fr 1fr}.logistics-layout{grid-template-columns:1fr}.logistics-drivers-panel{display:none}.logistics-toolbar select{display:none}}
@@ -3091,6 +3094,8 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
 /* ---------- Logistics dispatch ---------- */
 let logisticsLoaded = false;
 let logisticsData = { drivers: [], assets: [], moves: [] };
+window.logisticsDriverEdit = window.logisticsDriverEdit || {};
+window.logisticsAssetEdit = window.logisticsAssetEdit || {};
 const CONTAINER_PIPELINE_ID = "F8i8hB7E5xHrJbJUXFr4";
 try { window.logisticsAssetAssignments = JSON.parse(localStorage.getItem('logisticsAssetAssignments') || '{}'); } catch (_) { window.logisticsAssetAssignments = {}; }
 function persistLogisticsAssetAssignments() { localStorage.setItem('logisticsAssetAssignments', JSON.stringify(window.logisticsAssetAssignments || {})); }
@@ -3314,9 +3319,14 @@ function renderLogistics() {
     const assignedAssetIds = new Set(assignedAssets.map(asset => String(asset.id || asset.assetId || '')));
     const assignedAssetDisplay = assignedAssets.map(asset => asset.name || asset.assetName || asset.id || asset.assetId).filter(Boolean).join(', ');
     const availableAssetOptions = assets.filter(a => String(a.status || 'available').toLowerCase() === 'available' && !assignedAssetIds.has(String(a.id || a.assetId || ''))).map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
-    const removeDriver = assignable && (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
-    const driverAssignment = assignable ? `<div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}<div class="driver-break-schedule" data-move-id="${escapeLogisticsHtml(moveKey)}"><label class="driver-break-field">Lunch <input type="time" class="logistics-lunch" aria-label="Lunch time" value="${escapeLogisticsHtml(breakSchedule.lunch || '')}"></label></div></div>` : '';
-    const assetAssignment = assignable ? `<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(m.moveId || m.id || '')}">Add Vehicle</button></div>` : '';
+    const driverEditing = Boolean(window.logisticsDriverEdit[moveKey]);
+    const assetEditing = Boolean(window.logisticsAssetEdit[moveKey]);
+    const removeDriver = (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
+    const driverEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit driver</span><button type="button" class="job-stage-btn logistics-done-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div><div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}<div class="driver-break-schedule" data-move-id="${escapeLogisticsHtml(moveKey)}"><label class="driver-break-field">Lunch <input type="time" class="logistics-lunch" aria-label="Lunch time" value="${escapeLogisticsHtml(breakSchedule.lunch || '')}"></label></div></div></div>`;
+    const driverAssignment = assignable ? ((assignedDriverId || assignedDriverName) && !driverEditing ? `<div class="assignment-lock"><span class="assignment-lock-copy"><span class="assignment-lock-label">Driver locked</span><span class="assignment-lock-value">${escapeLogisticsHtml(assignedDriverName || assignedDriverId)}</span></span><button type="button" class="job-stage-btn edit logistics-edit-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit Driver</button></div>` : driverEditor) : '';
+    const assignedAssetEditors = assignedAssets.map(asset => `<span class="assignment-edit-item"><span>${escapeLogisticsHtml(asset.name || asset.assetName || asset.id || asset.assetId)}</span><button type="button" class="job-stage-btn cancel logistics-remove-asset" data-move-id="${escapeLogisticsHtml(moveKey)}" data-asset-id="${escapeLogisticsHtml(asset.id || asset.assetId || '')}">Remove</button></span>`).join('');
+    const assetEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit vehicle</span><button type="button" class="job-stage-btn logistics-done-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div>${assignedAssetEditors ? `<div class="assignment-edit-items">${assignedAssetEditors}</div>` : ''}<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Add Vehicle</button></div></div>`;
+    const assetAssignment = assignable ? (assignedAssets.length && !assetEditing ? `<div class="assignment-lock"><span class="assignment-lock-copy"><span class="assignment-lock-label">Vehicle locked</span><span class="assignment-lock-value">${escapeLogisticsHtml(assignedAssetDisplay)}</span></span><button type="button" class="job-stage-btn edit logistics-edit-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit Vehicle</button></div>` : assetEditor) : '';
     const targetType = logisticsTargetType(m);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
     const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
@@ -3697,6 +3707,31 @@ function buildDriverLogRows(driverName, currentMove) {
 }
 
 document.getElementById('logisticsMoves').addEventListener('click', event => {
+  const editDriverButton = event.target.closest('.logistics-edit-driver');
+  if (editDriverButton) { window.logisticsDriverEdit[editDriverButton.dataset.moveId] = true; renderLogistics(); return; }
+  const doneDriverButton = event.target.closest('.logistics-done-driver');
+  if (doneDriverButton) { delete window.logisticsDriverEdit[doneDriverButton.dataset.moveId]; renderLogistics(); return; }
+  const editAssetButton = event.target.closest('.logistics-edit-asset');
+  if (editAssetButton) { window.logisticsAssetEdit[editAssetButton.dataset.moveId] = true; renderLogistics(); return; }
+  const doneAssetButton = event.target.closest('.logistics-done-asset');
+  if (doneAssetButton) { delete window.logisticsAssetEdit[doneAssetButton.dataset.moveId]; renderLogistics(); return; }
+  const removeAssetButton = event.target.closest('.logistics-remove-asset');
+  if (removeAssetButton) {
+    const move = (logisticsData.moves || []).find(item => String(item.moveId || item.id || '') === String(removeAssetButton.dataset.moveId)) || {};
+    const asset = (logisticsData.assets || []).find(item => String(item.id || item.assetId || '') === String(removeAssetButton.dataset.assetId)) || cachedAssetsForMove(removeAssetButton.dataset.moveId).find(item => String(item.id || item.assetId || '') === String(removeAssetButton.dataset.assetId));
+    if (!asset) return showToast('Could not find that vehicle.', true);
+    removeAssetButton.disabled = true; removeAssetButton.textContent = 'Removing...';
+    persistLogisticsAsset('available', move, asset)
+      .then(() => {
+        removeCachedAssetAssignment(removeAssetButton.dataset.assetId);
+        persistLogisticsAssetAssignments();
+        showToast(`${asset.name || asset.assetName || asset.id || 'Vehicle'} removed.`);
+        return loadLogistics();
+      })
+      .catch(err => { console.error('Vehicle removal failed:', err); showToast('Could not remove vehicle.', true); })
+      .finally(() => { removeAssetButton.disabled = false; removeAssetButton.textContent = 'Remove'; });
+    return;
+  }
   const assignAssetButton = event.target.closest('.logistics-assign-asset');
   if (assignAssetButton) {
     const row = assignAssetButton.closest('tr');
@@ -3711,6 +3746,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
     persistLogisticsAsset('booked', move, asset)
       .then(payload => {
         window.logisticsAssetAssignments[moveKey] = [...existingAssets, { ...asset, ...payload, id: payload.assetId, status: 'assigned', booked: true, _pendingUntil: Date.now() + 10000 }];
+        delete window.logisticsAssetEdit[moveKey];
         persistLogisticsAssetAssignments();
         showToast(`${asset.name || asset.assetName || asset.id} assigned.`);
         return loadLogistics();
@@ -3774,7 +3810,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
     const clearedPayload = { ...payload, driverId: '', driverName: '', driverPhone: '' };
     removeButton.disabled = true; removeButton.textContent = 'Removing...';
     persistLogisticsDriver(payload, clearedPayload)
-      .then(() => { showToast(`${driverName || 'Driver'} removed.`); return loadLogistics(); })
+      .then(() => { delete window.logisticsDriverEdit[String(removeButton.dataset.moveId)]; showToast(`${driverName || 'Driver'} removed.`); return loadLogistics(); })
       .catch(err => { console.error('Driver removal failed:', err); showToast('Could not remove driver.', true); })
       .finally(() => { removeButton.disabled = false; removeButton.textContent = 'Remove Driver'; });
     return;
@@ -3796,7 +3832,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
     };
     assignButton.disabled = true; assignButton.textContent = 'Assigning...';
     persistLogisticsDriver(payload)
-      .then(() => { showToast(`${driver.name} assigned.`); return loadLogistics(); })
+      .then(() => { delete window.logisticsDriverEdit[String(assignButton.dataset.moveId)]; showToast(`${driver.name} assigned.`); return loadLogistics(); })
       .catch(err => { console.error('Driver assignment failed:', err); showToast('Could not assign driver.', true); })
       .finally(() => { assignButton.disabled = false; assignButton.textContent = 'Assign'; });
     return;
