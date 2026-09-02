@@ -3202,7 +3202,7 @@ function normalizeAssetRoster(data) {
   const flattened = raw.flatMap(record => {
     const nested = record && record.data && Array.isArray(record.data.assets) ? record.data.assets : null;
     if (!nested) return [record];
-    return nested.map(asset => ({ ...asset, id: asset.id || asset.assetId || record.key || '', booked: asset.booked ?? record.booked }));
+    return nested.map(asset => ({ ...asset, id: asset.id || asset.assetId || record.key || '', storeKey: record.key || asset.assetId || asset.id || '', booked: asset.booked ?? record.booked }));
   });
   return flattened.map(asset => ({
     ...asset,
@@ -3394,7 +3394,7 @@ function renderLogistics() {
     const assignedAssetIds = new Set(assignedAssets.map(asset => String(asset.id || asset.assetId || '')));
     const assignedAssetDisplay = assignedAssets.map(asset => asset.name || asset.assetName || asset.id || asset.assetId).filter(Boolean).join(', ');
     const availableAssets = assets.filter(a => String(a.status || 'available').toLowerCase() === 'available' && !assignedAssetIds.has(String(a.id || a.assetId || '')));
-    const isDumpTruck = a => /dump\s*truck/i.test([a.name, a.assetName, a.type, a.assetType, a.configuration].filter(Boolean).join(' '));
+    const isDumpTruck = a => /dump\s*truck|\bsemi\b|peterb(?:ilt|uilt)/i.test([a.name, a.assetName, a.type, a.assetType, a.configuration].filter(Boolean).join(' '));
     const availableAssetOptions = availableAssets.map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
     const availableDumpTruckOptions = availableAssets.filter(isDumpTruck).map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
     const driverEditing = Boolean(window.logisticsDriverEdit[moveKey]);
@@ -3565,7 +3565,9 @@ async function setContainerStage(jobId, action, button) {
 
 async function persistLogisticsAsset(action, move, asset) {
   const jobId = move.sourceOpportunityId || move.opportunityId || move.jobId || move.id || '';
-  const assetId = asset.id || asset.assetId || move.assetId || move.lowboyId || '';
+  // Make updates the asset Data Store by its outer record key. Some trucks
+  // use a friendly unit name as that key instead of their nested assetId.
+  const assetId = asset.storeKey || asset.key || asset.id || asset.assetId || move.assetId || move.lowboyId || '';
   const payload = {
     action,
     booked: action === 'booked',
