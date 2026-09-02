@@ -290,6 +290,10 @@
     letter-spacing: 0;
     margin-left: 4px;
   }
+  .job-group-today .job-group-header { color: #ff8a55 !important; }
+  .job-group-tomorrow .job-group-header { color: #f0ca50 !important; }
+  .job-group-future .job-group-header { color: #7fc8ff !important; }
+  .job-group-unscheduled .job-group-header { color: #d9dde1 !important; }
   .job-group-empty {
     color: var(--ink-soft);
     font-size: 12px;
@@ -724,12 +728,9 @@
   #logisticsDispatchView .job-stage-btn{min-height:28px;padding:5px 9px;box-shadow:0 1px 2px rgba(21,22,24,.05)}
   #logisticsDispatchView .logistics-primary-actions .complete{background:#fffaf0}
   #logisticsDispatchView .logistics-primary-actions .cancel{background:#fff8f7}
-  #logisticsDispatchView .job-group-header{background:#e9ebed;color:var(--ink);border-top:1px solid #d6d9dc;border-bottom:1px solid #d6d9dc;padding:9px 12px}
+  #logisticsDispatchView .job-group-header{border-top:1px solid #3a3c40;border-bottom:1px solid #3a3c40;padding:9px 12px}
   #logisticsDispatchView .logistics-primary-actions{padding-top:7px;border-top:1px solid var(--stripe);margin-top:7px}
   #logisticsDispatchView .logistics-primary-actions .job-stage-btn{border-radius:5px}
-  #logisticsDispatchView .job-group-header {
-  color: #ffffff !important;
-}
   #logisticsDispatchView .logistics-status{padding:4px 8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
   .assignment-lock{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:8px 9px;border:1px solid #d5d9dc;border-radius:7px;background:#f1f3f4}
   .assignment-lock-copy{min-width:0}.assignment-lock-label{display:block;font:700 8px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#6b7075}.assignment-lock-value{display:block;margin-top:2px;font-size:11px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
@@ -753,6 +754,53 @@
     .sheet{width:100%;max-width:100vw}.sheet-body{padding:14px}.field-row{display:block}.sheet-foot{padding:10px 14px}.sheet-foot button{min-height:44px}
   }
 
+  /* ---------- Dashboard dark mode ---------- */
+  body.dark-mode {
+    --bg:#151719; --card:#222427; --stripe:#292c2f; --border:#3b3f43;
+    --ink:#f1f3f4; --ink-soft:#b3b8bd; --grey:#a4a9ae;
+    --grey-dark:#777d83; --grey-light:#303439;
+    --orange-tint:#58301f; --orange-tint-soft:#34241d;
+    --gold-tint:#51451f; --gold-tint-soft:#302b1c;
+    background:#151719; color:#f1f3f4;
+  }
+  body.dark-mode .topbar{background:linear-gradient(135deg,#101113,#25282b)}
+  body.dark-mode .dispatch-view-tabs,body.dark-mode .dispatch-view-tab{background:#202326;color:#b8bdc2;border-color:#3b3f43}
+  body.dark-mode .dispatch-view-tab.active{background:#35251e;color:#fff}
+  body.dark-mode .panel,body.dark-mode .status-card,body.dark-mode .logistics-stat,body.dark-mode .sheet{background:#222427;color:#f1f3f4}
+  body.dark-mode .status-card.available,body.dark-mode .status-card.booked,body.dark-mode .status-card.scheduled{background:linear-gradient(180deg,#24272a,#202225)}
+  body.dark-mode .panel-head,body.dark-mode .sheet-head{background:linear-gradient(180deg,#292c2f,#232629);border-color:#3b3f43}
+  body.dark-mode input,body.dark-mode select,body.dark-mode textarea{background:#191b1e!important;color:#f1f3f4!important;border-color:#4a4f54!important;color-scheme:dark}
+  body.dark-mode input::placeholder,body.dark-mode textarea::placeholder{color:#858b91}
+  body.dark-mode .roster-resource,body.dark-mode .roster-item,body.dark-mode .logistics-resource{border-color:#373b3f}
+  body.dark-mode .logistics-resource:nth-child(even){background:#272a2d}
+  body.dark-mode table.jobs td,body.dark-mode table.logistics-table td{color:#edf0f2;border-color:#373b3f}
+  body.dark-mode table.jobs tr:nth-child(even) td,body.dark-mode table.logistics-table tr:nth-child(even) td{background:#272a2d}
+  body.dark-mode #logisticsDispatchView{background:linear-gradient(180deg,#17191b,#202326)}
+  body.dark-mode #logisticsDispatchView .panel,body.dark-mode #logisticsDispatchView .logistics-stat,body.dark-mode #logisticsDispatchView .jobs-table-wrap{background:#222427;border-color:#3b3f43;box-shadow:0 7px 22px rgba(0,0,0,.25)}
+  body.dark-mode #logisticsDispatchView .panel-head{background:linear-gradient(180deg,#292c2f,#232629)}
+  body.dark-mode #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):hover td{background:#33251f}
+  body.dark-mode .logistics-note,body.dark-mode .addon-section{background:#302b1c;color:#eadb9c;border-color:#665a2c}
+  body.dark-mode .addon-block,body.dark-mode .crew-assign-panel{background:#26292c;border-color:#41464b}
+  body.dark-mode .assignment-lock{background:#2b2e31;border-color:#484d52}
+  body.dark-mode .assignment-edit-panel{background:#26292c;border-color:#484d52}
+  body.dark-mode .assignment-edit-item{background:#1d1f22;border-color:#454a4f}
+  body.dark-mode .job-stage-btn,body.dark-mode .time-unlock,body.dark-mode .end-save{border-color:#555b61;color:#f1f3f4;background:#303438}
+  body.dark-mode .job-stage-btn.complete{background:#3a321f!important;color:#f4d36b}
+  body.dark-mode .job-stage-btn.cancel{background:#3b2322!important;color:#f1a09a}
+  body.dark-mode .job-stage-btn.edit{background:#293642!important;color:#a9d5fa}
+  body.dark-mode .job-stage-btn.reset{background:#303438!important;color:#d6dade}
+  body.dark-mode .crew-chip.empty-slot{color:#bdc2c7;border-color:#737980}
+  body.dark-mode .empty-state,body.dark-mode .load-state,body.dark-mode .logistics-route{color:#adb2b7}
+  body.dark-mode .sheet-foot{background:#202326;border-color:#3b3f43}
+  body.dark-mode .btn-ghost{color:#d4d8dc;border-color:#666c72}
+  body.dark-mode .toast{background:#eceff1;color:#17191b}
+  body.dark-mode #backendStatus,body.dark-mode #logisticsBackendStatus{background:#3d2220!important;color:#ffaaa2!important;border-color:#9f4a42!important}
+  @media(max-width:760px){
+    body.dark-mode .dispatch-view-tab{background:#202326}
+    body.dark-mode table.jobs tr:not(.job-group-header-row):not(.job-group-empty-row),body.dark-mode table.logistics-table tr:not(.job-group-header-row):not(.job-group-empty-row){background:#222427;border-color:#41464b;box-shadow:0 3px 12px rgba(0,0,0,.3)}
+    body.dark-mode table.jobs td,body.dark-mode table.logistics-table td,body.dark-mode #logisticsDispatchView table.logistics-table td{background:#222427!important;border-color:#373b3f!important}
+  }
+
 </style>
 </head>
 <body>
@@ -763,6 +811,7 @@
   </div>
   <div class="date mono" id="todayDate"></div>
   <div class="actions">
+    <button class="btn-ghost" id="themeToggle" type="button" aria-pressed="false">Dark Mode</button>
     <button class="btn-ghost" id="refreshBtn">Refresh</button>
     <button class="btn-primary" id="newJobBtn">+ Book Job</button>
   </div>
@@ -2024,7 +2073,7 @@ function renderJobs(jobs) {
   body.innerHTML = sectionDefs.map(({ key, label }) => {
     const groupJobs = sortGroup(groups[key]);
     const headerRow = `
-      <tr class="job-group-header-row">
+      <tr class="job-group-header-row job-group-${key}">
         <td colspan="8" class="job-group-header">${label} <span class="job-group-count">${groupJobs.length}</span></td>
       </tr>
     `;
@@ -3369,7 +3418,7 @@ function renderLogistics() {
   ];
   document.getElementById('logisticsMoves').innerHTML = visibleMoves.length ? sectionDefs.map(({ key, label }) => {
     const groupMoves = groups[key].slice().sort((a, b) => String(a.scheduledTime || a.requestedTime || a.reportTime || '').localeCompare(String(b.scheduledTime || b.requestedTime || b.reportTime || '')));
-    return `<tr class="job-group-header-row"><td colspan="10" class="job-group-header">${label} <span class="job-group-count">${groupMoves.length}</span></td></tr>` +
+    return `<tr class="job-group-header-row job-group-${key}"><td colspan="10" class="job-group-header">${label} <span class="job-group-count">${groupMoves.length}</span></td></tr>` +
       (groupMoves.length ? groupMoves.map(buildLogisticsRow).join('') : `<tr class="job-group-empty-row"><td colspan="10" class="job-group-empty">No moves</td></tr>`);
   }).join('') : '<tr><td colspan="10" class="empty-state">No logistics moves returned for this view.</td></tr>';
 }
@@ -3995,6 +4044,18 @@ document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListe
 }));
 document.getElementById('logisticsSourceFilter').addEventListener('change', renderLogistics);
 document.getElementById('refreshBtn').addEventListener('click', () => document.getElementById('logisticsDispatchView').hidden ? refreshAll() : loadLogistics());
+
+const themeToggle = document.getElementById('themeToggle');
+function applyDashboardTheme(dark) {
+  document.body.classList.toggle('dark-mode', dark);
+  themeToggle.textContent = dark ? 'Light Mode' : 'Dark Mode';
+  themeToggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+  try { localStorage.setItem('a2zDashboardTheme', dark ? 'dark' : 'light'); } catch (_) {}
+}
+let savedDarkMode = false;
+try { savedDarkMode = localStorage.getItem('a2zDashboardTheme') === 'dark'; } catch (_) {}
+applyDashboardTheme(savedDarkMode);
+themeToggle.addEventListener('click', () => applyDashboardTheme(!document.body.classList.contains('dark-mode')));
 
 /* ---------- Init ---------- */
 fmtDateHeader();
