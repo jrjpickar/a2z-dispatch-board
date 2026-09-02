@@ -698,7 +698,7 @@
   .logistics-pill.available{background:#e4eee9;color:#287a54}.logistics-pill.assigned{background:var(--orange-tint);color:var(--orange-dark)}.logistics-pill.maintenance{background:#f7dfdc;color:var(--danger)}
   .logistics-source.demo{background:var(--gold-tint);color:#755c08}.logistics-source.container{background:#dceaf7;color:#275c8e}.logistics-source.other{background:var(--grey-light);color:var(--ink-soft)}
   .logistics-status.scheduled{border:1px solid #287a54;color:#287a54}.logistics-status.en-route{background:var(--orange);color:#fff}.logistics-status.unassigned{border:1px solid var(--danger);color:var(--danger)}.logistics-status.completed{background:var(--grey-light);color:var(--ink-soft)}
-  .logistics-driver-select{max-width:145px;border:1px solid var(--border);border-radius:4px;background:#fff;padding:4px 6px;font-size:10px}
+  .logistics-driver-select,.logistics-dump-truck-select{max-width:145px;border:1px solid var(--border);border-radius:4px;background:#fff;padding:4px 6px;font-size:10px}
   .driver-break-schedule{display:flex;flex-wrap:wrap;gap:4px;width:100%;margin-top:2px}.driver-break-field{display:flex;align-items:center;gap:3px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--ink-soft);text-transform:uppercase}.driver-break-field input{width:76px;border:1px solid var(--border);border-radius:4px;padding:3px;font:9px 'IBM Plex Mono',monospace;background:#fff}
   .logistics-toolbar{display:flex;gap:8px}.logistics-toolbar select{border:1px solid var(--border);border-radius:var(--radius);padding:7px;background:#fff;font-size:12px}
   table.logistics-table{width:100%;min-width:960px;border-collapse:collapse}table.logistics-table th{background:linear-gradient(90deg,var(--ink),#2c2d30);color:#fff;text-align:left;padding:10px 12px;font-family:'Oswald',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.06em}table.logistics-table td{padding:12px;border-bottom:1px solid var(--stripe);font-size:12px;vertical-align:top}table.logistics-table tr:nth-child(even) td{background:var(--stripe)}
@@ -720,7 +720,7 @@
   #logisticsDispatchView table.logistics-table tr[data-source="container"] td:first-child{box-shadow:inset 4px 0 0 #4f87b7}
   #logisticsDispatchView table.logistics-table tr[data-source="demo"] td:first-child{box-shadow:inset 4px 0 0 var(--gold)}
   #logisticsDispatchView .logistics-job-link{font-size:12px;text-decoration-thickness:2px;text-underline-offset:3px}
-  #logisticsDispatchView .logistics-driver-select,#logisticsDispatchView .logistics-asset-select{min-height:30px;border-radius:6px;border-color:#cfd3d7;box-shadow:0 1px 2px rgba(21,22,24,.04)}
+  #logisticsDispatchView .logistics-driver-select,#logisticsDispatchView .logistics-asset-select,#logisticsDispatchView .logistics-dump-truck-select{min-height:30px;border-radius:6px;border-color:#cfd3d7;box-shadow:0 1px 2px rgba(21,22,24,.04)}
   #logisticsDispatchView .job-stage-btn{min-height:28px;padding:5px 9px;box-shadow:0 1px 2px rgba(21,22,24,.05)}
   #logisticsDispatchView .logistics-primary-actions .complete{background:#fffaf0}
   #logisticsDispatchView .logistics-primary-actions .cancel{background:#fff8f7}
@@ -2836,14 +2836,18 @@ document.getElementById('submitBook').addEventListener('click', async () => {
           notes: addon.notes || payload.notes || ''
         };
         try {
-          const addonRes = await fetchWithTimeout(CONFIG.ADDON_LOGISTICS_URL, {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload)
-          });
-          if (!addonRes.ok) throw new Error(`HTTP ${addonRes.status}: ${(await addonRes.text()).slice(0, 240)}`);
           const addonSyncRes = await fetchWithTimeout(CONFIG.LOGISTICS_STATE_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload)
           });
           if (!addonSyncRes.ok) throw new Error(`Shared-state HTTP ${addonSyncRes.status}: ${(await addonSyncRes.text()).slice(0, 240)}`);
+          try {
+            const addonRes = await fetchWithTimeout(CONFIG.ADDON_LOGISTICS_URL, {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload)
+            });
+            if (!addonRes.ok) throw new Error(`HTTP ${addonRes.status}: ${(await addonRes.text()).slice(0, 240)}`);
+          } catch (makeErr) {
+            console.warn('Add-on is safe in Netlify, but Make sync failed:', makeErr);
+          }
         } catch (addonErr) {
           addonFailures += 1;
           console.warn('Logistics add-on failed:', addonErr);
@@ -3080,10 +3084,14 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
         notes: addon.notes || scopeOfWork || ''
       };
       try {
-        const addonRes = await fetchWithTimeout(CONFIG.ADDON_LOGISTICS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload) });
-        if (!addonRes.ok) throw new Error(`HTTP ${addonRes.status}: ${(await addonRes.text()).slice(0, 240)}`);
         const addonSyncRes = await fetchWithTimeout(CONFIG.LOGISTICS_STATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload) });
         if (!addonSyncRes.ok) throw new Error(`Shared-state HTTP ${addonSyncRes.status}: ${(await addonSyncRes.text()).slice(0, 240)}`);
+        try {
+          const addonRes = await fetchWithTimeout(CONFIG.ADDON_LOGISTICS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(addonPayload) });
+          if (!addonRes.ok) throw new Error(`HTTP ${addonRes.status}: ${(await addonRes.text()).slice(0, 240)}`);
+        } catch (makeErr) {
+          console.warn('Add-on is safe in Netlify, but Make sync failed:', makeErr);
+        }
       } catch (addonErr) { editAddonFailures += 1; console.warn('Edit-job logistics add-on failed:', addonErr); }
     }
 
@@ -3333,14 +3341,17 @@ function renderLogistics() {
     if ((m.assetId || m.lowboyId || (m.asset && m.asset.id)) && !assignedAssets.some(asset => String(asset.id || asset.assetId || '') === String(m.assetId || m.lowboyId || (m.asset && m.asset.id)))) assignedAssets.unshift({ id: m.assetId || m.lowboyId || (m.asset && m.asset.id), name: m.assetName || (m.asset && m.asset.name) || '' });
     const assignedAssetIds = new Set(assignedAssets.map(asset => String(asset.id || asset.assetId || '')));
     const assignedAssetDisplay = assignedAssets.map(asset => asset.name || asset.assetName || asset.id || asset.assetId).filter(Boolean).join(', ');
-    const availableAssetOptions = assets.filter(a => String(a.status || 'available').toLowerCase() === 'available' && !assignedAssetIds.has(String(a.id || a.assetId || ''))).map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
+    const availableAssets = assets.filter(a => String(a.status || 'available').toLowerCase() === 'available' && !assignedAssetIds.has(String(a.id || a.assetId || '')));
+    const isDumpTruck = a => /dump\s*truck/i.test([a.name, a.assetName, a.type, a.assetType, a.configuration].filter(Boolean).join(' '));
+    const availableAssetOptions = availableAssets.map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
+    const availableDumpTruckOptions = availableAssets.filter(isDumpTruck).map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
     const driverEditing = Boolean(window.logisticsDriverEdit[moveKey]);
     const assetEditing = Boolean(window.logisticsAssetEdit[moveKey]);
     const removeDriver = (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
     const driverEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit driver</span><button type="button" class="job-stage-btn logistics-done-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div><div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}<div class="driver-break-schedule" data-move-id="${escapeLogisticsHtml(moveKey)}"><label class="driver-break-field">Lunch <input type="time" class="logistics-lunch" aria-label="Lunch time" value="${escapeLogisticsHtml(breakSchedule.lunch || '')}"></label></div></div></div>`;
     const driverAssignment = assignable ? ((assignedDriverId || assignedDriverName) && !driverEditing ? `<div class="assignment-lock"><span class="assignment-lock-copy"><span class="assignment-lock-label">Driver locked</span><span class="assignment-lock-value">${escapeLogisticsHtml(assignedDriverName || assignedDriverId)}</span></span><button type="button" class="job-stage-btn edit logistics-edit-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit Driver</button></div>` : driverEditor) : '';
     const assignedAssetEditors = assignedAssets.map(asset => `<span class="assignment-edit-item"><span>${escapeLogisticsHtml(asset.name || asset.assetName || asset.id || asset.assetId)}</span><button type="button" class="job-stage-btn cancel logistics-remove-asset" data-move-id="${escapeLogisticsHtml(moveKey)}" data-asset-id="${escapeLogisticsHtml(asset.id || asset.assetId || '')}">Remove</button></span>`).join('');
-    const assetEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit vehicle</span><button type="button" class="job-stage-btn logistics-done-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div>${assignedAssetEditors ? `<div class="assignment-edit-items">${assignedAssetEditors}</div>` : ''}<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Add Vehicle</button></div></div>`;
+    const assetEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit vehicle</span><button type="button" class="job-stage-btn logistics-done-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div>${assignedAssetEditors ? `<div class="assignment-edit-items">${assignedAssetEditors}</div>` : ''}<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Add Vehicle</button></div><div class="job-stage-actions"><select class="logistics-dump-truck-select" aria-label="Select dump truck"><option value="">${availableDumpTruckOptions ? 'Select dump truck…' : 'No dump trucks available'}</option>${availableDumpTruckOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-asset-kind="dump-truck" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${availableDumpTruckOptions ? '' : 'disabled'}>Add Dump Truck</button></div></div>`;
     const assetAssignment = assignable ? (assignedAssets.length && !assetEditing ? `<div class="assignment-lock"><span class="assignment-lock-copy"><span class="assignment-lock-label">Vehicle locked</span><span class="assignment-lock-value">${escapeLogisticsHtml(assignedAssetDisplay)}</span></span><button type="button" class="job-stage-btn edit logistics-edit-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit Vehicle</button></div>` : assetEditor) : '';
     const targetType = logisticsTargetType(m);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
@@ -3750,7 +3761,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
   const assignAssetButton = event.target.closest('.logistics-assign-asset');
   if (assignAssetButton) {
     const row = assignAssetButton.closest('tr');
-    const select = row.querySelector('.logistics-asset-select');
+    const select = row.querySelector(assignAssetButton.dataset.assetKind === 'dump-truck' ? '.logistics-dump-truck-select' : '.logistics-asset-select');
     const asset = (logisticsData.assets || []).find(item => String(item.id || item.assetId || '') === String(select.value));
     if (!asset) return showToast('Select an available vehicle.', true);
     const move = (logisticsData.moves || []).find(item => String(item.moveId || item.id || '') === String(assignAssetButton.dataset.moveId)) || findLogisticsMove(assignAssetButton.dataset.id) || {};
@@ -3767,7 +3778,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
         return loadLogistics();
       })
       .catch(err => { console.error('Vehicle assignment failed:', err); showToast('Could not assign vehicle.', true); })
-      .finally(() => { assignAssetButton.disabled = false; assignAssetButton.textContent = 'Add Vehicle'; });
+      .finally(() => { assignAssetButton.disabled = false; assignAssetButton.textContent = assignAssetButton.dataset.assetKind === 'dump-truck' ? 'Add Dump Truck' : 'Add Vehicle'; });
     return;
   }
   const scheduleEditButton = event.target.closest('.logistics-schedule-edit');
