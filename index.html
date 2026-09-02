@@ -270,6 +270,8 @@
     border-radius: 10px;
     white-space: nowrap;
   }
+  .job-type-badge{display:inline-block;margin-top:5px;padding:3px 7px;border-radius:999px;font:700 9px 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase}
+  .job-type-badge.change-order{background:#dceaf7;color:#275c8e;border:1px solid #aac9e4}
 
   .job-group-header {
     background: linear-gradient(90deg, var(--ink) 0%, #2c2d30 100%) !important;
@@ -790,6 +792,7 @@
   body.dark-mode .job-stage-btn.edit{background:#293642!important;color:#a9d5fa}
   body.dark-mode .job-stage-btn.reset{background:#303438!important;color:#d6dade}
   body.dark-mode .crew-chip.empty-slot{color:#bdc2c7;border-color:#737980}
+  body.dark-mode .job-type-badge.change-order{background:#263c50;color:#a9d5fa;border-color:#416989}
   body.dark-mode .empty-state,body.dark-mode .load-state,body.dark-mode .logistics-route{color:#adb2b7}
   body.dark-mode .sheet-foot{background:#202326;border-color:#3b3f43}
   body.dark-mode .btn-ghost{color:#d4d8dc;border-color:#666c72}
@@ -2033,9 +2036,10 @@ function renderJobs(jobs) {
     `;
 
     const ghlLink = getGhlOpportunityLink(j);
+    const changeOrderBadge = j.sourceType === 'change_order' ? '<br><span class="job-type-badge change-order">Change Order</span>' : '';
     const jobIdCell = ghlLink
-      ? `<a class="job-id" href="${ghlLink}" target="_blank" rel="noopener" title="Open in GHL">${(j.id || '').slice(-8)}</a>`
-      : `<span class="job-id">${(j.id || '').slice(-8)}</span>`;
+      ? `<a class="job-id" href="${ghlLink}" target="_blank" rel="noopener" title="Open in GHL">${(j.id || '').slice(-8)}</a>${changeOrderBadge}`
+      : `<span class="job-id">${(j.id || '').slice(-8)}</span>${changeOrderBadge}`;
     const valueCell = `<span class="opp-value">${formatCurrency(getOpportunityValue(j))}</span>`;
 
     return `
@@ -2681,6 +2685,7 @@ const WON_STAGE_IDS = {
   contract: "bb901617-1ec6-4f3c-8c77-27ccafb96404"
 };
 function isHourlyJob(job) {
+  if (job && job.sourceType === 'change_order') return false;
   if (job && job.pipelineStageId === WON_STAGE_IDS.contract) return false;
   return true; // default true (hourly) — matches WON_STAGE_IDS.hourly and any unrecognized stage
 }
