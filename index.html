@@ -781,7 +781,12 @@
   body.dark-mode #logisticsDispatchView .panel,body.dark-mode #logisticsDispatchView .logistics-stat,body.dark-mode #logisticsDispatchView .jobs-table-wrap{background:#222427;border-color:#3b3f43;box-shadow:0 7px 22px rgba(0,0,0,.25)}
   body.dark-mode #logisticsDispatchView .panel-head{background:linear-gradient(180deg,#292c2f,#232629)}
   body.dark-mode #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):hover td{background:#33251f}
-  body.dark-mode .logistics-note,body.dark-mode .addon-section{background:#302b1c;color:#eadb9c;border-color:#665a2c}
+  /* .logistics-note is scoped under #logisticsDispatchView in its light-mode
+     rule (border/background gradient with a hardcoded #fffdf7 tail), which
+     outranks this class-only selector on specificity — !important is what
+     actually makes this override win instead of leaving that light gradient
+     showing through. */
+  body.dark-mode .logistics-note,body.dark-mode .addon-section{background:#302b1c!important;color:#eadb9c;border-color:#665a2c}
   body.dark-mode .addon-block,body.dark-mode .crew-assign-panel{background:#26292c;border-color:#41464b}
   body.dark-mode .assignment-lock{background:#2b2e31;border-color:#484d52}
   body.dark-mode .assignment-edit-panel{background:#26292c;border-color:#484d52}
@@ -790,6 +795,7 @@
   body.dark-mode .job-stage-btn.complete{background:#3a321f!important;color:#f4d36b}
   body.dark-mode .job-stage-btn.cancel{background:#3b2322!important;color:#f1a09a}
   body.dark-mode .job-stage-btn.edit{background:#293642!important;color:#a9d5fa}
+  body.dark-mode .job-stage-btn.edit:hover{background:#31445a!important;color:#c3e2fb;border-color:#416989}
   body.dark-mode .job-stage-btn.reset{background:#303438!important;color:#d6dade}
   body.dark-mode .crew-chip.empty-slot{color:#bdc2c7;border-color:#737980}
   body.dark-mode .job-type-badge.change-order{background:#263c50;color:#a9d5fa;border-color:#416989}
@@ -798,6 +804,31 @@
   body.dark-mode .btn-ghost{color:#d4d8dc;border-color:#666c72}
   body.dark-mode .toast{background:#eceff1;color:#17191b}
   body.dark-mode #backendStatus,body.dark-mode #logisticsBackendStatus{background:#3d2220!important;color:#ffaaa2!important;border-color:#9f4a42!important}
+
+  /* A handful of "always-dark chrome" bars (job table header, job-group
+     divider, the active segment toggle) reuse var(--ink) as one end of a
+     gradient specifically because --ink is a dark near-black in light mode —
+     but --ink flips to a near-white text color in dark mode, so those same
+     rules would otherwise render half-light/half-dark instead of solid dark.
+     Give them their own fixed dark gradient instead of depending on --ink. */
+  body.dark-mode table.jobs th{background:linear-gradient(90deg,#101113,#2c2d30)}
+  body.dark-mode .job-group-header{background:linear-gradient(90deg,#101113,#2c2d30)!important;border-color:#3a3c40}
+  body.dark-mode .segmented{border-color:#3b3f43}
+  body.dark-mode .segmented-option{background:#222427;color:#b3b8bd;border-color:#3b3f43}
+  body.dark-mode .segmented-option.active{background:linear-gradient(135deg,#101113 0%,#2c2d30 100%);color:#fff}
+
+  /* Driver/asset/status pills in the Logistics roster — light pastel chips
+     by design in light mode, with no dark counterpart at all before this. */
+  body.dark-mode .logistics-pill.available{background:#1d3327;color:#5fd39a}
+  body.dark-mode .logistics-pill.assigned{background:#3d2418;color:#f0a878}
+  body.dark-mode .logistics-pill.maintenance{background:#3b2220;color:#f1a09a}
+  body.dark-mode .logistics-source.demo{background:#3a321f;color:#eadb9c}
+  body.dark-mode .logistics-source.container{background:#1c2e3d;color:#8bc0ea}
+  body.dark-mode .logistics-source.other{background:#303439;color:#b3b8bd}
+  body.dark-mode .logistics-status.scheduled{border-color:#3f9c6c;color:#5fd39a}
+  body.dark-mode .logistics-status.en-route{background:#e8622c;color:#fff}
+  body.dark-mode .logistics-status.unassigned{border-color:#c0392b;color:#f1a09a}
+  body.dark-mode .logistics-status.completed{background:#303439;color:#b3b8bd}
   @media(max-width:760px){
     body.dark-mode .dispatch-view-tab{background:#202326}
     body.dark-mode table.jobs tr:not(.job-group-header-row):not(.job-group-empty-row),body.dark-mode table.logistics-table tr:not(.job-group-header-row):not(.job-group-empty-row){background:#222427;border-color:#41464b;box-shadow:0 3px 12px rgba(0,0,0,.3)}
