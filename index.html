@@ -810,9 +810,11 @@
      gradient specifically because --ink is a dark near-black in light mode —
      but --ink flips to a near-white text color in dark mode, so those same
      rules would otherwise render half-light/half-dark instead of solid dark.
-     Give them their own fixed dark gradient instead of depending on --ink. */
-  body.dark-mode table.jobs th{background:linear-gradient(90deg,#101113,#2c2d30)}
-  body.dark-mode .job-group-header{background:linear-gradient(90deg,#101113,#2c2d30)!important;border-color:#3a3c40}
+     Flat colors + !important here, not another gradient: a gradient is what
+     caused the washed-out look in the first place, so this removes the
+     possibility entirely rather than just picking different gradient stops. */
+  body.dark-mode table.jobs th{background:#1a1c1f!important}
+  body.dark-mode .job-group-header{background:#1a1c1f!important;border-color:#3a3c40}
   body.dark-mode .segmented{border-color:#3b3f43}
   body.dark-mode .segmented-option{background:#222427;color:#b3b8bd;border-color:#3b3f43}
   body.dark-mode .segmented-option.active{background:linear-gradient(135deg,#101113 0%,#2c2d30 100%);color:#fff}
