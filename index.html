@@ -1005,6 +1005,16 @@
       <label for="jobValue">Job Value <span class="label-optional">(optional — estimated $ value)</span></label>
       <input type="number" id="jobValue" placeholder="e.g. 2500" min="0" step="1">
     </div>
+    <div class="field">
+      <label for="paymentTerms">Payment Terms <span class="label-optional">(required)</span></label>
+      <select id="paymentTerms" required>
+        <option value="">Payment Terms</option>
+        <option value="net-7">net-7</option>
+        <option value="net-30">net-30</option>
+        <option value="net-45">net-45</option>
+        <option value="net-60">net-60</option>
+      </select>
+    </div>
     <div class="field-row">
       <div class="field">
         <label for="jobDate">Report Date</label>
@@ -1093,6 +1103,16 @@
     <div class="field">
       <label for="editJobValue">Job Value <span class="label-optional">(estimated $ value)</span></label>
       <input type="number" id="editJobValue" placeholder="e.g. 2500" min="0" step="1">
+    </div>
+    <div class="field">
+      <label for="editPaymentTerms">Payment Terms</label>
+      <select id="editPaymentTerms">
+        <option value="">Payment Terms</option>
+        <option value="net-7">net-7</option>
+        <option value="net-30">net-30</option>
+        <option value="net-45">net-45</option>
+        <option value="net-60">net-60</option>
+      </select>
     </div>
     <div class="field">
       <label for="editScopeWork">Scope of Work</label>
@@ -1239,6 +1259,12 @@ function getSharedState(job) {
   if (!rec) return null;
   if (rec.active === false || rec.active === 'false') return null;
   return rec;
+}
+
+function getPaymentTerms(job) {
+  const shared = getSharedState(job);
+  const override = (window.jobDetailsOverride || {})[job.id];
+  return shared?.paymentTerms ?? override?.paymentTerms ?? job.paymentTerms ?? '';
 }
 
 function cleanCrewName(value) {
@@ -2784,6 +2810,7 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     clientPhone: document.getElementById('clientPhone').value.trim(),
     jobAddress: document.getElementById('jobAddress').value.trim(),
     jobType: jobType,
+    paymentTerms: document.getElementById('paymentTerms').value,
     pipelineId: JOB_PIPELINE_IDS[jobType],
     reportDate: reportDateVal,
     reportTime: document.getElementById('jobTime').value,
@@ -2796,6 +2823,12 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     monetaryValue: document.getElementById('jobValue').value === '' ? null : parseFloat(document.getElementById('jobValue').value),
     crewSize: crewSize
   };
+
+  if (!['net-7', 'net-30', 'net-45', 'net-60'].includes(payload.paymentTerms)) {
+    showToast('Please select Payment Terms.', true);
+    document.getElementById('paymentTerms').focus();
+    return;
+  }
 
   const addonRequests = [];
   if (jobType !== 'contract' && document.getElementById('addLowboyToggle').checked) {
@@ -3008,6 +3041,7 @@ function openEditJobSheet(jobId) {
   document.getElementById('editClientPhone').value = getClientPhone(job) || '';
   const currentValue = getOpportunityValue(job);
   document.getElementById('editJobValue').value = (currentValue === null || currentValue === undefined) ? '' : currentValue;
+  document.getElementById('editPaymentTerms').value = getPaymentTerms(job);
   document.getElementById('editScopeWork').value = getScopeOfWork(job) || '';
 
   const currentTools = getToolsRequired(job).split(',').map(t => t.trim()).filter(Boolean);
@@ -3068,6 +3102,7 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
   const clientPhone = document.getElementById('editClientPhone').value.trim();
   const scopeOfWork = document.getElementById('editScopeWork').value.trim();
   const toolsRequired = Array.from(document.querySelectorAll('#editToolsGrid input:checked')).map(c => c.value);
+  const paymentTerms = document.getElementById('editPaymentTerms').value;
   const monetaryValueRaw = document.getElementById('editJobValue').value;
   const monetaryValue = monetaryValueRaw === '' ? null : parseFloat(monetaryValueRaw);
   const editAddonRequests = [];
@@ -3112,6 +3147,7 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
     scopeOfWork,
     toolsRequired,
     monetaryValue,
+    paymentTerms,
     crewSize: editCrewSize
   };
 
@@ -3138,6 +3174,7 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
       scopeOfWork,
       toolsRequired,
       monetaryValue,
+    paymentTerms,
       reportDate: getReportDate(job),
       reportTime: getReportTime(job),
       reportEndDate: getReportEndDate(job),
@@ -3156,7 +3193,7 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
       console.warn("Shared-state sync on edit failed (job details still saved):", logErr);
     }
 
-    window.jobDetailsOverride[jobId] = { scopeOfWork, toolsRequired, monetaryValue };
+    window.jobDetailsOverride[jobId] = { scopeOfWork, toolsRequired, monetaryValue, paymentTerms };
     persistTimeOverride('jobDetailsOverride', window.jobDetailsOverride);
 
     let editAddonFailures = 0;
