@@ -948,6 +948,7 @@
     <div class="field-row"><div class="field"><label for="containerSize">Container Size</label><select id="containerSize"><option value="10 Yard">10 Yard</option><option value="20 Yard">20 Yard</option><option value="30 Yard" selected>30 Yard</option><option value="40 Yard">40 Yard</option></select></div><div class="field"><label for="containerMovementType">Movement</label><select id="containerMovementType"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option></select></div></div>
     <div class="field-row"><div class="field"><label for="containerDate">Report Date</label><input type="date" id="containerDate"></div><div class="field"><label for="containerTime">Report Time</label><input type="time" id="containerTime"></div></div>
     <div class="field"><label for="containerValue">Job Value <span class="label-optional">(optional)</span></label><input type="number" id="containerValue" min="0" step="1" placeholder="e.g. 650"></div>
+    <div class="field"><label for="containerPaymentTerms">Payment Terms <span class="label-optional">(required)</span></label><select id="containerPaymentTerms" required><option value="">Payment Terms</option><option value="net-7">net-7</option><option value="net-30">net-30</option><option value="net-45">net-45</option><option value="net-60">net-60</option></select></div>
     <div class="field"><label for="containerNotes">Notes / Material</label><textarea id="containerNotes" placeholder="Material type, access instructions, placement notes..."></textarea></div>
   </div>
   <div class="sheet-foot"><button class="btn-ghost" id="cancelContainerBook" style="color:var(--ink-soft);border-color:var(--border);">Cancel</button><button class="btn-primary" id="submitContainerBook">Create Container Job</button></div>
@@ -963,6 +964,7 @@
     <div class="field-row"><div class="field"><label for="editContainerSize">Container Size</label><select id="editContainerSize"><option value="10 Yard">10 Yard</option><option value="20 Yard">20 Yard</option><option value="30 Yard">30 Yard</option><option value="40 Yard">40 Yard</option></select></div><div class="field"><label for="editContainerMovementType">Movement</label><select id="editContainerMovementType"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option><option value="container_dispatch">Container Dispatch</option><option value="equipment_delivery">Equipment Delivery</option></select></div></div>
     <div class="field-row"><div class="field"><label for="editContainerDate">Report Date</label><input type="date" id="editContainerDate"></div><div class="field"><label for="editContainerTime">Report Time</label><input type="time" id="editContainerTime"></div></div>
     <div class="field"><label for="editContainerValue">Job Value</label><input type="number" id="editContainerValue" min="0" step="1"></div>
+    <div class="field" id="editContainerPaymentTermsField"><label for="editContainerPaymentTerms">Payment Terms</label><select id="editContainerPaymentTerms"><option value="">Payment Terms</option><option value="net-7">net-7</option><option value="net-30">net-30</option><option value="net-45">net-45</option><option value="net-60">net-60</option></select></div>
     <div class="field"><label for="editContainerNotes">Notes / Scope</label><textarea id="editContainerNotes"></textarea></div>
   </div>
   <div class="sheet-foot"><button class="btn-ghost" id="cancelEditContainer" style="color:var(--ink-soft);border-color:var(--border);">Cancel</button><button class="btn-primary" id="submitEditContainer">Save Changes</button></div>
@@ -3769,6 +3771,8 @@ function openEditContainerSheetFn(jobId) {
   document.getElementById('editContainerDate').value = move.scheduledDate || move.requestedDate || move.reportDate || move.date || '';
   document.getElementById('editContainerTime').value = move.scheduledTime || move.requestedTime || move.reportTime || move.time || '';
   document.getElementById('editContainerValue').value = move.monetaryValue == null ? '' : move.monetaryValue;
+  document.getElementById('editContainerPaymentTermsField').hidden = logisticsTargetType(move) === 'job_addon';
+  document.getElementById('editContainerPaymentTerms').value = move.paymentTerms || '';
   document.getElementById('editContainerNotes').value = move.notes || move.scopeOfWork || '';
   editContainerOverlay.classList.add('open'); editContainerSheet.classList.add('open');
 }
@@ -3792,6 +3796,7 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
   const movementType = document.getElementById('editContainerMovementType').value;
   if (!firstName || !lastName || !jobAddress || !reportDate || !reportTime) return showToast('Client, destination, date, and time are required.', true);
   const payload = {
+    ...(!isAddon ? { paymentTerms: document.getElementById('editContainerPaymentTerms').value } : {}),
     action: isAddon ? 'update_addon' : 'update_job', jobId: parentJobId, opportunityId: parentJobId, sourceOpportunityId: parentJobId, moveId,
     targetType: isAddon ? 'job_addon' : 'standalone', bookingMode: isAddon ? 'job_addon' : 'standalone', jobType: 'container', sourceType: 'container', pipelineId: CONTAINER_PIPELINE_ID,
     locationId: GHL_LOCATION_ID, firstName, lastName, clientName,
@@ -4032,6 +4037,12 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
   const containerSize = document.getElementById('containerSize').value;
   const movementType = document.getElementById('containerMovementType').value;
   const notes = document.getElementById('containerNotes').value.trim();
+  const paymentTerms = document.getElementById('containerPaymentTerms').value;
+  if (!['net-7', 'net-30', 'net-45', 'net-60'].includes(paymentTerms)) {
+    showToast('Please select Payment Terms.', true);
+    document.getElementById('containerPaymentTerms').focus();
+    return;
+  }
   if (!firstName || !lastName || !jobAddress || !reportDate || !reportTime) {
     showToast('Client, delivery address, date, and time are required.', true);
     return;
@@ -4039,6 +4050,7 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
   const payload = {
     action: 'create',
     bookingMode: 'standalone',
+    paymentTerms,
     jobType: 'container',
     sourceType: 'container',
     pipelineId: CONTAINER_PIPELINE_ID,
@@ -4078,6 +4090,7 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
     if (opportunityId) {
       const sharedPayload = {
         ...payload,
+        moveId: String(opportunityId),
         jobId: String(opportunityId),
         opportunityId: String(opportunityId),
         sourceOpportunityId: String(opportunityId),
@@ -4101,7 +4114,7 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
       showToast('Container created, but Make must return opportunityId to sync shared state.', true);
     }
     closeContainerSheetFn();
-    ['containerFirstName','containerLastName','containerAddress','containerValue','containerNotes'].forEach(id => document.getElementById(id).value = '');
+    ['containerFirstName','containerLastName','containerAddress','containerValue','containerNotes','containerPaymentTerms'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('containerPhone').value = '+1';
     await loadLogistics();
   } catch (err) {
