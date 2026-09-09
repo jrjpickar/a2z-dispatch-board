@@ -1,0 +1,3 @@
+{
+  "recordJson": "{\"moveId\": \"REPLACE_MOVE_ID\", \"sourceOpportunityId\": \"REPLACE_PARENT_ID\", \"targetType\": \"job_addon\", \"sourceType\": \"demo\", \"action\": \"import\", \"expectedVersion\": 0, \"requestId\": \"one-time-import-move-REPLACE_MOVE_ID\", \"scheduledDate\": \"2026-09-09\", \"scheduledTime\": \"08:00\", \"driverName\": \"Example Driver\", \"assetId\": \"REPLACE_ASSET_ID\", \"active\": true}"
+}

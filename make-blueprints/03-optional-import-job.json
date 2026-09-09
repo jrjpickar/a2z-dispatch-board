@@ -1,0 +1,133 @@
+{
+  "name": "A2Z \u2014 OPTIONAL one-time job import; leave OFF after migration",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "parameters": {
+        "hook": 0,
+        "maxResults": 1
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "interface": [
+          {
+            "name": "recordJson",
+            "type": "text",
+            "label": "recordJson"
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": {
+        "handleErrors": true
+      },
+      "mapper": {
+        "url": "https://REPLACE_WITH_YOUR_SITE.netlify.app/api/shared-state",
+        "method": "post",
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Bearer REPLACE_WITH_STATE_SYNC_TOKEN"
+          }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "data": "{{1.recordJson}}",
+        "parseResponse": false,
+        "timeout": "40",
+        "followRedirect": false,
+        "rejectUnauthorized": true,
+        "shareCookies": false,
+        "useQuerystring": false,
+        "gzip": true
+      },
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 3,
+      "module": "gateway:WebhookRespond",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "status": "200",
+        "body": "{{2.data}}",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        },
+        "restore": {},
+        "expect": [
+          {
+            "name": "status",
+            "type": "uinteger",
+            "label": "Status",
+            "required": true
+          },
+          {
+            "name": "body",
+            "type": "any",
+            "label": "Body"
+          },
+          {
+            "name": "headers",
+            "type": "array",
+            "label": "Custom headers",
+            "spec": [
+              {
+                "name": "key",
+                "type": "text",
+                "label": "Key"
+              },
+              {
+                "name": "value",
+                "type": "text",
+                "label": "Value"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": true,
+      "confidential": true,
+      "dataloss": false,
+      "dlq": false
+    },
+    "designer": {
+      "orphans": []
+    }
+  }
+}

@@ -1,5 +1,5 @@
 [build]
-  publish = "."
+  publish = "public"
   functions = "netlify/functions"
   command = "npm run build"
 
@@ -38,3 +38,23 @@
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "same-origin"
+
+[[redirects]]
+  from = "/api/sync-retry"
+  to = "/.netlify/functions/sync-retry"
+  status = 200
+
+[[redirects]]
+  from = "/api/roster"
+  to = "/.netlify/functions/roster"
+  status = 200
+
+[[redirects]]
+  from = "/api/workflow-effect"
+  to = "/.netlify/functions/workflow-effect"
+  status = 200
+
+[[redirects]]
+  from = "/api/job-action"
+  to = "/.netlify/functions/job-action"
+  status = 200

@@ -1,0 +1,75 @@
+{
+  "name": "A2Z \u2014 COPY final response AFTER existing successful actions",
+  "flow": [
+    {
+      "id": 900,
+      "module": "gateway:WebhookRespond",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "status": "200",
+        "body": "{\"ok\":true}",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "restore": {},
+        "expect": [
+          {
+            "name": "status",
+            "type": "uinteger",
+            "label": "Status",
+            "required": true
+          },
+          {
+            "name": "body",
+            "type": "any",
+            "label": "Body"
+          },
+          {
+            "name": "headers",
+            "type": "array",
+            "label": "Custom headers",
+            "spec": [
+              {
+                "name": "key",
+                "type": "text",
+                "label": "Key"
+              },
+              {
+                "name": "value",
+                "type": "text",
+                "label": "Value"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": true,
+      "confidential": true,
+      "dataloss": false,
+      "dlq": false
+    },
+    "designer": {
+      "orphans": []
+    }
+  }
+}

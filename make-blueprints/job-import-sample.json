@@ -1,0 +1,3 @@
+{
+  "recordJson": "{\"jobId\": \"REPLACE_JOB_ID\", \"action\": \"import\", \"expectedVersion\": 0, \"requestId\": \"one-time-import-job-REPLACE_JOB_ID\", \"crew\": [{\"id\": \"REPLACE_CONTACT_ID\", \"name\": \"Example Worker\", \"phone\": \"+15555550100\"}], \"reportDate\": \"2026-09-09\", \"reportTime\": \"08:00\", \"reportEndDate\": \"2026-09-09\", \"reportEndTime\": \"17:00\", \"scopeOfWork\": \"Example job\", \"active\": true}"
+}

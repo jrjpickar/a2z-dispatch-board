@@ -1,3 +1,5 @@
+import { searchOpportunities } from '../../lib/ghl.mjs';
+import { jobRecord } from '../../lib/store.mjs';
 import { db, ensureSchema } from "./db.mjs";
 
 const DEFAULTS = {
@@ -23,29 +25,6 @@ function json(body, status = 200, extraHeaders = {}) {
       ...extraHeaders
     }
   });
-}
-
-async function searchOpportunities(token, locationId, pipelineId) {
-  const url = new URL("https://services.leadconnectorhq.com/opportunities/search");
-  url.searchParams.set("location_id", locationId);
-  url.searchParams.set("pipeline_id", pipelineId);
-  url.searchParams.set("status", "won");
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Version: "2021-07-28",
-      Accept: "application/json"
-    }
-  });
-
-  const text = await response.text();
-  if (!response.ok) {
-    throw new Error(`GHL returned ${response.status}: ${text.slice(0, 180)}`);
-  }
-
-  const payload = JSON.parse(text);
-  return Array.isArray(payload.opportunities) ? payload.opportunities : [];
 }
 
 function dashboardJob(opportunity, sourceType) {
@@ -89,9 +68,8 @@ export default async function handler(request) {
       searchOpportunities(token, locationId, demoPipelineId),
       searchOpportunities(token, locationId, changeOrderPipelineId),
       sql`
-        select job_id, data, active, updated_at
+        select *
         from job_shared_state
-        where active = true
         order by updated_at desc
       `
     ]);
@@ -104,17 +82,12 @@ export default async function handler(request) {
       ...changeOrders.map(job => dashboardJob(job, "change_order"))
     ];
 
-    const sharedState = sharedRows.map(row => ({
-      jobId: row.job_id,
-      ...row.data,
-      active: row.active,
-      updatedAt: row.updated_at
-    }));
+    const sharedState = sharedRows.map(jobRecord);
 
     return json(
       { jobs, sharedState },
       200,
-      { "cache-control": "private, max-age=15" }
+      { "cache-control": "no-store" }
     );
   } catch (error) {
     console.error("dashboard-data failed", error);

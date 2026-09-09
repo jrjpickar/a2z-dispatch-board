@@ -1,36 +1,14 @@
-import { db } from "./db.mjs";
+import { searchOpportunities as searchContainerOpportunities } from '../../lib/ghl.mjs';
+import { moveRecord } from '../../lib/store.mjs';
+import { db, ensureSchema } from "./db.mjs";
 
 const DEFAULT_LOCATION_ID = "QUcu2PEAxPV1sQm1GQCq";
 const DEFAULT_CONTAINER_PIPELINE_ID = "F8i8hB7E5xHrJbJUXFr4";
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status,
-  headers: { "content-type": "application/json; charset=utf-8", "cache-control": "private, max-age=15" }
+  headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
 });
-
-async function ensureLogisticsSchema(sql) {
-  await sql`
-    create table if not exists logistics_move_state (
-      move_id text primary key,
-      data jsonb not null default '{}'::jsonb,
-      updated_at timestamptz not null default now()
-    )
-  `;
-}
-
-async function searchContainerOpportunities(token, locationId, pipelineId) {
-  const url = new URL("https://services.leadconnectorhq.com/opportunities/search");
-  url.searchParams.set("location_id", locationId);
-  url.searchParams.set("pipeline_id", pipelineId);
-  url.searchParams.set("status", "won");
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", Accept: "application/json" }
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`GHL returned ${response.status}: ${text.slice(0, 180)}`);
-  const payload = JSON.parse(text);
-  return Array.isArray(payload.opportunities) ? payload.opportunities : [];
-}
 
 function standaloneMove(opportunity, pipelineId) {
   return {
@@ -68,12 +46,12 @@ export default async function handler(request) {
 
   try {
     const sql = db();
-    await ensureLogisticsSchema(sql);
+    await ensureSchema(sql);
     const locationId = process.env.GHL_LOCATION_ID || DEFAULT_LOCATION_ID;
     const pipelineId = process.env.CONTAINER_PIPELINE_ID || DEFAULT_CONTAINER_PIPELINE_ID;
     const [opportunities, stateRows] = await Promise.all([
       searchContainerOpportunities(token, locationId, pipelineId),
-      sql`select move_id, data, updated_at from logistics_move_state order by updated_at desc`
+      sql`select * from logistics_move_state order by updated_at desc`
     ]);
 
     const moves = new Map(opportunities.map(opportunity => {
@@ -83,7 +61,7 @@ export default async function handler(request) {
 
     for (const row of stateRows) {
       const moveId = String(row.move_id);
-      const state = { ...row.data, moveId, updatedAt: row.updated_at };
+      const state = moveRecord(row);
       const existing = moves.get(moveId);
       moves.set(moveId, existing
         ? { ...existing, ...state }

@@ -1,16 +1,21 @@
 {
   "name": "a2z-dispatch-netlify",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "scripts": {
     "dev": "netlify dev",
-    "build": "node -e \"console.log('Static dashboard ready')\""
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@netlify/database": "latest",
     "postgres": "latest"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.16",
     "netlify-cli": "latest"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

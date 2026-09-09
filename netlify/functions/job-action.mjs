@@ -6,8 +6,7 @@ export default async function handler(request) {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     authorizeWrite(request);
     const payload = await readPayload(request);
-    Object.assign(payload, { targetType: 'standalone', bookingMode: 'standalone', jobType: 'container', sourceType: 'container' });
     const sql = db(); await ensureSchema(sql);
-    return json(await createDispatch(sql, 'move', payload));
+    return json(await createDispatch(sql, 'job', payload));
   } catch (error) { return errorResponse(error); }
 }
