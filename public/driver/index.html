@@ -91,7 +91,6 @@
   .status-pill.requested { background: var(--gold-tint); color: #8a6d1a; }
   .route-meta { margin-top: 6px; font-size: 13px; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 14px; }
   .route-meta .schedule { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--ink); }
-  .route-meta a.tel { color: var(--orange-dark); font-weight: 600; text-decoration: none; }
   .route-notes { padding: 10px 16px; font-size: 13px; color: var(--ink-soft); background: var(--bg); border-bottom: 1px solid var(--border); white-space: pre-wrap; }
 
   .stops { list-style: none; margin: 0; padding: 0; }
@@ -270,11 +269,6 @@
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address);
   }
 
-  function telLink(phone) {
-    const digits = String(phone || '').replace(/[^\d+]/g, '');
-    return digits ? ('tel:' + digits) : '';
-  }
-
   // Shows a start time alone, or "start – end" once an end date/time is set
   // (same-day end just shows the end time, not the redundant date twice).
   function formatTimeRange(startDate, startTime, endDate, endTime) {
@@ -318,7 +312,6 @@
 
   function routeCard(move) {
     const stops = (move.stops || []).map((s, i) => Object.assign({}, s, { _seq: i + 1 }));
-    const tel = telLink(move.clientPhone);
     return '<div class="route-card" data-move-id="' + escapeHtml(move.moveId) + '">'
       + '<div class="route-head">'
       + '<div class="top-line"><h2>' + escapeHtml(move.equipment || move.movementType || 'Route') + '</h2>'
@@ -327,7 +320,6 @@
       + '<div class="route-meta">'
       + '<span class="schedule">' + escapeHtml(formatSchedule(move)) + '</span>'
       + (move.clientName ? '<span>' + escapeHtml(move.clientName) + '</span>' : '')
-      + (tel ? '<a class="tel" href="' + tel + '">' + escapeHtml(move.clientPhone) + '</a>' : '')
       + (move.assetName ? '<span>' + escapeHtml(move.assetName) + '</span>' : '')
       + '</div></div>'
       + (move.notes ? '<div class="route-notes">' + escapeHtml(move.notes) + '</div>' : '')

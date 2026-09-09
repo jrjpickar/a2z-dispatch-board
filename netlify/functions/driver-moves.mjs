@@ -25,7 +25,6 @@ function driverRoute(m) {
     equipment: m.equipment || '',
     movementType: m.movementType || '',
     clientName: m.clientName || '',
-    clientPhone: m.clientPhone || '',
     scheduledDate: m.scheduledDate || m.reportDate || m.requestedDate || '',
     scheduledTime: m.scheduledTime || m.reportTime || m.requestedTime || '',
     scheduledEndDate: m.reportEndDate || '',
