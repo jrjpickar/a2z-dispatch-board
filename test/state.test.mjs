@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mutateJob, mutateMove, checkVersion, normalizePayload } from '../lib/state.mjs';
 import { authorizeWrite } from '../lib/http.mjs';
 import { scheduleFields, searchOpportunities } from '../lib/ghl.mjs';
+import { signDriverToken, verifyDriverToken, matchesDriver, matchesWorker } from '../lib/driver-token.mjs';
 const times = { reportDate: '2026-09-09', reportTime: '08:00', reportEndDate: '2026-09-09', reportEndTime: '17:00' };
 const job = { version: 4, active: true, data: { ...times, crew: [{ name: 'Ana', id: 'a', phone: '+15555550100' }], scopeOfWork: 'Keep this', monetaryValue: 400 } };
 test('saving times does not overwrite crew or details from another dispatcher', () => {
@@ -62,6 +63,55 @@ test('write authorization rejects cross-site and anonymous machine requests', ()
   delete process.env.STATE_SYNC_TOKEN;
 });
 test('GHL reset writes explicit empty custom fields', () => assert.ok(scheduleFields({}).every(f => f.field_value === '')));
+test('stops become the route source of truth and legacy pickup/destination stay in sync', () => {
+  const next = mutateMove({ data: {} }, { action: 'update_stops', stops: [{ address: 'A2Z Yard', type: 'pickup' }, { address: '123 Main St' }] });
+  assert.equal(next.data.stops.length, 2);
+  assert.equal(next.data.pickupAddress, 'A2Z Yard');
+  assert.equal(next.data.destinationAddress, '123 Main St');
+  assert.ok(next.data.stops.every(s => s.id));
+  assert.equal(next.data.stops[1].type, 'stop');
+});
+test('stops require an address; an empty route is rejected', () => {
+  assert.throws(() => mutateMove({ data: {} }, { action: 'update_stops', stops: [{ address: '' }] }), /needs an address/);
+  assert.throws(() => mutateMove({ data: {} }, { action: 'update_stops', stops: [] }), /At least one stop/);
+});
+test('editing an existing move can replace its stops via update_job/update_addon', () => {
+  const created = mutateMove(undefined, { action: 'create', stops: [{ address: 'First' }] });
+  const edited = mutateMove({ data: created.data }, { action: 'update_job', stops: [{ address: 'First' }, { address: 'Second' }], scheduledDate: '2026-09-09', scheduledTime: '08:00' });
+  assert.equal(edited.data.stops.length, 2);
+  assert.equal(edited.data.destinationAddress, 'Second');
+});
+test('toggle_stop only flips the matching stop\'s completion, nothing else', () => {
+  const created = mutateMove({ data: {} }, { action: 'update_stops', stops: [{ address: 'A' }, { address: 'B' }] });
+  const stopId = created.data.stops[1].id;
+  const toggled = mutateMove({ data: created.data }, { action: 'toggle_stop', stopId, completed: true, completedBy: 'Joe' });
+  assert.ok(toggled.data.stops[1].completedAt);
+  assert.equal(toggled.data.stops[1].completedBy, 'Joe');
+  assert.equal(toggled.data.stops[0].completedAt, '');
+  const untoggled = mutateMove({ data: toggled.data }, { action: 'toggle_stop', stopId, completed: false });
+  assert.equal(untoggled.data.stops[1].completedAt, '');
+});
+test('toggle_stop on an unknown stop id is rejected', () => {
+  const created = mutateMove({ data: {} }, { action: 'update_stops', stops: [{ address: 'A' }] });
+  assert.throws(() => mutateMove({ data: created.data }, { action: 'toggle_stop', stopId: 'nope' }), e => e.status === 404);
+});
+test('driver tokens verify only with the right secret and before expiry', () => {
+  process.env.DRIVER_TOKEN_SECRET = 'test-only-secret';
+  const token = signDriverToken({ driverKey: 'phone:5551234567', name: 'Joe', phone: '5551234567' }, 60);
+  const payload = verifyDriverToken(token);
+  assert.equal(payload.name, 'Joe');
+  assert.equal(verifyDriverToken(token + 'x'), null);
+  assert.equal(verifyDriverToken(signDriverToken({ driverKey: 'phone:1' }, -10)), null);
+  delete process.env.DRIVER_TOKEN_SECRET;
+});
+test('driver/worker identity matching is phone-first with a name fallback', () => {
+  const identity = { name: 'Joe Smith', phone: '5551234567' };
+  assert.ok(matchesDriver({ driverPhone: '(555) 123-4567' }, identity));
+  assert.ok(matchesDriver({ driverName: 'joe smith' }, identity));
+  assert.ok(!matchesDriver({ driverName: 'Bob' }, identity));
+  assert.ok(matchesWorker({ crew: [{ name: 'Joe Smith' }] }, identity));
+  assert.ok(!matchesWorker({ crew: [{ name: 'Bob' }] }, identity));
+});
 test('GHL pagination collects all pages and does not silently truncate', async () => {
   const original = globalThis.fetch; const urls = []; process.env.GHL_API_TOKEN = 'fake';
   globalThis.fetch = async url => { urls.push(String(url)); const page = new URL(url).searchParams.get('page'); return Response.json({ opportunities: page === '1' ? Array.from({ length: 100 }, (_, i) => ({ id: String(i) })) : [{ id: '100' }] }); };

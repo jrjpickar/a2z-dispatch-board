@@ -414,6 +414,18 @@
   .field-row { display: flex; gap: 10px; }
   .field-row .field { flex: 1; }
 
+  .link-btn-inline { background: none; border: none; color: var(--orange-dark); font-size: 12px; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 4px 0; }
+  .stops-editor { display: flex; flex-direction: column; gap: 8px; }
+  .stop-row { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; background: var(--stripe); }
+  .stop-row-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .stop-row-head .stop-row-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); }
+  .stop-row-head button { background: none; border: none; color: var(--danger); font-size: 12px; font-weight: 600; cursor: pointer; }
+  .stop-row .field-row { margin-bottom: 8px; }
+  .stop-row .field-row:last-child { margin-bottom: 0; }
+  .stop-row .field { margin-bottom: 8px; }
+  .stop-move-buttons { display: flex; gap: 4px; }
+  .stop-move-buttons button { background: #fff; border: 1px solid var(--border); border-radius: 4px; width: 22px; height: 22px; font-size: 11px; cursor: pointer; line-height: 1; }
+
   .tools-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -935,6 +947,12 @@
     <div class="panel logistics-assets-panel"><div class="panel-head"><h2>Assets</h2><span class="mono" id="logisticsAssetCount">0 TOTAL</span></div><div class="logistics-note">Drivers and assets stay independent so either can be reassigned.</div><ul class="logistics-resource-list" id="logisticsAssets"></ul></div>
     <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Move</th><th>Destination</th><th>Monetary Value</th><th>Type / Equipment</th><th>Notes</th><th>Route</th><th>Schedule</th><th>Driver</th><th>Asset</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="10" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
   </div>
+  <div class="panel" id="fieldAppAccessPanel" style="margin-top:16px;">
+    <div class="panel-head"><h2>Field App Access</h2><button type="button" class="job-stage-btn edit" id="refreshFieldAppAccess">Refresh</button></div>
+    <div class="logistics-note">Give each driver or crew member the link below plus their own access code — they sign in to see only their assigned route or job, read-only (drivers can also check off stops). Codes never expire until you regenerate or revoke them.</div>
+    <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
+    <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Code</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
+  </div>
 </div>
 
 <!-- Standalone Container booking — creates via LOGISTICS_CREATE_URL, then syncs shared state. -->
@@ -945,6 +963,11 @@
     <div class="field-row"><div class="field"><label for="containerFirstName">First Name</label><input type="text" id="containerFirstName" placeholder="e.g. Maria"></div><div class="field"><label for="containerLastName">Last Name</label><input type="text" id="containerLastName" placeholder="e.g. Gomez"></div></div>
     <div class="field"><label for="containerPhone">Client Phone</label><input type="tel" id="containerPhone" placeholder="+15555555555" inputmode="tel" maxlength="12" value="+1"></div>
     <div class="field"><label for="containerAddress">Delivery Address</label><input type="text" id="containerAddress" placeholder="Street, City"></div>
+    <div class="field">
+      <label>Additional Stops <span class="label-optional">(optional — for multi-stop routes)</span></label>
+      <div class="stops-editor" id="containerStopsList"></div>
+      <button type="button" class="link-btn-inline" id="containerAddStopBtn">+ Add Stop</button>
+    </div>
     <div class="field-row"><div class="field"><label for="containerSize">Container Size</label><select id="containerSize"><option value="10 Yard">10 Yard</option><option value="20 Yard">20 Yard</option><option value="30 Yard" selected>30 Yard</option><option value="40 Yard">40 Yard</option><option value="Materials">Materials</option></select></div><div class="field"><label for="containerMovementType">Movement</label><select id="containerMovementType"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option></select></div></div>
     <div class="field-row"><div class="field"><label for="containerDate">Report Date</label><input type="date" id="containerDate"></div><div class="field"><label for="containerTime">Report Time</label><input type="time" id="containerTime"></div></div>
     <div class="field"><label for="containerValue">Job Value <span class="label-optional">(optional)</span></label><input type="number" id="containerValue" min="0" step="1" placeholder="e.g. 650"></div>
@@ -961,6 +984,11 @@
     <div class="field-row"><div class="field"><label for="editContainerFirstName">First Name</label><input type="text" id="editContainerFirstName" placeholder="e.g. Maria"></div><div class="field"><label for="editContainerLastName">Last Name</label><input type="text" id="editContainerLastName" placeholder="e.g. Gomez"></div></div>
     <div class="field"><label for="editContainerPhone">Client Phone</label><input type="tel" id="editContainerPhone" placeholder="+15555555555" inputmode="tel" maxlength="12"></div>
     <div class="field"><label for="editContainerAddress">Delivery Address</label><input type="text" id="editContainerAddress" placeholder="Street, City"></div>
+    <div class="field">
+      <label>Additional Stops <span class="label-optional">(optional — for multi-stop routes)</span></label>
+      <div class="stops-editor" id="editContainerStopsList"></div>
+      <button type="button" class="link-btn-inline" id="editContainerAddStopBtn">+ Add Stop</button>
+    </div>
     <div class="field-row"><div class="field"><label for="editContainerSize">Container Size</label><select id="editContainerSize"><option value="10 Yard">10 Yard</option><option value="20 Yard">20 Yard</option><option value="30 Yard">30 Yard</option><option value="40 Yard">40 Yard</option><option value="Materials">Materials</option></select></div><div class="field"><label for="editContainerMovementType">Movement</label><select id="editContainerMovementType"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option><option value="container_dispatch">Container Dispatch</option><option value="equipment_delivery">Equipment Delivery</option></select></div></div>
     <div class="field-row"><div class="field"><label for="editContainerDate">Report Date</label><input type="date" id="editContainerDate"></div><div class="field"><label for="editContainerTime">Report Time</label><input type="time" id="editContainerTime"></div></div>
     <div class="field"><label for="editContainerValue">Job Value</label><input type="number" id="editContainerValue" min="0" step="1"></div>
@@ -1197,8 +1225,62 @@ const CONFIG = {
   ASSET_ROSTER_URL: "/api/roster?kind=assets",
   DRIVER_ASSIGNMENT_URL: "https://hook.us2.make.com/y7ko2j9343i7mvy1zzweq6db25f31t8k",
   LOGISTICS_STATE_URL: "/api/logistics-state",
-  DRIVER_LOG_URL: "/api/driver-log"
+  DRIVER_LOG_URL: "/api/driver-log",
+  // Field app (read-only mobile app for drivers/crew) sign-in codes.
+  DRIVER_CODES_URL: "/api/driver-codes"
 };
+
+/* ---------- Multi-stop route editor, shared by the new/edit container sheets ---------- */
+function createStopsEditor(listId, addBtnId) {
+  const list = document.getElementById(listId);
+  const addBtn = document.getElementById(addBtnId);
+  const escapeHtml = value => String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  const STOP_TYPE_OPTIONS = [['stop', 'Stop'], ['pickup', 'Pickup'], ['delivery', 'Delivery'], ['dropoff', 'Drop-off']];
+  function rowHtml(stop) {
+    const typeOptions = STOP_TYPE_OPTIONS.map(([value, label]) => `<option value="${value}" ${stop.type === value ? 'selected' : ''}>${label}</option>`).join('');
+    return `<div class="stop-row">
+      <div class="stop-row-head"><span class="stop-row-label"></span><div class="stop-move-buttons"><button type="button" class="stop-move-up" title="Move up">&uarr;</button><button type="button" class="stop-move-down" title="Move down">&darr;</button></div><button type="button" class="stop-remove">Remove</button></div>
+      <div class="field"><label>Address</label><input type="text" class="stop-address" value="${escapeHtml(stop.address || '')}" placeholder="Street, City"></div>
+      <div class="field-row">
+        <div class="field"><label>Type</label><select class="stop-type">${typeOptions}</select></div>
+        <div class="field"><label>Date</label><input type="date" class="stop-date" value="${escapeHtml(stop.scheduledDate || '')}"></div>
+        <div class="field"><label>Time</label><input type="time" class="stop-time" value="${escapeHtml(stop.scheduledTime || '')}"></div>
+      </div>
+      <div class="field"><label>Notes <span class="label-optional">(optional)</span></label><input type="text" class="stop-notes" value="${escapeHtml(stop.notes || '')}" placeholder="Gate code, contact, etc."></div>
+      <input type="hidden" class="stop-id" value="${escapeHtml(stop.id || '')}">
+    </div>`;
+  }
+  function relabel() {
+    [...list.children].forEach((row, i) => { row.querySelector('.stop-row-label').textContent = `Stop ${i + 2}`; });
+  }
+  function render(stops) { list.innerHTML = (stops || []).map(rowHtml).join(''); relabel(); }
+  function collect() {
+    return [...list.querySelectorAll('.stop-row')].map(row => ({
+      id: row.querySelector('.stop-id').value,
+      address: row.querySelector('.stop-address').value.trim(),
+      type: row.querySelector('.stop-type').value,
+      scheduledDate: row.querySelector('.stop-date').value,
+      scheduledTime: row.querySelector('.stop-time').value,
+      notes: row.querySelector('.stop-notes').value.trim()
+    })).filter(stop => stop.address);
+  }
+  addBtn.addEventListener('click', () => { list.insertAdjacentHTML('beforeend', rowHtml({ type: 'stop' })); relabel(); });
+  list.addEventListener('click', event => {
+    const row = event.target.closest('.stop-row'); if (!row) return;
+    if (event.target.closest('.stop-remove')) { row.remove(); relabel(); return; }
+    if (event.target.closest('.stop-move-up') && row.previousElementSibling) { list.insertBefore(row, row.previousElementSibling); relabel(); return; }
+    if (event.target.closest('.stop-move-down') && row.nextElementSibling) { list.insertBefore(row.nextElementSibling, row); relabel(); }
+  });
+  return { render, collect };
+}
+const containerStopsEditor = createStopsEditor('containerStopsList', 'containerAddStopBtn');
+const editContainerStopsEditor = createStopsEditor('editContainerStopsList', 'editContainerAddStopBtn');
+// A move's stops are [first stop from the main address field, ...additional stops from the editor].
+// This keeps the common single-destination booking flow untouched while supporting a full route.
+function buildStopsPayload(editor, firstStop) {
+  return [{ ...firstStop, type: firstStop.type || 'delivery' }, ...editor.collect()];
+}
 
 // Guards against a webhook call that never resolves (e.g. a Make scenario
 // with no Webhook Respond module on the branch that gets hit, or a
@@ -3030,6 +3112,10 @@ function renderLogistics() {
     const equipment = m.equipment || m.container || m.assetDescription || '';
     const notes = m.notes || m.scopeOfWork || m.description || '';
     const pickup = m.pickupAddress || m.pickup || 'A2Z Yard', destination = m.destinationAddress || m.deliveryAddress || m.jobAddress || m.address || m.destination || m.dropoff || m.name || '—';
+    const stops = Array.isArray(m.stops) ? m.stops : [];
+    const routeDisplay = stops.length > 1
+      ? stops.map(s => escapeLogisticsHtml(s.address) + (s.completedAt ? ' &#10003;' : '')).join(' &rarr; ')
+      : `${escapeLogisticsHtml(pickup)} &rarr; ${escapeLogisticsHtml(destination)}`;
     const moveKey = String(m.moveId || m.id || oppId);
     const scheduleOverride = window.logisticsScheduleOverride[moveKey];
     const breakSchedule = window.logisticsBreakSchedule[moveKey] || {};
@@ -3078,7 +3164,7 @@ function renderLogistics() {
     const targetType = logisticsTargetType(m);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
     const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
-    return `<tr data-source="${sourceType}"><td data-label="Move"><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || '—')}</strong></td><td data-label="Destination"><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td data-label="Value"><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td data-label="Type / equipment"><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td data-label="Notes" class="logistics-route">${escapeLogisticsHtml(notes || '—')}</td><td data-label="Route" class="logistics-route">${escapeLogisticsHtml(pickup)} → ${escapeLogisticsHtml(destination)}</td><td data-label="Schedule" class="mono">${scheduleCell}</td><td data-label="Driver">${escapeLogisticsHtml(assignedDriverName || '—')}</td><td data-label="Vehicle">${escapeLogisticsHtml(assignedAssetDisplay || '—')}</td><td data-label="Status"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
+    return `<tr data-source="${sourceType}"><td data-label="Move"><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || '—')}</strong></td><td data-label="Destination"><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td data-label="Value"><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td data-label="Type / equipment"><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td data-label="Notes" class="logistics-route">${escapeLogisticsHtml(notes || '—')}</td><td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td><td data-label="Schedule" class="mono">${scheduleCell}</td><td data-label="Driver">${escapeLogisticsHtml(assignedDriverName || '—')}</td><td data-label="Vehicle">${escapeLogisticsHtml(assignedAssetDisplay || '—')}</td><td data-label="Status"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
   };
   const sectionDefs = [
     { key: 'today', label: 'Today' },
@@ -3124,6 +3210,7 @@ async function loadLogistics() {
     logisticsLoaded = true;
     errorEl.style.display = 'none'; errorEl.textContent = '';
     renderLogistics();
+    loadFieldAppAccess();
   } catch (err) {
     console.error('Logistics webhook failed:', err);
     errorEl.style.display = 'block';
@@ -3131,6 +3218,75 @@ async function loadLogistics() {
     document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="10" class="empty-state">Logistics data could not be loaded.</td></tr>';
   }
 }
+
+/* ---------- Field App (read-only driver/crew mobile app) access codes ---------- */
+let fieldAppCodes = [];
+function fieldAppKeyFor(person) {
+  const digits = String(person.phone || '').replace(/\D/g, '').slice(-10);
+  return digits ? `phone:${digits}` : `name:${String(person.name || '').trim().toLowerCase()}`;
+}
+async function postFieldAppAction(payload) {
+  const response = await fetchWithTimeout(CONFIG.DRIVER_CODES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, 20000);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+  return data;
+}
+async function loadFieldAppAccess() {
+  const list = document.getElementById('fieldAppAccessList');
+  try {
+    const data = await fetchJsonStrict(CONFIG.DRIVER_CODES_URL, 'Field app codes');
+    fieldAppCodes = data.codes || [];
+    renderFieldAppAccess();
+  } catch (err) {
+    list.innerHTML = `<tr><td colspan="5" class="empty-state">Codes could not be loaded: ${escapeLogisticsHtml(err.message)}</td></tr>`;
+  }
+}
+function renderFieldAppAccess() {
+  const list = document.getElementById('fieldAppAccessList');
+  document.getElementById('fieldAppLink').textContent = `${window.location.origin}/driver/`;
+  const drivers = (logisticsData.drivers || []).map(d => ({ name: d.name, phone: d.phone, role: 'Driver' }));
+  const labor = (dashboardData.labor || []).map(w => ({ name: w.name, phone: w.phone, role: 'Crew' }));
+  const merged = new Map();
+  [...drivers, ...labor].filter(p => p.name && p.name !== 'Unnamed Driver').forEach(p => {
+    const key = fieldAppKeyFor(p);
+    const existing = merged.get(key);
+    if (existing) { if (!existing.role.includes(p.role)) existing.role += `/${p.role}`; }
+    else merged.set(key, { ...p });
+  });
+  const people = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
+  if (!people.length) { list.innerHTML = '<tr><td colspan="5" class="load-state">No drivers or crew found in the rosters yet.</td></tr>'; return; }
+  list.innerHTML = people.map(p => {
+    const key = fieldAppKeyFor(p);
+    const existingCode = fieldAppCodes.find(c => c.driverKey === key);
+    const codeCell = existingCode ? `<span class="mono" style="user-select:all;">${escapeLogisticsHtml(existingCode.code)}</span>` : '<span class="logistics-route">No code yet</span>';
+    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Code">${codeCell}</td>`
+      + `<td><button type="button" class="job-stage-btn edit field-app-generate" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">${existingCode ? 'Regenerate' : 'Generate'}</button>`
+      + (existingCode ? ` <button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>` : '') + '</td></tr>';
+  }).join('');
+}
+document.getElementById('fieldAppAccessList').addEventListener('click', async event => {
+  const genBtn = event.target.closest('.field-app-generate');
+  const revokeBtn = event.target.closest('.field-app-revoke');
+  const button = genBtn || revokeBtn;
+  if (!button) return;
+  const name = button.dataset.name, phone = button.dataset.phone;
+  button.disabled = true;
+  try {
+    if (revokeBtn) {
+      await postFieldAppAction({ name, phone, action: 'revoke' });
+      fieldAppCodes = fieldAppCodes.filter(c => c.driverKey !== fieldAppKeyFor({ name, phone }));
+      showToast('Access code revoked.');
+    } else {
+      const result = await postFieldAppAction({ name, phone, action: 'generate' });
+      fieldAppCodes = fieldAppCodes.filter(c => c.driverKey !== result.driver.driverKey);
+      fieldAppCodes.push(result.driver);
+      showToast(`Code generated for ${name}: ${result.driver.code}`);
+    }
+    renderFieldAppAccess();
+  } catch (err) { showToast(err.message, true); }
+  finally { button.disabled = false; }
+});
+document.getElementById('refreshFieldAppAccess').addEventListener('click', loadFieldAppAccess);
 
 function logisticsIdentity(move) {
   return { moveId: String(move.moveId || move.id || ''), targetType: logisticsTargetType(move), sourceType: logisticsSourceType(move),
@@ -3312,6 +3468,7 @@ function openEditContainerSheetFn(jobId) {
   document.getElementById('editContainerLastName').value = move.lastName || contact.lastName || nameParts.join(' ') || '';
   document.getElementById('editContainerPhone').value = contact.phone || move.clientPhone || move.phone || '';
   document.getElementById('editContainerAddress').value = move.destinationAddress || move.deliveryAddress || move.jobAddress || move.address || move.name || '';
+  editContainerStopsEditor.render(Array.isArray(move.stops) && move.stops.length > 1 ? move.stops.slice(1) : []);
   const sizeMatch = String(move.equipment || '').match(/^(10|20|30|40) Yard/i);
   document.getElementById('editContainerSize').value = move.containerSize || (sizeMatch ? `${sizeMatch[1]} Yard` : '30 Yard');
   if (!document.getElementById('editContainerSize').value) document.getElementById('editContainerSize').value = '30 Yard';
@@ -3355,7 +3512,8 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
     reportEndDate: reportDate, reportEndTime: move.reportEndTime || '',
     monetaryValue: document.getElementById('editContainerValue').value === '' ? null : parseFloat(document.getElementById('editContainerValue').value),
     scopeOfWork: document.getElementById('editContainerNotes').value.trim(), notes: document.getElementById('editContainerNotes').value.trim(),
-    toolsRequired: [`${containerSize} Container`], containerSize, movementType, equipment: `${containerSize} Container`
+    toolsRequired: [`${containerSize} Container`], containerSize, movementType, equipment: `${containerSize} Container`,
+    stops: buildStopsPayload(editContainerStopsEditor, { address: jobAddress, type: 'delivery' })
   };
   button.disabled = true; button.textContent = 'Saving...';
   try {
@@ -3539,6 +3697,7 @@ const containerSheet = document.getElementById('containerSheet');
 function closeContainerSheetFn() { containerOverlay.classList.remove('open'); containerSheet.classList.remove('open'); }
 function openContainerSheetFn() {
   if (!document.getElementById('containerDate').value) document.getElementById('containerDate').value = new Date().toISOString().slice(0, 10);
+  containerStopsEditor.render([]);
   containerOverlay.classList.add('open'); containerSheet.classList.add('open');
 }
 document.getElementById('newContainerBtn').addEventListener('click', openContainerSheetFn);
@@ -3591,7 +3750,8 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
     scopeOfWork: notes,
     toolsRequired: [`${containerSize} Container`],
     monetaryValue: document.getElementById('containerValue').value === '' ? null : parseFloat(document.getElementById('containerValue').value),
-    notes
+    notes,
+    stops: buildStopsPayload(containerStopsEditor, { address: jobAddress, type: 'delivery' })
   };
   submitBtn.disabled = true; submitBtn.textContent = 'Creating...';
   try {

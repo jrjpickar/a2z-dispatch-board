@@ -22,6 +22,22 @@ test('real PostgreSQL migrations are repeatable and preserve legacy data', async
   await ensureSchema(sql);
   const rows = await sql`select column_name from information_schema.columns where table_name = 'job_shared_state'`;
   assert.ok(rows.some(r => r.column_name === 'version'));
+  const codeTable = await sql`select column_name from information_schema.columns where table_name = 'dispatch_driver_codes'`;
+  assert.ok(codeTable.some(r => r.column_name === 'code'));
+});
+const moveRequest = (moveId, body) => ({ moveId, expectedVersion: 0, requestId: crypto.randomUUID(), ...body });
+test('a route with stops persists, and a driver-safe stop toggle survives a stale concurrent write', async () => {
+  const created = await saveState(sql, 'move', moveRequest('move-stops', { action: 'create', stops: [{ address: 'A2Z Yard', type: 'pickup' }, { address: '123 Main St', type: 'delivery' }] }));
+  assert.equal(created.state.stops.length, 2);
+  assert.equal(created.state.destinationAddress, '123 Main St');
+  const stopId = created.state.stops[1].id;
+  const toggled = await saveState(sql, 'move', moveRequest('move-stops', { action: 'toggle_stop', stopId, completed: true, completedBy: 'Joe', expectedVersion: created.state.version }));
+  assert.ok(toggled.state.stops[1].completedAt);
+  assert.equal(toggled.state.stops[0].completedAt, '');
+  // A stale dispatcher edit (still on the pre-toggle version) must not silently clobber the driver's checkmark.
+  await assert.rejects(saveState(sql, 'move', moveRequest('move-stops', { action: 'update_job', notes: 'stale edit', expectedVersion: created.state.version })), e => e.status === 409);
+  const [row] = await sql`select data from logistics_move_state where move_id = 'move-stops'`;
+  assert.ok(row.data.stops[1].completedAt);
 });
 test('transactional replay returns the original version without applying twice', async () => {
   const payload = request('job-replay', { action: 'create', crew: 'Ana', scopeOfWork: 'keep' });

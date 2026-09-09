@@ -61,5 +61,9 @@ async function createSchema(sql) {
     request_id text primary key, kind text not null, fingerprint text not null, payload jsonb not null,
     status text not null, opportunity_id text, result jsonb, updated_at timestamptz not null default now()
   )`;
+  await sql`create table if not exists dispatch_driver_codes (
+    driver_key text primary key, name text not null default '', phone text not null default '',
+    code text not null, updated_at timestamptz not null default now()
+  )`;
   });
 }

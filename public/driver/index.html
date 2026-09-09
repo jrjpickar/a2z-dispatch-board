@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>A2Z Field</title>
+<meta name="theme-color" content="#1c1d1f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="A2Z Field">
+<link rel="manifest" href="/driver/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/driver/icon-192.png">
+<link rel="icon" href="/driver/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --grey: #9ea0a3; --grey-dark: #7d7f82; --grey-light: #e4e4e2;
+    --ink: #1c1d1f; --ink-soft: #4a4b4d;
+    --orange: #e8622c; --orange-dark: #c94f1f; --orange-tint: #fbe4d8; --orange-tint-soft: #fdf0e9;
+    --gold: #c9a227; --gold-tint: #f5e9c4;
+    --bg: #e9ebed; --card: #ffffff; --border: #dddddb; --danger: #c0392b; --good: #2f8f4e;
+    --radius: 10px;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.5;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  h1, h2, .label-caps { font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 0.04em; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  .topbar {
+    background: linear-gradient(135deg, var(--ink) 0%, #2c2d30 100%); color: #fff;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 14px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 4px solid transparent; border-image: linear-gradient(90deg, var(--orange), var(--gold)) 1;
+    position: sticky; top: 0; z-index: 5;
+  }
+  .topbar h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.05em; }
+  .topbar .tag { color: var(--orange); }
+  .topbar .who { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--grey-light); }
+  .topbar button { background: none; border: 1px solid rgba(255,255,255,0.35); color: #fff; padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+  /* ---------- Login ---------- */
+  .login-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px 20px; margin-top: 10vh; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+  .login-card h2 { margin: 0 0 4px; font-size: 20px; }
+  .login-card p { margin: 0 0 20px; color: var(--ink-soft); font-size: 13px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 16px; font-family: inherit; background: #fff; color: var(--ink);
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+  .btn-primary {
+    width: 100%; background: var(--orange); color: #fff; border: none; padding: 13px; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em;
+  }
+  .btn-primary:disabled { opacity: 0.6; }
+  .btn-primary:active { background: var(--orange-dark); }
+  .link-btn { background: none; border: none; color: var(--orange-dark); font-size: 13px; text-decoration: underline; cursor: pointer; padding: 0; margin-top: 4px; }
+  .error-box { background: #fbeae7; border: 1px solid var(--danger); color: var(--danger); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: none; }
+  .error-box.show { display: block; }
+
+  /* ---------- Home ---------- */
+  .empty-state { text-align: center; color: var(--grey-dark); padding: 60px 20px; font-size: 14px; }
+  .refresh-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .refresh-row .updated { font-size: 11px; color: var(--grey-dark); }
+  .refresh-row button { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+  .route-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    margin-bottom: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .route-head { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .route-head .top-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .route-head h2 { margin: 0; font-size: 16px; }
+  .status-pill { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 20px; background: var(--grey-light); color: var(--ink-soft); white-space: nowrap; }
+  .status-pill.assigned, .status-pill.scheduled { background: var(--orange-tint); color: var(--orange-dark); }
+  .status-pill.requested { background: var(--gold-tint); color: #8a6d1a; }
+  .route-meta { margin-top: 6px; font-size: 13px; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .route-meta .schedule { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--ink); }
+  .route-meta a.tel { color: var(--orange-dark); font-weight: 600; text-decoration: none; }
+  .route-notes { padding: 10px 16px; font-size: 13px; color: var(--ink-soft); background: var(--bg); border-bottom: 1px solid var(--border); white-space: pre-wrap; }
+
+  .stops { list-style: none; margin: 0; padding: 0; }
+  .stop {
+    display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); align-items: flex-start;
+  }
+  .stop:last-child { border-bottom: none; }
+  .stop.done { background: #f4faf6; }
+  .stop-seq {
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-top: 2px;
+  }
+  .stop.done .stop-seq { background: var(--good); }
+  .stop-body { flex: 1 1 auto; min-width: 0; }
+  .stop-type { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-dark); }
+  .stop-address { font-size: 14px; font-weight: 600; margin: 2px 0; word-break: break-word; }
+  .stop-address a { color: var(--ink); text-decoration: none; border-bottom: 1px dotted var(--grey); }
+  .stop-window { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-soft); }
+  .stop-notes { font-size: 12px; color: var(--ink-soft); margin-top: 4px; white-space: pre-wrap; }
+  .stop-done-meta { font-size: 11px; color: var(--good); margin-top: 4px; font-weight: 600; }
+  .stop-toggle {
+    flex: 0 0 auto; border: 1px solid var(--border); background: #fff; border-radius: 8px;
+    padding: 9px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; align-self: center;
+  }
+  .stop-toggle.mark-done { border-color: var(--orange); color: var(--orange-dark); }
+  .stop-toggle.mark-undo { border-color: var(--good); color: var(--good); }
+  .stop-toggle:disabled { opacity: 0.55; }
+
+  .section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-dark); margin: 18px 2px 8px; }
+  .section-label:first-child { margin-top: 0; }
+
+  .job-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .job-card h2 { margin: 0; font-size: 16px; }
+  .job-meta { margin-top: 6px; font-size: 13px; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .job-meta .schedule { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--ink); }
+  .job-scope { font-size: 13px; color: var(--ink-soft); margin-top: 8px; white-space: pre-wrap; }
+  .crew-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey-dark); margin-top: 12px; }
+  .crew-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .crew-list li { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 4px 11px; font-size: 12px; }
+  .crew-list li.you { background: var(--orange-tint); border-color: var(--orange); color: var(--orange-dark); font-weight: 600; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px;
+    max-width: 90vw; text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 20;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>A2Z <span class="tag">Field</span></h1>
+  <div class="who" id="topbarWho" hidden>
+    <span id="driverNameLabel"></span>
+    <button type="button" id="signOutBtn">Sign Out</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div id="loginView">
+    <div class="login-card">
+      <h2>Sign In</h2>
+      <p>Enter the phone number and access code dispatch gave you. This shows your assigned route or job only &mdash; drivers can check off stops, everything else is view-only.</p>
+      <div class="error-box" id="loginError"></div>
+      <form id="loginForm">
+        <div class="field" id="phoneField">
+          <label for="loginPhone">Phone Number</label>
+          <input type="tel" id="loginPhone" inputmode="tel" placeholder="(555) 555-5555" autocomplete="tel">
+        </div>
+        <div class="field" id="nameField" hidden>
+          <label for="loginName">Full Name</label>
+          <input type="text" id="loginName" placeholder="As dispatch has it" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="loginCode">Access Code</label>
+          <input type="text" id="loginCode" placeholder="e.g. 7F3K9Q" maxlength="6" autocapitalize="characters" autocomplete="off">
+        </div>
+        <button type="submit" class="btn-primary" id="loginSubmit">Sign In</button>
+        <button type="button" class="link-btn" id="toggleLoginMode">No phone on file? Sign in with your name instead</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="homeView" hidden>
+    <div class="refresh-row">
+      <span class="updated" id="updatedLabel">&nbsp;</span>
+      <button type="button" id="refreshBtn">Refresh</button>
+    </div>
+    <div id="routesList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  const TOKEN_KEY = 'a2zDriverToken';
+  const NAME_KEY = 'a2zDriverName';
+  const POLL_MS = 20000;
+
+  const $ = id => document.getElementById(id);
+  const loginView = $('loginView'), homeView = $('homeView'), topbarWho = $('topbarWho');
+  const loginForm = $('loginForm'), loginError = $('loginError'), loginSubmit = $('loginSubmit');
+  const phoneField = $('phoneField'), nameField = $('nameField'), toggleLoginMode = $('toggleLoginMode');
+  const routesList = $('routesList'), updatedLabel = $('updatedLabel'), refreshBtn = $('refreshBtn');
+  const driverNameLabel = $('driverNameLabel'), signOutBtn = $('signOutBtn');
+  const toastEl = $('toast');
+
+  let pollTimer = null;
+  let usingNameMode = false;
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  }
+
+  function showToast(message, isError) {
+    toastEl.textContent = message;
+    toastEl.className = 'toast show' + (isError ? ' error' : '');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { toastEl.className = 'toast'; }, 3200);
+  }
+
+  function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+  function setSession(token, name) {
+    try { localStorage.setItem(TOKEN_KEY, token); localStorage.setItem(NAME_KEY, name || ''); } catch (e) { /* private mode */ }
+  }
+  function clearSession() {
+    try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(NAME_KEY); } catch (e) { /* ignore */ }
+  }
+
+  async function api(path, options) {
+    const token = getToken();
+    const response = await fetch(path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json', 'Accept': 'application/json',
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...(options && options.headers)
+      }
+    });
+    let body = null;
+    try { body = await response.json(); } catch (e) { /* no body */ }
+    if (!response.ok) {
+      const message = (body && body.error) || ('Request failed (' + response.status + ')');
+      const error = new Error(message); error.status = response.status; throw error;
+    }
+    return body;
+  }
+
+  function createRequestId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 12);
+  }
+
+  function mapsLink(address) {
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address);
+  }
+
+  function telLink(phone) {
+    const digits = String(phone || '').replace(/[^\d+]/g, '');
+    return digits ? ('tel:' + digits) : '';
+  }
+
+  function formatSchedule(move) {
+    if (!move.scheduledDate && !move.scheduledTime) return 'Not scheduled yet';
+    return [move.scheduledDate, move.scheduledTime].filter(Boolean).join(' · ');
+  }
+
+  function formatWindow(stop) {
+    if (!stop.scheduledDate && !stop.scheduledTime) return '';
+    return [stop.scheduledDate, stop.scheduledTime].filter(Boolean).join(' · ');
+  }
+
+  function statusClass(status) {
+    return /assign/.test(status || '') ? 'assigned' : /schedul/.test(status || '') ? 'scheduled' : /request/.test(status || '') ? 'requested' : '';
+  }
+
+  function stopRow(move, stop) {
+    const done = !!stop.completedAt;
+    const window = formatWindow(stop);
+    const link = mapsLink(stop.address);
+    return '<li class="stop ' + (done ? 'done' : '') + '" data-move-id="' + escapeHtml(move.moveId) + '" data-stop-id="' + escapeHtml(stop.id) + '">'
+      + '<div class="stop-seq">' + (stop._seq) + '</div>'
+      + '<div class="stop-body">'
+      + '<div class="stop-type">' + escapeHtml(stop.type || 'stop') + '</div>'
+      + '<div class="stop-address"><a href="' + link + '" target="_blank" rel="noopener">' + escapeHtml(stop.address) + ' ↗</a></div>'
+      + (window ? '<div class="stop-window">' + escapeHtml(window) + '</div>' : '')
+      + (stop.notes ? '<div class="stop-notes">' + escapeHtml(stop.notes) + '</div>' : '')
+      + (done ? '<div class="stop-done-meta">Completed' + (stop.completedBy ? ' by ' + escapeHtml(stop.completedBy) : '') + '</div>' : '')
+      + '</div>'
+      + '<button type="button" class="stop-toggle ' + (done ? 'mark-undo' : 'mark-done') + '" data-action="toggle">' + (done ? 'Undo' : 'Mark Done') + '</button>'
+      + '</li>';
+  }
+
+  function routeCard(move) {
+    const stops = (move.stops || []).map((s, i) => Object.assign({}, s, { _seq: i + 1 }));
+    const tel = telLink(move.clientPhone);
+    return '<div class="route-card" data-move-id="' + escapeHtml(move.moveId) + '">'
+      + '<div class="route-head">'
+      + '<div class="top-line"><h2>' + escapeHtml(move.equipment || move.movementType || 'Route') + '</h2>'
+      + (move.status ? '<span class="status-pill ' + statusClass(move.status) + '">' + escapeHtml(move.status) + '</span>' : '')
+      + '</div>'
+      + '<div class="route-meta">'
+      + '<span class="schedule">' + escapeHtml(formatSchedule(move)) + '</span>'
+      + (move.clientName ? '<span>' + escapeHtml(move.clientName) + '</span>' : '')
+      + (tel ? '<a class="tel" href="' + tel + '">' + escapeHtml(move.clientPhone) + '</a>' : '')
+      + (move.assetName ? '<span>' + escapeHtml(move.assetName) + '</span>' : '')
+      + '</div></div>'
+      + (move.notes ? '<div class="route-notes">' + escapeHtml(move.notes) + '</div>' : '')
+      + '<ul class="stops">' + stops.map(s => stopRow(move, s)).join('') + '</ul>'
+      + '</div>';
+  }
+
+  function sortByDate(list) {
+    return list.slice().sort((a, b) => {
+      const ak = (a.scheduledDate || a.reportDate || '9999') + 'T' + (a.scheduledTime || a.reportTime || '99:99');
+      const bk = (b.scheduledDate || b.reportDate || '9999') + 'T' + (b.scheduledTime || b.reportTime || '99:99');
+      return ak < bk ? -1 : ak > bk ? 1 : 0;
+    });
+  }
+
+  function jobCard(job) {
+    const schedule = [job.reportDate, job.reportTime].filter(Boolean).join(' · ') || 'Not scheduled yet';
+    const crew = job.crew || [];
+    return '<div class="job-card" data-job-id="' + escapeHtml(job.jobId) + '">'
+      + '<h2>' + escapeHtml(job.jobAddress || job.clientName || 'Job') + '</h2>'
+      + '<div class="job-meta">'
+      + '<span class="schedule">' + escapeHtml(schedule) + '</span>'
+      + (job.clientName ? '<span>' + escapeHtml(job.clientName) + '</span>' : '')
+      + '</div>'
+      + (job.scopeOfWork ? '<div class="job-scope">' + escapeHtml(job.scopeOfWork) + '</div>' : '')
+      + (crew.length ? '<div class="crew-label">Crew On This Job</div><ul class="crew-list">'
+          + crew.map(w => '<li class="' + (w.isYou ? 'you' : '') + '">' + escapeHtml(w.name) + (w.isYou ? ' (You)' : '') + '</li>').join('')
+          + '</ul>' : '')
+      + '</div>';
+  }
+
+  function renderData(data) {
+    const routes = data.routes || [], jobs = data.jobs || [];
+    if (!routes.length && !jobs.length) {
+      routesList.innerHTML = '<div class="empty-state">Nothing assigned to you right now. Pull to refresh or check with dispatch.</div>';
+      return;
+    }
+    let html = '';
+    if (routes.length) html += '<div class="section-label">My Routes</div>' + sortByDate(routes).map(routeCard).join('');
+    if (jobs.length) html += '<div class="section-label">My Job' + (jobs.length > 1 ? 's' : '') + '</div>' + sortByDate(jobs).map(jobCard).join('');
+    routesList.innerHTML = html;
+  }
+
+  async function loadMoves(showSpinner) {
+    try {
+      const data = await api('/api/driver-moves', { method: 'GET' });
+      renderData(data);
+      updatedLabel.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+      if (error.status === 401) return goToLogin('Your session ended. Sign in again.');
+      if (showSpinner) showToast(error.message, true);
+    }
+  }
+
+  function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(() => { if (document.visibilityState === 'visible') loadMoves(false); }, POLL_MS);
+  }
+  function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+  function goToHome() {
+    const name = localStorage.getItem(NAME_KEY) || '';
+    driverNameLabel.textContent = name;
+    topbarWho.hidden = false;
+    loginView.hidden = true; homeView.hidden = false;
+    loadMoves(true);
+    startPolling();
+  }
+
+  function goToLogin(message) {
+    stopPolling();
+    clearSession();
+    topbarWho.hidden = true;
+    homeView.hidden = true; loginView.hidden = false;
+    loginError.classList.remove('show');
+    if (message) { loginError.textContent = message; loginError.classList.add('show'); }
+  }
+
+  toggleLoginMode.addEventListener('click', () => {
+    usingNameMode = !usingNameMode;
+    phoneField.hidden = usingNameMode; nameField.hidden = !usingNameMode;
+    toggleLoginMode.textContent = usingNameMode ? 'Have a phone on file? Sign in with phone instead' : 'No phone on file? Sign in with your name instead';
+  });
+
+  loginForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    loginError.classList.remove('show');
+    const code = $('loginCode').value.trim();
+    const phone = $('loginPhone').value.trim();
+    const name = $('loginName').value.trim();
+    if (!code || (usingNameMode ? !name : !phone)) {
+      loginError.textContent = 'Enter your ' + (usingNameMode ? 'name' : 'phone number') + ' and access code.';
+      loginError.classList.add('show'); return;
+    }
+    loginSubmit.disabled = true; loginSubmit.textContent = 'Signing In...';
+    try {
+      const result = await api('/api/driver-auth', { method: 'POST', body: JSON.stringify({ phone: usingNameMode ? '' : phone, name: usingNameMode ? name : '', code }) });
+      setSession(result.token, result.name);
+      goToHome();
+    } catch (error) {
+      loginError.textContent = error.message || 'Sign in failed.';
+      loginError.classList.add('show');
+    } finally {
+      loginSubmit.disabled = false; loginSubmit.textContent = 'Sign In';
+    }
+  });
+
+  signOutBtn.addEventListener('click', () => goToLogin());
+  refreshBtn.addEventListener('click', () => loadMoves(true));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !homeView.hidden) loadMoves(false); });
+
+  routesList.addEventListener('click', async event => {
+    const button = event.target.closest('.stop-toggle');
+    if (!button) return;
+    const li = button.closest('.stop');
+    const moveId = li.dataset.moveId, stopId = li.dataset.stopId;
+    const wasDone = li.classList.contains('done');
+    button.disabled = true; button.textContent = wasDone ? 'Undoing...' : 'Saving...';
+    try {
+      await api('/api/driver-stop-action', {
+        method: 'POST',
+        body: JSON.stringify({ moveId, stopId, completed: !wasDone, requestId: createRequestId() })
+      });
+      await loadMoves(false);
+      showToast(wasDone ? 'Stop marked not done.' : 'Stop marked done.');
+    } catch (error) {
+      if (error.status === 401) return goToLogin('Your session ended. Sign in again.');
+      if (error.status === 409) {
+        showToast('Someone else updated this route. Refreshed — try again.', true);
+        await loadMoves(false);
+      } else {
+        showToast(error.message, true);
+        button.disabled = false; button.textContent = wasDone ? 'Undo' : 'Mark Done';
+      }
+    }
+  });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/driver/sw.js').catch(() => {}));
+  }
+
+  if (getToken()) goToHome(); else goToLogin();
+})();
+</script>
+</body>
+</html>

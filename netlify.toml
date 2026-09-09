@@ -58,3 +58,23 @@
   from = "/api/job-action"
   to = "/.netlify/functions/job-action"
   status = 200
+
+[[redirects]]
+  from = "/api/driver-codes"
+  to = "/.netlify/functions/driver-codes"
+  status = 200
+
+[[redirects]]
+  from = "/api/driver-auth"
+  to = "/.netlify/functions/driver-auth"
+  status = 200
+
+[[redirects]]
+  from = "/api/driver-moves"
+  to = "/.netlify/functions/driver-moves"
+  status = 200
+
+[[redirects]]
+  from = "/api/driver-stop-action"
+  to = "/.netlify/functions/driver-stop-action"
+  status = 200
