@@ -141,6 +141,12 @@
   }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); }
+
+  .install-banner { display: none; align-items: center; gap: 10px; background: var(--orange-tint-soft); border-bottom: 1px solid var(--orange-tint); padding: 10px 16px; font-size: 13px; color: var(--ink); }
+  .install-banner.show { display: flex; }
+  .install-banner p { margin: 0; flex: 1; }
+  .install-banner button.install-go { background: var(--orange); color: #fff; border: none; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .install-banner button.install-dismiss { background: none; border: none; color: var(--ink-soft); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
 </style>
 </head>
 <body>
@@ -151,6 +157,12 @@
     <span id="driverNameLabel"></span>
     <button type="button" id="signOutBtn">Sign Out</button>
   </div>
+</div>
+
+<div class="install-banner" id="installBanner">
+  <p id="installBannerText">Install this app on your phone for one-tap access.</p>
+  <button type="button" class="install-go" id="installGoBtn">Install</button>
+  <button type="button" class="install-dismiss" id="installDismissBtn" aria-label="Dismiss">&times;</button>
 </div>
 
 <div class="wrap">
@@ -263,9 +275,19 @@
     return digits ? ('tel:' + digits) : '';
   }
 
+  // Shows a start time alone, or "start – end" once an end date/time is set
+  // (same-day end just shows the end time, not the redundant date twice).
+  function formatTimeRange(startDate, startTime, endDate, endTime) {
+    if (!startDate && !startTime) return 'Not scheduled yet';
+    const start = [startDate, startTime].filter(Boolean).join(' · ');
+    if (!endDate && !endTime) return start;
+    const sameDay = !endDate || endDate === startDate;
+    const end = sameDay ? endTime : [endDate, endTime].filter(Boolean).join(' · ');
+    return end ? (start + ' – ' + end) : start;
+  }
+
   function formatSchedule(move) {
-    if (!move.scheduledDate && !move.scheduledTime) return 'Not scheduled yet';
-    return [move.scheduledDate, move.scheduledTime].filter(Boolean).join(' · ');
+    return formatTimeRange(move.scheduledDate, move.scheduledTime, move.scheduledEndDate, move.scheduledEndTime);
   }
 
   function formatWindow(stop) {
@@ -322,7 +344,7 @@
   }
 
   function jobCard(job) {
-    const schedule = [job.reportDate, job.reportTime].filter(Boolean).join(' · ') || 'Not scheduled yet';
+    const schedule = formatTimeRange(job.reportDate, job.reportTime, job.reportEndDate, job.reportEndTime);
     const crew = job.crew || [];
     return '<div class="job-card" data-job-id="' + escapeHtml(job.jobId) + '">'
       + '<h2>' + escapeHtml(job.jobAddress || job.clientName || 'Job') + '</h2>'
@@ -442,6 +464,45 @@
       }
     }
   });
+
+  // --- Install prompt: a real Chrome/Android/desktop install (own icon, own
+  // window, no address bar) triggered by one tap. iOS Safari has no such
+  // event, so it gets the manual Share-sheet instructions instead. ---
+  (function setupInstallBanner() {
+    const DISMISS_KEY = 'a2zFieldInstallDismissed';
+    const banner = $('installBanner'), text = $('installBannerText'), goBtn = $('installGoBtn'), dismissBtn = $('installDismissBtn');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (isStandalone) return; // already installed and running as an app -- nothing to prompt
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+    let deferredPrompt = null;
+    const dismissed = () => { try { return localStorage.getItem(DISMISS_KEY) === '1'; } catch (e) { return false; } };
+    const setDismissed = () => { try { localStorage.setItem(DISMISS_KEY, '1'); } catch (e) { /* private mode */ } };
+    const show = () => { if (!dismissed()) banner.classList.add('show'); };
+    const hide = () => banner.classList.remove('show');
+
+    if (isIOS) {
+      text.textContent = 'Install this app: tap the Share icon below, then "Add to Home Screen".';
+      goBtn.hidden = true;
+      show();
+    } else {
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        deferredPrompt = event;
+        show();
+      });
+      goBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return hide();
+        goBtn.disabled = true;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        goBtn.disabled = false;
+        hide();
+      });
+    }
+    dismissBtn.addEventListener('click', () => { setDismissed(); hide(); });
+    window.addEventListener('appinstalled', hide);
+  })();
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/driver/sw.js').catch(() => {}));

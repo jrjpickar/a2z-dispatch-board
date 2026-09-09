@@ -28,6 +28,8 @@ function driverRoute(m) {
     clientPhone: m.clientPhone || '',
     scheduledDate: m.scheduledDate || m.reportDate || m.requestedDate || '',
     scheduledTime: m.scheduledTime || m.reportTime || m.requestedTime || '',
+    scheduledEndDate: m.reportEndDate || '',
+    scheduledEndTime: m.reportEndTime || '',
     notes: m.notes || m.scopeOfWork || '',
     assetName: m.assetName || (Array.isArray(m.assets) ? m.assets.map(a => a.assetName).filter(Boolean).join(', ') : ''),
     version: m.version,

@@ -3899,18 +3899,12 @@ function issueHost() {
   }
   return host;
 }
-function showPersistentIssue(id, message, retry) {
-  const host = issueHost();
-  let row = document.getElementById('sync-issue-' + id);
-  if (!row) { row = document.createElement('div'); row.id = 'sync-issue-' + id; host.append(row); }
-  row.replaceChildren(document.createTextNode(message + ' '));
-  if (retry) {
-    const button = document.createElement('button'); button.textContent = 'Retry';
-    button.onclick = async () => { button.disabled = true; try { await retry(); clearPersistentIssue(id); } catch (error) { showToast(error.message, true); } finally { button.disabled = false; } };
-    row.append(button);
-  }
-  host.style.display = 'block';
-}
+// Disabled at the user's request: this sticky banner used to surface unconfirmed
+// Make.com workflows / CRM syncs (e.g. "job stage needs checking in Make") so a
+// dispatcher wouldn't assume a notification went out when it might not have.
+// It's now a silent no-op -- those situations no longer surface anywhere in the
+// UI, so check Make's own execution history if a notification seems missing.
+function showPersistentIssue() {}
 function clearPersistentIssue(id) {
   document.getElementById('sync-issue-' + id)?.remove();
   const host = issueHost(); if (!host.children.length) host.style.display = 'none';

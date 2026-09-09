@@ -78,3 +78,8 @@
   from = "/api/driver-stop-action"
   to = "/.netlify/functions/driver-stop-action"
   status = 200
+
+[[headers]]
+  for = "/driver/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
