@@ -46,6 +46,9 @@
   .topbar .tag { color: var(--orange); }
   .topbar .who { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--grey-light); }
   .topbar button { background: none; border: 1px solid rgba(255,255,255,0.35); color: #fff; padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-toggle button { padding: 5px 9px; font-size: 11px; font-weight: 700; opacity: 0.6; }
+  .lang-toggle button.active { opacity: 1; border-color: var(--orange); color: var(--orange); }
 
   .wrap { max-width: 640px; margin: 0 auto; padding: 16px; }
 
@@ -156,6 +159,10 @@
     <span id="driverNameLabel"></span>
     <button type="button" id="signOutBtn">Sign Out</button>
   </div>
+  <div class="lang-toggle" id="langToggle">
+    <button type="button" data-lang="en">EN</button>
+    <button type="button" data-lang="es">ES</button>
+  </div>
 </div>
 
 <div class="install-banner" id="installBanner">
@@ -168,21 +175,17 @@
 
   <div id="loginView">
     <div class="login-card">
-      <h2>Sign In</h2>
-      <p>Enter the phone number and access code dispatch gave you. This shows your assigned route or job only &mdash; drivers can check off stops, everything else is view-only.</p>
+      <h2 id="loginTitle">Sign In</h2>
+      <p id="loginDesc">Enter the phone number dispatch has on file for you. This shows your assigned route or job only &mdash; drivers can check off stops, everything else is view-only.</p>
       <div class="error-box" id="loginError"></div>
       <form id="loginForm">
         <div class="field" id="phoneField">
-          <label for="loginPhone">Phone Number</label>
-          <input type="tel" id="loginPhone" inputmode="tel" placeholder="(555) 555-5555" autocomplete="tel">
+          <label for="loginPhone" id="loginPhoneLabel">Phone Number</label>
+          <input type="tel" id="loginPhone" inputmode="tel" placeholder="(555) 555-5555" autocomplete="tel" autofocus>
         </div>
         <div class="field" id="nameField" hidden>
-          <label for="loginName">Full Name</label>
+          <label for="loginName" id="loginNameLabel">Full Name</label>
           <input type="text" id="loginName" placeholder="As dispatch has it" autocomplete="name">
-        </div>
-        <div class="field">
-          <label for="loginCode">Access Code</label>
-          <input type="text" id="loginCode" placeholder="e.g. 7F3K9Q" maxlength="6" autocapitalize="characters" autocomplete="off">
         </div>
         <button type="submit" class="btn-primary" id="loginSubmit">Sign In</button>
         <button type="button" class="link-btn" id="toggleLoginMode">No phone on file? Sign in with your name instead</button>
@@ -207,7 +210,108 @@
   'use strict';
   const TOKEN_KEY = 'a2zDriverToken';
   const NAME_KEY = 'a2zDriverName';
+  const LANG_KEY = 'a2zFieldLang';
   const POLL_MS = 20000;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+  const TRANSLATIONS = {
+    en: {
+      signOut: 'Sign Out',
+      loginTitle: 'Sign In',
+      loginDesc: 'Enter the phone number dispatch has on file for you. This shows your assigned route or job only — drivers can check off stops, everything else is view-only.',
+      phoneLabel: 'Phone Number',
+      phonePlaceholder: '(555) 555-5555',
+      nameLabel: 'Full Name',
+      namePlaceholder: 'As dispatch has it',
+      signInBtn: 'Sign In',
+      signingIn: 'Signing In...',
+      toggleToName: 'No phone on file? Sign in with your name instead',
+      toggleToPhone: 'Have a phone on file? Sign in with phone instead',
+      enterPhone: 'Enter your phone number.',
+      enterName: 'Enter your name.',
+      signInFailed: 'Sign in failed.',
+      sessionEnded: 'Your session ended. Sign in again.',
+      refresh: 'Refresh',
+      updated: 'Updated {time}',
+      emptyState: 'Nothing assigned to you right now. Pull to refresh or check with dispatch.',
+      myRoutes: 'My Routes',
+      myJob: 'My Job',
+      myJobs: 'My Jobs',
+      notScheduled: 'Not scheduled yet',
+      completed: 'Completed',
+      completedBy: 'Completed by {name}',
+      markDone: 'Mark Done',
+      undo: 'Undo',
+      saving: 'Saving...',
+      undoing: 'Undoing...',
+      stopMarkedDone: 'Stop marked done.',
+      stopMarkedNotDone: 'Stop marked not done.',
+      conflict: 'Someone else updated this route. Refreshed — try again.',
+      crewOnJob: 'Crew On This Job',
+      you: ' (You)',
+      route: 'Route',
+      job: 'Job',
+      installDefault: 'Install this app on your phone for one-tap access.',
+      installIOS: 'Install this app: tap the Share icon below, then "Add to Home Screen".',
+      install: 'Install'
+    },
+    es: {
+      signOut: 'Cerrar Sesión',
+      loginTitle: 'Iniciar Sesión',
+      loginDesc: 'Ingresa el número de teléfono que despacho tiene registrado para ti. Esto muestra solo tu ruta o trabajo asignado — los conductores pueden marcar paradas, todo lo demás es solo para ver.',
+      phoneLabel: 'Número de Teléfono',
+      phonePlaceholder: '(555) 555-5555',
+      nameLabel: 'Nombre Completo',
+      namePlaceholder: 'Como lo tiene despacho',
+      signInBtn: 'Iniciar Sesión',
+      signingIn: 'Iniciando Sesión...',
+      toggleToName: '¿No tienes teléfono registrado? Inicia sesión con tu nombre',
+      toggleToPhone: '¿Tienes teléfono registrado? Inicia sesión con tu teléfono',
+      enterPhone: 'Ingresa tu número de teléfono.',
+      enterName: 'Ingresa tu nombre.',
+      signInFailed: 'No se pudo iniciar sesión.',
+      sessionEnded: 'Tu sesión terminó. Inicia sesión de nuevo.',
+      refresh: 'Actualizar',
+      updated: 'Actualizado {time}',
+      emptyState: 'No tienes nada asignado por ahora. Actualiza o consulta con despacho.',
+      myRoutes: 'Mis Rutas',
+      myJob: 'Mi Trabajo',
+      myJobs: 'Mis Trabajos',
+      notScheduled: 'Aún no programado',
+      completed: 'Completado',
+      completedBy: 'Completado por {name}',
+      markDone: 'Marcar Hecho',
+      undo: 'Deshacer',
+      saving: 'Guardando...',
+      undoing: 'Deshaciendo...',
+      stopMarkedDone: 'Parada marcada como hecha.',
+      stopMarkedNotDone: 'Parada marcada como no hecha.',
+      conflict: 'Otra persona actualizó esta ruta. Actualizado — intenta de nuevo.',
+      crewOnJob: 'Equipo En Este Trabajo',
+      you: ' (Tú)',
+      route: 'Ruta',
+      job: 'Trabajo',
+      installDefault: 'Instala esta app en tu teléfono para acceso con un toque.',
+      installIOS: 'Instala esta app: toca el ícono de Compartir abajo, luego "Agregar a Inicio".',
+      install: 'Instalar'
+    }
+  };
+
+  function getLang() {
+    try { const stored = localStorage.getItem(LANG_KEY); if (stored === 'en' || stored === 'es') return stored; } catch (e) { /* ignore */ }
+    return /^es/i.test(navigator.language || '') ? 'es' : 'en';
+  }
+  let currentLang = getLang();
+  function setLang(lang) {
+    currentLang = lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* private mode */ }
+  }
+  function t(key, vars) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+    let str = dict[key] != null ? dict[key] : (TRANSLATIONS.en[key] || key);
+    if (vars) Object.keys(vars).forEach(k => { str = str.replace('{' + k + '}', vars[k]); });
+    return str;
+  }
 
   const $ = id => document.getElementById(id);
   const loginView = $('loginView'), homeView = $('homeView'), topbarWho = $('topbarWho');
@@ -216,9 +320,13 @@
   const routesList = $('routesList'), updatedLabel = $('updatedLabel'), refreshBtn = $('refreshBtn');
   const driverNameLabel = $('driverNameLabel'), signOutBtn = $('signOutBtn');
   const toastEl = $('toast');
+  const loginTitle = $('loginTitle'), loginDesc = $('loginDesc');
+  const loginPhoneLabel = $('loginPhoneLabel'), loginNameLabel = $('loginNameLabel');
+  const langToggle = $('langToggle');
 
   let pollTimer = null;
   let usingNameMode = false;
+  let lastData = null;
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -272,7 +380,7 @@
   // Shows a start time alone, or "start – end" once an end date/time is set
   // (same-day end just shows the end time, not the redundant date twice).
   function formatTimeRange(startDate, startTime, endDate, endTime) {
-    if (!startDate && !startTime) return 'Not scheduled yet';
+    if (!startDate && !startTime) return t('notScheduled');
     const start = [startDate, startTime].filter(Boolean).join(' · ');
     if (!endDate && !endTime) return start;
     const sameDay = !endDate || endDate === startDate;
@@ -304,9 +412,9 @@
       + '<div class="stop-address"><a href="' + link + '" target="_blank" rel="noopener">' + escapeHtml(stop.address) + ' ↗</a></div>'
       + (window ? '<div class="stop-window">' + escapeHtml(window) + '</div>' : '')
       + (stop.notes ? '<div class="stop-notes">' + escapeHtml(stop.notes) + '</div>' : '')
-      + (done ? '<div class="stop-done-meta">Completed' + (stop.completedBy ? ' by ' + escapeHtml(stop.completedBy) : '') + '</div>' : '')
+      + (done ? '<div class="stop-done-meta">' + escapeHtml(stop.completedBy ? t('completedBy', { name: stop.completedBy }) : t('completed')) + '</div>' : '')
       + '</div>'
-      + '<button type="button" class="stop-toggle ' + (done ? 'mark-undo' : 'mark-done') + '" data-action="toggle">' + (done ? 'Undo' : 'Mark Done') + '</button>'
+      + '<button type="button" class="stop-toggle ' + (done ? 'mark-undo' : 'mark-done') + '" data-action="toggle">' + (done ? escapeHtml(t('undo')) : escapeHtml(t('markDone'))) + '</button>'
       + '</li>';
   }
 
@@ -314,7 +422,7 @@
     const stops = (move.stops || []).map((s, i) => Object.assign({}, s, { _seq: i + 1 }));
     return '<div class="route-card" data-move-id="' + escapeHtml(move.moveId) + '">'
       + '<div class="route-head">'
-      + '<div class="top-line"><h2>' + escapeHtml(move.equipment || move.movementType || 'Route') + '</h2>'
+      + '<div class="top-line"><h2>' + escapeHtml(move.equipment || move.movementType || t('route')) + '</h2>'
       + (move.status ? '<span class="status-pill ' + statusClass(move.status) + '">' + escapeHtml(move.status) + '</span>' : '')
       + '</div>'
       + '<div class="route-meta">'
@@ -339,27 +447,28 @@
     const schedule = formatTimeRange(job.reportDate, job.reportTime, job.reportEndDate, job.reportEndTime);
     const crew = job.crew || [];
     return '<div class="job-card" data-job-id="' + escapeHtml(job.jobId) + '">'
-      + '<h2>' + escapeHtml(job.jobAddress || job.clientName || 'Job') + '</h2>'
+      + '<h2>' + escapeHtml(job.jobAddress || job.clientName || t('job')) + '</h2>'
       + '<div class="job-meta">'
       + '<span class="schedule">' + escapeHtml(schedule) + '</span>'
       + (job.clientName ? '<span>' + escapeHtml(job.clientName) + '</span>' : '')
       + '</div>'
       + (job.scopeOfWork ? '<div class="job-scope">' + escapeHtml(job.scopeOfWork) + '</div>' : '')
-      + (crew.length ? '<div class="crew-label">Crew On This Job</div><ul class="crew-list">'
-          + crew.map(w => '<li class="' + (w.isYou ? 'you' : '') + '">' + escapeHtml(w.name) + (w.isYou ? ' (You)' : '') + '</li>').join('')
+      + (crew.length ? '<div class="crew-label">' + escapeHtml(t('crewOnJob')) + '</div><ul class="crew-list">'
+          + crew.map(w => '<li class="' + (w.isYou ? 'you' : '') + '">' + escapeHtml(w.name) + (w.isYou ? escapeHtml(t('you')) : '') + '</li>').join('')
           + '</ul>' : '')
       + '</div>';
   }
 
   function renderData(data) {
+    lastData = data;
     const routes = data.routes || [], jobs = data.jobs || [];
     if (!routes.length && !jobs.length) {
-      routesList.innerHTML = '<div class="empty-state">Nothing assigned to you right now. Pull to refresh or check with dispatch.</div>';
+      routesList.innerHTML = '<div class="empty-state">' + escapeHtml(t('emptyState')) + '</div>';
       return;
     }
     let html = '';
-    if (routes.length) html += '<div class="section-label">My Routes</div>' + sortByDate(routes).map(routeCard).join('');
-    if (jobs.length) html += '<div class="section-label">My Job' + (jobs.length > 1 ? 's' : '') + '</div>' + sortByDate(jobs).map(jobCard).join('');
+    if (routes.length) html += '<div class="section-label">' + escapeHtml(t('myRoutes')) + '</div>' + sortByDate(routes).map(routeCard).join('');
+    if (jobs.length) html += '<div class="section-label">' + escapeHtml(jobs.length > 1 ? t('myJobs') : t('myJob')) + '</div>' + sortByDate(jobs).map(jobCard).join('');
     routesList.innerHTML = html;
   }
 
@@ -367,9 +476,9 @@
     try {
       const data = await api('/api/driver-moves', { method: 'GET' });
       renderData(data);
-      updatedLabel.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      updatedLabel.textContent = t('updated', { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
     } catch (error) {
-      if (error.status === 401) return goToLogin('Your session ended. Sign in again.');
+      if (error.status === 401) return goToLogin(t('sessionEnded'));
       if (showSpinner) showToast(error.message, true);
     }
   }
@@ -401,29 +510,28 @@
   toggleLoginMode.addEventListener('click', () => {
     usingNameMode = !usingNameMode;
     phoneField.hidden = usingNameMode; nameField.hidden = !usingNameMode;
-    toggleLoginMode.textContent = usingNameMode ? 'Have a phone on file? Sign in with phone instead' : 'No phone on file? Sign in with your name instead';
+    toggleLoginMode.textContent = usingNameMode ? t('toggleToPhone') : t('toggleToName');
   });
 
   loginForm.addEventListener('submit', async event => {
     event.preventDefault();
     loginError.classList.remove('show');
-    const code = $('loginCode').value.trim();
     const phone = $('loginPhone').value.trim();
     const name = $('loginName').value.trim();
-    if (!code || (usingNameMode ? !name : !phone)) {
-      loginError.textContent = 'Enter your ' + (usingNameMode ? 'name' : 'phone number') + ' and access code.';
+    if (usingNameMode ? !name : !phone) {
+      loginError.textContent = usingNameMode ? t('enterName') : t('enterPhone');
       loginError.classList.add('show'); return;
     }
-    loginSubmit.disabled = true; loginSubmit.textContent = 'Signing In...';
+    loginSubmit.disabled = true; loginSubmit.textContent = t('signingIn');
     try {
-      const result = await api('/api/driver-auth', { method: 'POST', body: JSON.stringify({ phone: usingNameMode ? '' : phone, name: usingNameMode ? name : '', code }) });
+      const result = await api('/api/driver-auth', { method: 'POST', body: JSON.stringify({ phone: usingNameMode ? '' : phone, name: usingNameMode ? name : '' }) });
       setSession(result.token, result.name);
       goToHome();
     } catch (error) {
-      loginError.textContent = error.message || 'Sign in failed.';
+      loginError.textContent = error.message || t('signInFailed');
       loginError.classList.add('show');
     } finally {
-      loginSubmit.disabled = false; loginSubmit.textContent = 'Sign In';
+      loginSubmit.disabled = false; loginSubmit.textContent = t('signInBtn');
     }
   });
 
@@ -437,35 +545,66 @@
     const li = button.closest('.stop');
     const moveId = li.dataset.moveId, stopId = li.dataset.stopId;
     const wasDone = li.classList.contains('done');
-    button.disabled = true; button.textContent = wasDone ? 'Undoing...' : 'Saving...';
+    button.disabled = true; button.textContent = wasDone ? t('undoing') : t('saving');
     try {
       await api('/api/driver-stop-action', {
         method: 'POST',
         body: JSON.stringify({ moveId, stopId, completed: !wasDone, requestId: createRequestId() })
       });
       await loadMoves(false);
-      showToast(wasDone ? 'Stop marked not done.' : 'Stop marked done.');
+      showToast(wasDone ? t('stopMarkedNotDone') : t('stopMarkedDone'));
     } catch (error) {
-      if (error.status === 401) return goToLogin('Your session ended. Sign in again.');
+      if (error.status === 401) return goToLogin(t('sessionEnded'));
       if (error.status === 409) {
-        showToast('Someone else updated this route. Refreshed — try again.', true);
+        showToast(t('conflict'), true);
         await loadMoves(false);
       } else {
         showToast(error.message, true);
-        button.disabled = false; button.textContent = wasDone ? 'Undo' : 'Mark Done';
+        button.disabled = false; button.textContent = wasDone ? t('undo') : t('markDone');
       }
     }
+  });
+
+  // Refreshes every static label/placeholder in the current language, and
+  // re-renders any already-loaded route/job cards without a refetch.
+  function applyLangToStatic() {
+    document.documentElement.lang = currentLang;
+    langToggle.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentLang));
+    signOutBtn.textContent = t('signOut');
+    loginTitle.textContent = t('loginTitle');
+    loginDesc.textContent = t('loginDesc');
+    loginPhoneLabel.textContent = t('phoneLabel');
+    $('loginPhone').placeholder = t('phonePlaceholder');
+    loginNameLabel.textContent = t('nameLabel');
+    $('loginName').placeholder = t('namePlaceholder');
+    loginSubmit.textContent = t('signInBtn');
+    toggleLoginMode.textContent = usingNameMode ? t('toggleToPhone') : t('toggleToName');
+    refreshBtn.textContent = t('refresh');
+    setInstallBannerText();
+    if (lastData) renderData(lastData);
+  }
+
+  langToggle.addEventListener('click', event => {
+    const button = event.target.closest('button[data-lang]');
+    if (!button || button.dataset.lang === currentLang) return;
+    setLang(button.dataset.lang);
+    applyLangToStatic();
   });
 
   // --- Install prompt: a real Chrome/Android/desktop install (own icon, own
   // window, no address bar) triggered by one tap. iOS Safari has no such
   // event, so it gets the manual Share-sheet instructions instead. ---
+  function setInstallBannerText() {
+    const text = $('installBannerText'), goBtn = $('installGoBtn');
+    if (isIOS) { text.textContent = t('installIOS'); }
+    else { text.textContent = t('installDefault'); goBtn.textContent = t('install'); }
+  }
+
   (function setupInstallBanner() {
     const DISMISS_KEY = 'a2zFieldInstallDismissed';
-    const banner = $('installBanner'), text = $('installBannerText'), goBtn = $('installGoBtn'), dismissBtn = $('installDismissBtn');
+    const banner = $('installBanner'), goBtn = $('installGoBtn'), dismissBtn = $('installDismissBtn');
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     if (isStandalone) return; // already installed and running as an app -- nothing to prompt
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
     let deferredPrompt = null;
     const dismissed = () => { try { return localStorage.getItem(DISMISS_KEY) === '1'; } catch (e) { return false; } };
     const setDismissed = () => { try { localStorage.setItem(DISMISS_KEY, '1'); } catch (e) { /* private mode */ } };
@@ -473,7 +612,6 @@
     const hide = () => banner.classList.remove('show');
 
     if (isIOS) {
-      text.textContent = 'Install this app: tap the Share icon below, then "Add to Home Screen".';
       goBtn.hidden = true;
       show();
     } else {
@@ -500,6 +638,7 @@
     window.addEventListener('load', () => navigator.serviceWorker.register('/driver/sw.js').catch(() => {}));
   }
 
+  applyLangToStatic();
   if (getToken()) goToHome(); else goToLogin();
 })();
 </script>

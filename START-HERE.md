@@ -1,4 +1,4 @@
-# Deploy A2Z Dispatch 1.2
+# Deploy A2Z Dispatch 1.3
 
 1. Replace the files in your existing Netlify-connected repository with this folder’s contents. Keep the SAME Netlify site and database.
 2. Keep `GHL_API_TOKEN` in Netlify environment variables. Netlify Database supplies `NETLIFY_DB_URL`; never paste it into the page.
@@ -10,10 +10,12 @@
 ## Field App (read-only, for drivers and crew)
 
 - Lives at `/driver/` on the same site — no separate deployment, app store, or hosting needed. Give someone the link and tell them to "Add to Home Screen" for an app-like icon.
-- On the Logistics tab, open the **Field App Access** panel and click **Generate** next to a driver or crew member's name (pulled from the existing Driver and Labor rosters). Give them the `/driver/` link, their phone number, and the code shown. **Regenerate** replaces their code (old one stops working); **Revoke** removes their access entirely.
+- On the Logistics tab, open the **Field App Access** panel and click **Enable** next to a driver or crew member's name (pulled from the existing Driver and Labor rosters). Give them the `/driver/` link — they sign in with just their phone number, nothing else to hand out. **Revoke** removes their access; **Enable** again to restore it.
+- Sign-in is phone-number-only, by design, so it's low-friction for the crew. That also means anyone who knows an enabled person's phone number could open their route/job if they had the link — reasonable for an internal crew, but worth knowing. Revoke access as soon as someone leaves.
 - A driver sees only the logistics moves assigned to them (matched by phone, or name if no phone is on file), in stop order, and can tap a stop to mark it done/not done — nothing else on the board is reachable from there.
 - A crew member sees only the labor job(s) they're on the crew for, and the names of their coworkers on that job — no pricing, client contact details beyond what's already shown, or other jobs.
-- Sign-in codes are stored in the database (`dispatch_driver_codes`), not in Make/GHL. There's no separate "employee" system to keep in sync — it just matches whatever name/phone is already on the job or move.
+- Who's enabled is stored in the database (`dispatch_driver_codes` — the name is legacy, there's no code in it anymore), not in Make/GHL. There's no separate "employee" system to keep in sync — it just matches whatever name/phone is already on the job or move.
+- An **EN/ES** switch in the Field App's top bar translates the sign-in screen and every route/job/stop label. It defaults to the phone's own language and remembers whatever the person picks.
 
 ## Multi-stop routes
 

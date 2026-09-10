@@ -949,9 +949,9 @@
   </div>
   <div class="panel" id="fieldAppAccessPanel" style="margin-top:16px;">
     <div class="panel-head"><h2>Field App Access</h2><button type="button" class="job-stage-btn edit" id="refreshFieldAppAccess">Refresh</button></div>
-    <div class="logistics-note">Give each driver or crew member the link below plus their own access code — they sign in to see only their assigned route or job, read-only (drivers can also check off stops). Codes never expire until you regenerate or revoke them.</div>
+    <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number — no code — to see only their assigned route or job, read-only (drivers can also check off stops).</div>
     <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
-    <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Code</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
+    <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
   </div>
 </div>
 
@@ -3219,8 +3219,8 @@ async function loadLogistics() {
   }
 }
 
-/* ---------- Field App (read-only driver/crew mobile app) access codes ---------- */
-let fieldAppCodes = [];
+/* ---------- Field App (read-only driver/crew mobile app) enabled list ---------- */
+let fieldAppEnabled = [];
 function fieldAppKeyFor(person) {
   const digits = String(person.phone || '').replace(/\D/g, '').slice(-10);
   return digits ? `phone:${digits}` : `name:${String(person.name || '').trim().toLowerCase()}`;
@@ -3234,11 +3234,11 @@ async function postFieldAppAction(payload) {
 async function loadFieldAppAccess() {
   const list = document.getElementById('fieldAppAccessList');
   try {
-    const data = await fetchJsonStrict(CONFIG.DRIVER_CODES_URL, 'Field app codes');
-    fieldAppCodes = data.codes || [];
+    const data = await fetchJsonStrict(CONFIG.DRIVER_CODES_URL, 'Field app access list');
+    fieldAppEnabled = data.enabled || [];
     renderFieldAppAccess();
   } catch (err) {
-    list.innerHTML = `<tr><td colspan="5" class="empty-state">Codes could not be loaded: ${escapeLogisticsHtml(err.message)}</td></tr>`;
+    list.innerHTML = `<tr><td colspan="5" class="empty-state">Access list could not be loaded: ${escapeLogisticsHtml(err.message)}</td></tr>`;
   }
 }
 function renderFieldAppAccess() {
@@ -3257,34 +3257,34 @@ function renderFieldAppAccess() {
   if (!people.length) { list.innerHTML = '<tr><td colspan="5" class="load-state">No drivers or crew found in the rosters yet.</td></tr>'; return; }
   list.innerHTML = people.map(p => {
     const key = fieldAppKeyFor(p);
-    const existingCode = fieldAppCodes.find(c => c.driverKey === key);
-    const codeCell = existingCode ? `<span class="mono" style="user-select:all;">${escapeLogisticsHtml(existingCode.code)}</span>` : '<span class="logistics-route">No code yet</span>';
-    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Code">${codeCell}</td>`
-      + `<td><button type="button" class="job-stage-btn edit field-app-generate" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">${existingCode ? 'Regenerate' : 'Generate'}</button>`
-      + (existingCode ? ` <button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>` : '') + '</td></tr>';
+    const isEnabled = fieldAppEnabled.some(e => e.driverKey === key);
+    const statusCell = isEnabled ? '<span class="logistics-status assigned">Enabled</span>' : '<span class="logistics-route">Not enabled</span>';
+    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
+      + `<td>${isEnabled
+        ? `<button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>`
+        : `<button type="button" class="job-stage-btn edit field-app-enable" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}" ${p.phone ? '' : 'disabled title="Needs a phone number on file"'}>Enable</button>`}</td></tr>`;
   }).join('');
 }
 document.getElementById('fieldAppAccessList').addEventListener('click', async event => {
-  const genBtn = event.target.closest('.field-app-generate');
+  const enableBtn = event.target.closest('.field-app-enable');
   const revokeBtn = event.target.closest('.field-app-revoke');
-  const button = genBtn || revokeBtn;
+  const button = enableBtn || revokeBtn;
   if (!button) return;
   const name = button.dataset.name, phone = button.dataset.phone;
   button.disabled = true;
   try {
     if (revokeBtn) {
       await postFieldAppAction({ name, phone, action: 'revoke' });
-      fieldAppCodes = fieldAppCodes.filter(c => c.driverKey !== fieldAppKeyFor({ name, phone }));
-      showToast('Access code revoked.');
+      fieldAppEnabled = fieldAppEnabled.filter(e => e.driverKey !== fieldAppKeyFor({ name, phone }));
+      showToast(`${name} can no longer sign in to the field app.`);
     } else {
-      const result = await postFieldAppAction({ name, phone, action: 'generate' });
-      fieldAppCodes = fieldAppCodes.filter(c => c.driverKey !== result.driver.driverKey);
-      fieldAppCodes.push(result.driver);
-      showToast(`Code generated for ${name}: ${result.driver.code}`);
+      const result = await postFieldAppAction({ name, phone, action: 'enable' });
+      fieldAppEnabled = fieldAppEnabled.filter(e => e.driverKey !== result.driver.driverKey);
+      fieldAppEnabled.push(result.driver);
+      showToast(`${name} can now sign in with their phone number.`);
     }
     renderFieldAppAccess();
-  } catch (err) { showToast(err.message, true); }
-  finally { button.disabled = false; }
+  } catch (err) { showToast(err.message, true); button.disabled = false; }
 });
 document.getElementById('refreshFieldAppAccess').addEventListener('click', loadFieldAppAccess);
 

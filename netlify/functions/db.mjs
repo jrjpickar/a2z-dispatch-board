@@ -61,9 +61,13 @@ async function createSchema(sql) {
     request_id text primary key, kind text not null, fingerprint text not null, payload jsonb not null,
     status text not null, opportunity_id text, result jsonb, updated_at timestamptz not null default now()
   )`;
+  // "Codes" in the name is legacy -- access is now just an enabled phone/name,
+  // no code required (see driver-auth.mjs). Column kept, nullable, for anyone
+  // still holding a pre-upgrade row; nothing reads it anymore.
   await sql`create table if not exists dispatch_driver_codes (
     driver_key text primary key, name text not null default '', phone text not null default '',
-    code text not null, updated_at timestamptz not null default now()
+    code text, updated_at timestamptz not null default now()
   )`;
+  await sql`alter table dispatch_driver_codes alter column code drop not null`;
   });
 }
