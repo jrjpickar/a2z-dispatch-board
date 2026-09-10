@@ -3347,10 +3347,16 @@ async function setContainerStage(jobId, action, button) {
       lunch: completionBreaks.lunch || '',
       rows: buildDriverLogRows(completionDriverName, move)
     } : {
+      // Carry the full booking record (client, address, schedule, notes, equipment,
+      // value, stops...) along with the stage change -- Make gets the same shape
+      // it got at creation, not just the bare IDs.
+      ...move,
       action,
+      status: action === 'complete' ? 'completed' : 'cancelled',
+      active: action !== 'cancel',
       jobId,
       opportunityId: jobId,
-      sourceOpportunityId: jobId,
+      sourceOpportunityId: move.sourceOpportunityId || jobId,
       targetType: 'standalone',
       bookingMode: 'standalone',
       jobType: 'container',
