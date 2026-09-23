@@ -868,6 +868,9 @@
   .eod-summary .eod-sum-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
   .eod-summary .eod-grand { font-weight: 800; font-size: 15px; }
   .eod-summary input { width: 90px; padding: 6px 7px; border: 1px solid var(--border); border-radius: var(--radius); text-align: right; font: inherit; background: var(--gold-tint-soft); }
+  .eod-draft-note { font-size: 12px; margin: -8px 0 14px; padding: 6px 10px; background: var(--gold-tint-soft); border-left: 3px solid var(--gold); color: var(--ink); }
+  .eod-draft-note[hidden] { display: none; }
+  body.dark-mode .eod-draft-note { background: #2a2618; color: #f1f3f4; }
   .eod-reset-note { font-size: 12px; color: var(--ink-soft); margin-top: 14px; }
   body.dark-mode .eod-table input, body.dark-mode .eod-summary input { background: #2a2618 !important; }
   body.dark-mode .eod-summary { border-color: #f1f3f4; }
@@ -1226,10 +1229,11 @@
   </div>
   <div class="sheet-body">
     <div class="field-row">
-      <div class="field"><label for="eodJobName">Job Name</label><input type="text" id="eodJobName"></div>
+      <div class="field"><label for="eodJobName">Job Name</label><input type="text" id="eodJobName" maxlength="150" autocomplete="off"></div>
       <div class="field"><label for="eodDate">Date</label><input type="date" id="eodDate"></div>
     </div>
-    <p class="eod-legend">Highlighted boxes are yours to fill in. Line totals, subtotals and the price to the customer recalculate automatically.</p>
+    <p class="eod-legend">Highlighted boxes are yours to fill in. Line totals, subtotals and the price to the customer recalculate automatically. Your entries are saved as a draft on this device until you submit.</p>
+    <p class="eod-draft-note" id="eodDraftNote" hidden></p>
     <div id="eodSections"></div>
     <div class="eod-summary">
       <span>Total job cost</span><span class="eod-sum-val" id="eodTotalCost">$0.00</span>
@@ -1240,7 +1244,8 @@
     <datalist id="eodRateReference"></datalist>
   </div>
   <div class="sheet-foot">
-    <button class="btn-ghost" id="cancelEodSheet" style="color:var(--ink-soft); border-color:var(--border);">Cancel</button>
+    <button class="btn-ghost" id="clearEodSheet" style="color:var(--ink-soft); border-color:var(--border); margin-right:auto;">Clear sheet</button>
+    <button class="btn-ghost" id="cancelEodSheet" style="color:var(--ink-soft); border-color:var(--border);">Close</button>
     <button class="btn-primary" id="submitEodSheet">Submit EOD Sheet</button>
   </div>
 </div>
@@ -2393,7 +2398,7 @@ async function resetJobDay(jobId, btn, eodSheet) {
       // The crew being released rides along in removedWorkers so Make can
       // handle any release notifications inside the eod_sheet route.
       const sheetPayload = { ...eodSheet, action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
-      try { await runSideEffect(CONFIG.EOD_SHEET_URL, stripEmDashes(sheetPayload), 'EOD sheet', 'eod_sheet'); }
+      try { await runSideEffect(CONFIG.EOD_SHEET_URL, sanitizeEodPayload(sheetPayload), 'EOD sheet', 'eod_sheet'); }
       catch (error) { problems.push(error.message); }
     } else if (removedWorkers.length) {
       try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers }, 'Worker release notifications'); }
@@ -2410,11 +2415,23 @@ async function resetJobDay(jobId, btn, eodSheet) {
 }
 
 /* ---------- Complete EOD Sheet (Job Costing Worksheet) ---------- */
-// No em/en dashes in anything the EOD sheet sends (names, addresses, descriptions).
-function stripEmDashes(value) {
-  if (typeof value === 'string') return value.replace(/\s*[\u2014\u2013]\s*/g, ' - ');
-  if (Array.isArray(value)) return value.map(stripEmDashes);
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, stripEmDashes(v)]));
+// Baby-proofing: the EOD text goes straight into Make's hand-written JSON
+// body, so characters that can break JSON (or Make's {{ }} mapping) are never
+// allowed in: double quotes (straight and curly), backslashes, braces,
+// brackets, backticks, < >, tabs/newlines and other control characters.
+// Curly apostrophes become a plain ' and em/en dashes become " - ".
+const EOD_BLOCKED_CHARS = /["\u201C\u201D\u201E\u2033\\{}\[\]`<>\u0000-\u001F\u007F]/g;
+function cleanEodText(value) {
+  return String(value == null ? '' : value)
+    .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+    .replace(/\s*[\u2014\u2013]\s*/g, ' - ')
+    .replace(EOD_BLOCKED_CHARS, '')
+    .replace(/ {2,}/g, ' ');
+}
+function sanitizeEodPayload(value) {
+  if (typeof value === 'string') return cleanEodText(value);
+  if (Array.isArray(value)) return value.map(sanitizeEodPayload);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, sanitizeEodPayload(v)]));
   return value;
 }
 // Mirrors the "Job Costing" tab of Job_Costing_Worksheet_V2.xlsx row for row.
@@ -2457,7 +2474,7 @@ const eodSheetEl = document.getElementById('eodSheet');
 let eodJobId = '';
 let eodTriggerBtn = null;
 const eodMoney = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
-const eodNum = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const eodNum = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; };
 const eodRound = n => Math.round(n * 100) / 100;
 const eodEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -2474,7 +2491,7 @@ function renderEodSections() {
         <tbody>
           ${section.categories.map((cat, i) => `<tr class="eod-line" data-category="${cat}" data-line="${i + 1}">
             <td class="eod-cat">${cat}</td>
-            <td><input type="text" class="eod-desc" list="eodRateReference" aria-label="${section.label} ${cat} description"></td>
+            <td><input type="text" class="eod-desc" list="eodRateReference" maxlength="120" autocomplete="off" aria-label="${section.label} ${cat} description"></td>
             <td><input type="number" class="eod-qty" min="0" step="any" inputmode="decimal" aria-label="${section.label} ${cat} quantity"></td>
             <td><input type="number" class="eod-rate" min="0" step="any" inputmode="decimal" aria-label="${section.label} ${cat} rate"></td>
             <td class="eod-line-total">$0.00</td>
@@ -2493,7 +2510,7 @@ function collectEodSheet() {
     const lines = [...el.querySelectorAll('.eod-line')].map(row => {
       const qty = eodNum(row.querySelector('.eod-qty').value), rate = eodNum(row.querySelector('.eod-rate').value);
       return { section: section.label, category: row.dataset.category, line: Number(row.dataset.line),
-        description: row.querySelector('.eod-desc').value.trim(), qty, rate, lineTotal: eodRound(qty * rate) };
+        description: cleanEodText(row.querySelector('.eod-desc').value).trim(), qty, rate, lineTotal: eodRound(qty * rate) };
     });
     return { key: section.key, section: section.label, lines, subtotal: eodRound(lines.reduce((sum, l) => sum + l.lineTotal, 0)) };
   });
@@ -2501,7 +2518,7 @@ function collectEodSheet() {
   const markupPercent = eodNum(document.getElementById('eodMarkup').value);
   const bySection = Object.fromEntries(sections.map(s => [s.key, s]));
   return {
-    jobName: document.getElementById('eodJobName').value.trim(),
+    jobName: cleanEodText(document.getElementById('eodJobName').value).trim(),
     date: document.getElementById('eodDate').value,
     submittedAt: new Date().toISOString(),
     sections,
@@ -2561,25 +2578,110 @@ function openEodSheet(jobId, btn) {
   if (!job) { showToast("Couldn't find that job — try refreshing.", true); return; }
   eodJobId = jobId; eodTriggerBtn = btn || null;
   renderEodSections();
-  const client = getClientName(job);
-  document.getElementById('eodJobName').value = [client, job.name].filter(Boolean).join(' - ');
-  document.getElementById('eodDate').value = (typeof getReportDate === 'function' && getReportDate(job)) || localIsoDate();
-  document.getElementById('eodMarkup').value = '';
+  fillEodDefaults(job);
+  const draft = readEodDraft(jobId);
+  const note = document.getElementById('eodDraftNote');
+  if (draft) {
+    applyEodDraft(draft);
+    note.textContent = `Draft restored from ${new Date(draft.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}.`;
+    note.hidden = false;
+  } else note.hidden = true;
   recalcEodSheet();
   eodOverlay.classList.add('open'); eodSheetEl.classList.add('open');
 }
 function closeEodSheet() {
+  // Closing (X, Close, clicking outside, Esc) never loses work: save first.
+  if (eodJobId) saveEodDraft();
   eodOverlay.classList.remove('open'); eodSheetEl.classList.remove('open');
   eodJobId = ''; eodTriggerBtn = null;
 }
 
+function fillEodDefaults(job) {
+  document.getElementById('eodJobName').value = cleanEodText([getClientName(job), job.name].filter(Boolean).join(' - '));
+  document.getElementById('eodDate').value = (typeof getReportDate === 'function' && getReportDate(job)) || localIsoDate();
+  document.getElementById('eodMarkup').value = '';
+}
+
+/* EOD drafts: one per job, kept in this browser's localStorage until the
+   sheet is submitted (or "Clear sheet" is pressed). */
+const EOD_DRAFT_PREFIX = 'eodDraft:';
+function readEodDraft(jobId) {
+  try { const d = JSON.parse(localStorage.getItem(EOD_DRAFT_PREFIX + jobId) || 'null'); return d && d.lines ? d : null; }
+  catch { return null; }
+}
+function eodFormSnapshot() {
+  const lines = {};
+  EOD_SECTIONS.forEach(section => {
+    lines[section.key] = [...eodSheetEl.querySelectorAll(`.eod-section[data-section="${section.key}"] .eod-line`)]
+      .map(row => [row.querySelector('.eod-desc').value, row.querySelector('.eod-qty').value, row.querySelector('.eod-rate').value]);
+  });
+  return { jobName: document.getElementById('eodJobName').value, date: document.getElementById('eodDate').value, markup: document.getElementById('eodMarkup').value, lines };
+}
+function saveEodDraft() {
+  if (!eodJobId) return;
+  const snap = eodFormSnapshot();
+  const hasEntries = snap.markup || Object.values(snap.lines).some(rows => rows.some(r => r.some(Boolean)));
+  try {
+    if (hasEntries) localStorage.setItem(EOD_DRAFT_PREFIX + eodJobId, JSON.stringify({ ...snap, savedAt: Date.now() }));
+    else localStorage.removeItem(EOD_DRAFT_PREFIX + eodJobId);
+  } catch (err) { console.warn("Couldn't save EOD draft", err); }
+}
+function clearEodDraft(jobId) {
+  try { localStorage.removeItem(EOD_DRAFT_PREFIX + jobId); } catch {}
+}
+function applyEodDraft(draft) {
+  if (draft.jobName) document.getElementById('eodJobName').value = cleanEodText(draft.jobName);
+  if (draft.date) document.getElementById('eodDate').value = draft.date;
+  document.getElementById('eodMarkup').value = draft.markup || '';
+  EOD_SECTIONS.forEach(section => {
+    const saved = (draft.lines || {})[section.key] || [];
+    eodSheetEl.querySelectorAll(`.eod-section[data-section="${section.key}"] .eod-line`).forEach((row, i) => {
+      const [desc = '', qty = '', rate = ''] = saved[i] || [];
+      row.querySelector('.eod-desc').value = cleanEodText(desc);
+      row.querySelector('.eod-qty').value = qty;
+      row.querySelector('.eod-rate').value = rate;
+    });
+  });
+}
+
+// Strip blocked characters as they're typed or pasted, keeping the cursor put.
+let eodBlockedHintShown = false;
+function scrubEodTextInput(input) {
+  const before = input.value, cleaned = cleanEodText(before);
+  if (cleaned === before) return;
+  const caret = input.selectionStart ?? cleaned.length;
+  const removedBeforeCaret = before.slice(0, caret).length - cleanEodText(before.slice(0, caret)).length;
+  input.value = cleaned;
+  try { input.setSelectionRange(caret - removedBeforeCaret, caret - removedBeforeCaret); } catch {}
+  if (!eodBlockedHintShown) { eodBlockedHintShown = true; showToast('Quotes, \\ { } [ ] < > and ` are not allowed in the EOD sheet.', true); }
+}
+// Number boxes: digits and one decimal point only (no e, +, - or negatives).
+eodSheetEl.addEventListener('keydown', e => {
+  if (e.target.matches('.eod-qty, .eod-rate, #eodMarkup') && ['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && eodSheetEl.classList.contains('open')) closeEodSheet();
+});
+window.addEventListener('pagehide', saveEodDraft);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveEodDraft(); });
+
 eodSheetEl.addEventListener('input', e => {
+  if (e.target.matches('.eod-desc, #eodJobName')) scrubEodTextInput(e.target);
+  if (e.target.matches('.eod-qty, .eod-rate, #eodMarkup') && e.target.value !== '' && Number(e.target.value) < 0) e.target.value = '';
   if (e.target.classList.contains('eod-desc')) {
     const match = EOD_RATE_REFERENCE.find(([name]) => name === e.target.value);
     const rateInput = e.target.closest('tr').querySelector('.eod-rate');
     if (match && !rateInput.value) rateInput.value = match[1];
   }
   recalcEodSheet();
+  saveEodDraft();
+});
+document.getElementById('clearEodSheet').addEventListener('click', () => {
+  const job = (dashboardData.jobs || []).find(j => (j.id || '') === eodJobId);
+  if (!job || !confirm('Clear everything on this EOD sheet? This deletes the saved draft.')) return;
+  clearEodDraft(eodJobId);
+  renderEodSections(); fillEodDefaults(job); recalcEodSheet();
+  document.getElementById('eodDraftNote').hidden = true;
 });
 document.getElementById('closeEodSheet').addEventListener('click', closeEodSheet);
 document.getElementById('cancelEodSheet').addEventListener('click', closeEodSheet);
@@ -2592,8 +2694,9 @@ document.getElementById('submitEodSheet').addEventListener('click', async () => 
   const original = submitBtn.textContent;
   submitBtn.disabled = true; submitBtn.textContent = 'Submitting...';
   try {
-    const result = await resetJobDay(eodJobId, eodTriggerBtn || submitBtn, sheet);
-    if (result) closeEodSheet();
+    const jobId = eodJobId;
+    const result = await resetJobDay(jobId, eodTriggerBtn || submitBtn, sheet);
+    if (result) { clearEodDraft(jobId); eodJobId = ''; closeEodSheet(); }
   } finally { submitBtn.disabled = false; submitBtn.textContent = original; }
 });
 
