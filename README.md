@@ -18,3 +18,13 @@ Includes the backend, edited dashboard, the read-only Field App for drivers/crew
 - **Multi-stop routes.** A logistics move can now carry an ordered list of stops (address, type, date/time window, notes) instead of just one pickup and one destination. Add stops from the "Book Standalone Container" and "Edit" sheets on the Logistics tab. Older single-address moves keep working unchanged.
 - **Field App** — a read-only mobile web app for drivers and crew at `/driver/` (installable to the home screen). Drivers see their assigned route's stops (in order) and can check a stop off as complete; nothing else is editable. Crew members see the labor job they're on and who else is on that crew. Everything else about a job or move (schedule, pricing, client details, assignment) stays dispatcher-only.
 - Turn on access for each person from the "Field App Access" panel on the Logistics tab (pulls from the existing Driver and Labor rosters). Give them the `/driver/` link — they sign in with just their phone number, no code to remember.
+
+## Book Job: GHL assigned user
+
+The Book Job sheet has an **Assigned User** selector (live GHL location users via `/api/ghl-users`; the last pick is remembered on that browser). After Make returns the new opportunity ID, `job-action` checks the lead in GHL:
+
+- Contact has no assigned user: it's set to the selected user.
+- Contact already has one: left alone.
+- Opportunity has no assigned user: set to whoever owns the contact.
+
+This never fails the booking. If GHL rejects it, the job is still created and the dashboard shows a warning. `GHL_API_TOKEN` needs `users.readonly`, `contacts.readonly` and `contacts.write` (plus the opportunity scopes it already has). Optional `DEFAULT_ASSIGNED_USER_ID` is used if no user was picked (e.g. the user list couldn't load).

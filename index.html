@@ -1051,6 +1051,10 @@
       <input type="text" id="jobAddress" placeholder="Street, City">
     </div>
     <div class="field">
+      <label for="assignedUser">Assigned User <span class="label-optional">(set on the GHL contact if it has no one assigned)</span></label>
+      <select id="assignedUser"><option value="">Loading GHL users...</option></select>
+    </div>
+    <div class="field">
       <label>Job Type</label>
       <div class="segmented" id="jobTypeToggle">
         <button type="button" class="segmented-option active" data-type="hourly">Hourly (Labor)</button>
@@ -1260,6 +1264,7 @@ const CONFIG = {
   GET_DASHBOARD_DATA_URL: "/api/dashboard-data",
   LABOR_ROSTER_URL: "/api/roster?kind=labor",
   CREATE_JOB_URL: "/api/job-action",
+  GHL_USERS_URL: "/api/ghl-users",
   // Make.com scenario needs to: 1) create the Contact<->Opportunity association,
   // 2) flip the Contact's labor-status custom field from "available" to "booked".
   // Expects POST body: { jobId: "<opportunityId>", contactId: "<contactId>" }
@@ -2910,8 +2915,34 @@ function isHourlyJob(job) {
   return true; // default true (hourly) — matches WON_STAGE_IDS.hourly and any unrecognized stage
 }
 
+// Assigned User selector: live GHL location users, last pick remembered on this browser.
+let ghlUsersLoaded = false;
+async function loadGhlUsers() {
+  const select = document.getElementById('assignedUser');
+  if (ghlUsersLoaded) return;
+  let saved = '';
+  try { saved = localStorage.getItem('a2zBookAssignedUser') || ''; } catch (_) {}
+  try {
+    const res = await fetchWithTimeout(CONFIG.GHL_USERS_URL, { headers: { Accept: 'application/json' } });
+    const data = await res.json().catch(() => ({}));
+    const users = Array.isArray(data.users) ? data.users : [];
+    if (!res.ok || !users.length) throw new Error(data.error || 'No users');
+    select.innerHTML = '<option value="">Select a GHL user</option>' + users.map(u =>
+      `<option value="${escapeAttr(u.id)}">${escapeAttr(u.name)}</option>`).join('');
+    if (saved && users.some(u => u.id === saved)) select.value = saved;
+    ghlUsersLoaded = true;
+  } catch (err) {
+    console.warn('GHL users lookup failed:', err);
+    select.innerHTML = '<option value="">GHL users unavailable (booking still works)</option>';
+  }
+}
+function escapeAttr(v) {
+  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function openSheet() {
   bookingRequestId = null;
+  loadGhlUsers();
   overlay.classList.add('open');
   sheet.classList.add('open');
 }
@@ -2983,8 +3014,18 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     // Sent under the same key GHL uses natively on the Opportunity object,
     // so the Make "Create Opportunity" module can map it straight across.
     monetaryValue: document.getElementById('jobValue').value === '' ? null : parseFloat(document.getElementById('jobValue').value),
-    crewSize: crewSize
+    crewSize: crewSize,
+    assignedUserId: document.getElementById('assignedUser').value,
+    assignedUserName: document.getElementById('assignedUser').value
+      ? document.getElementById('assignedUser').selectedOptions[0].textContent : ''
   };
+
+  if (ghlUsersLoaded && !payload.assignedUserId) {
+    showToast('Please select an Assigned User.', true);
+    document.getElementById('assignedUser').focus();
+    return;
+  }
+  try { if (payload.assignedUserId) localStorage.setItem('a2zBookAssignedUser', payload.assignedUserId); } catch (_) {}
 
   if (!['net-1', 'net-7', 'net-30', 'net-45', 'net-60'].includes(payload.paymentTerms)) {
     showToast('Please select Payment Terms.', true);
@@ -3049,11 +3090,13 @@ document.getElementById('submitBook').addEventListener('click', async () => {
 
     // Make creates the GHL opportunity and returns its ID. Netlify stores dispatch state.
     let newJobId = '';
+    let ownerAssignFailed = false;
     try {
       const raw = (await res.text()).trim();
       try {
         const data = JSON.parse(raw);
         if (data.record) acceptJobRecords([data.record]);
+        ownerAssignFailed = !!(data.ownerAssignment && data.ownerAssignment.status === 'error');
         newJobId = (data && (data.id || data.opportunityId || (data.opportunity && data.opportunity.id))) || '';
       } catch (parseErr) {
         // Not JSON — GHL/Opportunity IDs are alphanumeric, ~20 chars, no
@@ -3119,7 +3162,8 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     // its next visit to reload so newly-created container/lowboy moves show.
     if (addonRequests.length) logisticsLoaded = false;
 
-    if (addonFailures) showToast(`Job created, but ${addonFailures} logistics add-on(s) need attention.`, true);
+    if (ownerAssignFailed) showToast('Job created, but the assigned user could not be set in GHL. Assign it on the contact in GHL.', true);
+    else if (addonFailures) showToast(`Job created, but ${addonFailures} logistics add-on(s) need attention.`, true);
     else if (addonRequests.length) showToast(`Job created with ${addonRequests.length} logistics add-on(s).`);
     else showToast(`Job created — ${payload.crewSize} crew slot(s) ready in GHL.`);
     closeSheetFn();
