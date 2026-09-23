@@ -16,9 +16,11 @@ Never return success before the actual work finishes or from an error/ignore rou
 
 ## Complete EOD Sheet route (worker webhook)
 
-The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing Worksheet to the same worker webhook Reset Day already used: `https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l` (or `EOD_SHEET_WEBHOOK` / `WORKER_EFFECT_WEBHOOK` if set in Netlify). Add a router path filtered on `action` = `eod_sheet` and end it with the `{"ok":true}` Webhook response above. The existing `action` = `remove` path still fires afterwards to release the crew.
+The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing Worksheet to the same worker webhook Reset Day already used: `https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l` (or `EOD_SHEET_WEBHOOK` / `WORKER_EFFECT_WEBHOOK` if set in Netlify). Add a router path filtered on `action` = `eod_sheet` and end it with the `{"ok":true}` Webhook response above. This is the only call the button makes; no separate `remove` event is sent. The released crew is included in `removedWorkers` if you want to notify them from this route.
 
-Payload fields: `action`, `jobId`, `opportunityId`, `jobName`, `jobAddress`, `clientName`, `date`, `submittedAt`, `crew` (names), `lines[]` (each: `section`, `category`, `line`, `description`, `qty`, `rate`, `lineTotal`; all 19 template rows, blanks included), `sections[]` (each: `key`, `section`, `lines`, `subtotal`), `interiorSubtotal`, `exteriorSubtotal`, `gradingSubtotal`, `totalJobCost`, `markupPercent` (e.g. `20` = 20%), `totalPriceToCustomer`, `eventId`.
+Payload fields: `action`, `jobId`, `opportunityId`, `jobName`, `jobAddress`, `clientName`, `date`, `submittedAt`, `crew` (names), `removedWorkers[]` (each: `contactId`, `workerName`, `workerPhone`), `lines[]` (each: `section`, `category`, `line`, `description`, `qty`, `rate`, `lineTotal`; all 19 template rows, blanks included), `sections[]` (each: `key`, `section`, `lines`, `subtotal`), `interiorSubtotal`, `exteriorSubtotal`, `gradingSubtotal`, `totalJobCost`, `markupPercent` (e.g. `20` = 20%), `totalPriceToCustomer`, `eventId`, and `file`.
+
+`file` is the filled-in Job Costing Worksheet as a real .xlsx (built from `templates/Job_Costing_Worksheet_V2.xlsx`, all four tabs, formatting and formulas intact): `file.fileName`, `file.mimeType`, `file.size` (bytes) and `file.data` (the file's bytes, base64). To use it as binary in Make (Google Drive upload, email attachment, etc.) set the module's file name to `{{file.fileName}}` and its data to `{{toBinary(file.data; "base64")}}`.
 
 ## 2. Return the created opportunity ID
 

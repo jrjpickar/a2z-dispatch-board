@@ -1236,7 +1236,7 @@
       <label for="eodMarkup">Markup %</label><span class="eod-sum-val"><input type="number" id="eodMarkup" min="0" step="0.1" inputmode="decimal" placeholder="0"></span>
       <span class="eod-grand">Total price to customer</span><span class="eod-sum-val eod-grand" id="eodTotalPrice">$0.00</span>
     </div>
-    <p class="eod-reset-note">Submitting also resets the day: the schedule and crew are cleared and the crew is released. Job details stay as they are.</p>
+    <p class="eod-reset-note">Submitting also resets the day: the schedule and crew are cleared. Job details stay as they are.</p>
     <datalist id="eodRateReference"></datalist>
   </div>
   <div class="sheet-foot">
@@ -2376,9 +2376,8 @@ async function setJobStage(jobId, action, btn) {
 // Sends the complete current dispatch snapshot so Make can map every field,
 // then clears only the daily schedule in the browser. The Opportunity and its
 // permanent details remain untouched.
-// When eodSheet is given (the Complete EOD Sheet flow), the sheet is sent to
-// the reset webhook as action "eod_sheet" right after the reset is saved, and
-// the crew release still runs even if the sheet isn't confirmed by Make.
+// When eodSheet is given (the Complete EOD Sheet flow), the only webhook call
+// is the sheet itself (action "eod_sheet"), sent right after the reset is saved.
 async function resetJobDay(jobId, btn, eodSheet) {
   const job = dashboardData.jobs.find(j => j.id === jobId);
   if (!job) return false;
@@ -2390,11 +2389,13 @@ async function resetJobDay(jobId, btn, eodSheet) {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reset_dispatch', jobId });
     const problems = [];
     if (eodSheet) {
-      const sheetPayload = { ...eodSheet, action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), crew: crewBeforeReset.map(w => w.name).filter(Boolean) };
-      try { await runSideEffect(CONFIG.EOD_SHEET_URL, sheetPayload, 'EOD sheet', 'eod_sheet'); }
+      // EOD flow sends ONLY the eod_sheet event -- no separate "remove" call.
+      // The crew being released rides along in removedWorkers so Make can
+      // handle any release notifications inside the eod_sheet route.
+      const sheetPayload = { ...eodSheet, action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
+      try { await runSideEffect(CONFIG.EOD_SHEET_URL, stripEmDashes(sheetPayload), 'EOD sheet', 'eod_sheet'); }
       catch (error) { problems.push(error.message); }
-    }
-    if (removedWorkers.length) {
+    } else if (removedWorkers.length) {
       try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers }, 'Worker release notifications'); }
       catch (error) { problems.push(error.message); }
     }
@@ -2409,6 +2410,13 @@ async function resetJobDay(jobId, btn, eodSheet) {
 }
 
 /* ---------- Complete EOD Sheet (Job Costing Worksheet) ---------- */
+// No em/en dashes in anything the EOD sheet sends (names, addresses, descriptions).
+function stripEmDashes(value) {
+  if (typeof value === 'string') return value.replace(/\s*[\u2014\u2013]\s*/g, ' - ');
+  if (Array.isArray(value)) return value.map(stripEmDashes);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, stripEmDashes(v)]));
+  return value;
+}
 // Mirrors the "Job Costing" tab of Job_Costing_Worksheet_V2.xlsx row for row.
 const EOD_SECTIONS = [
   { key: 'interior', label: 'Interior', categories: ['Labor', 'Hotel', 'Hauling', 'Equipment', 'Equipment', 'Fuel', 'Misc'] },
@@ -2529,7 +2537,7 @@ function openEodSheet(jobId, btn) {
   eodJobId = jobId; eodTriggerBtn = btn || null;
   renderEodSections();
   const client = getClientName(job);
-  document.getElementById('eodJobName').value = [client, job.name].filter(Boolean).join(' — ');
+  document.getElementById('eodJobName').value = [client, job.name].filter(Boolean).join(' - ');
   document.getElementById('eodDate').value = (typeof getReportDate === 'function' && getReportDate(job)) || localIsoDate();
   document.getElementById('eodMarkup').value = '';
   recalcEodSheet();
