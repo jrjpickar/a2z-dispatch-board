@@ -849,6 +849,29 @@
     body.dark-mode table.jobs td,body.dark-mode table.logistics-table td,body.dark-mode #logisticsDispatchView table.logistics-table td{background:#222427!important;border-color:#373b3f!important}
   }
 
+  /* ---------- Complete EOD Sheet (job costing worksheet) ---------- */
+  .sheet.eod-sheet { width: 760px; }
+  .eod-legend { font-size: 12px; color: var(--ink-soft); margin: -4px 0 14px; }
+  .eod-section { margin-bottom: 18px; }
+  .eod-section h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--orange-dark); }
+  .eod-table-wrap { overflow-x: auto; }
+  .eod-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+  .eod-table th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft); padding: 4px 6px; border-bottom: 1px solid var(--border); }
+  .eod-table td { padding: 3px 6px; border-bottom: 1px solid var(--stripe); vertical-align: middle; }
+  .eod-table td.eod-cat { font-weight: 600; white-space: nowrap; width: 90px; }
+  .eod-table input { width: 100%; padding: 6px 7px; border: 1px solid var(--border); border-radius: var(--radius); font: inherit; font-size: 13px; background: var(--gold-tint-soft); }
+  .eod-table input.eod-qty, .eod-table input.eod-rate { text-align: right; }
+  .eod-table col.c-qty { width: 72px; } .eod-table col.c-rate { width: 96px; } .eod-table col.c-total { width: 108px; }
+  .eod-table td.eod-line-total, .eod-table td.eod-subtotal { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .eod-table tr.eod-subtotal-row td { font-weight: 700; border-bottom: none; padding-top: 6px; }
+  .eod-summary { border-top: 2px solid var(--ink); padding-top: 10px; display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-items: center; font-size: 14px; }
+  .eod-summary .eod-sum-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .eod-summary .eod-grand { font-weight: 800; font-size: 15px; }
+  .eod-summary input { width: 90px; padding: 6px 7px; border: 1px solid var(--border); border-radius: var(--radius); text-align: right; font: inherit; background: var(--gold-tint-soft); }
+  .eod-reset-note { font-size: 12px; color: var(--ink-soft); margin-top: 14px; }
+  body.dark-mode .eod-table input, body.dark-mode .eod-summary input { background: #2a2618 !important; }
+  body.dark-mode .eod-summary { border-color: #f1f3f4; }
+  body.dark-mode .eod-table td { border-color: #33373b; }
 </style>
 </head>
 <body>
@@ -1190,6 +1213,38 @@
   </div>
 </div>
 
+<!-- Complete EOD Sheet: the Job Costing Worksheet (Job_Costing_Worksheet_V2,
+     "Job Costing" tab) filled out per job at end of day. Submitting it sends
+     the sheet to the same Make webhook the old Reset Day used
+     (MOVE_WORKER_URL, action "eod_sheet") and then resets the day exactly
+     like Reset Day did. Rows are rendered from EOD_SECTIONS in the script. -->
+<div class="overlay" id="eodOverlay"></div>
+<div class="sheet eod-sheet" id="eodSheet">
+  <div class="sheet-head">
+    <h2>Complete EOD Sheet</h2>
+    <button id="closeEodSheet">&times;</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field-row">
+      <div class="field"><label for="eodJobName">Job Name</label><input type="text" id="eodJobName"></div>
+      <div class="field"><label for="eodDate">Date</label><input type="date" id="eodDate"></div>
+    </div>
+    <p class="eod-legend">Highlighted boxes are yours to fill in. Line totals, subtotals and the price to the customer recalculate automatically.</p>
+    <div id="eodSections"></div>
+    <div class="eod-summary">
+      <span>Total job cost</span><span class="eod-sum-val" id="eodTotalCost">$0.00</span>
+      <label for="eodMarkup">Markup %</label><span class="eod-sum-val"><input type="number" id="eodMarkup" min="0" step="0.1" inputmode="decimal" placeholder="0"></span>
+      <span class="eod-grand">Total price to customer</span><span class="eod-sum-val eod-grand" id="eodTotalPrice">$0.00</span>
+    </div>
+    <p class="eod-reset-note">Submitting also resets the day: the schedule and crew are cleared and the crew is released. Job details stay as they are.</p>
+    <datalist id="eodRateReference"></datalist>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn-ghost" id="cancelEodSheet" style="color:var(--ink-soft); border-color:var(--border);">Cancel</button>
+    <button class="btn-primary" id="submitEodSheet">Submit EOD Sheet</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1204,6 +1259,10 @@ const CONFIG = {
   // 2) flip the Contact's labor-status custom field from "available" to "booked".
   // Expects POST body: { jobId: "<opportunityId>", contactId: "<contactId>" }
   MOVE_WORKER_URL: "https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l",
+  // Complete EOD Sheet (formerly Reset Day) posts the job costing worksheet to
+  // the same webhook Reset Day already used, routed on action: "eod_sheet".
+  // Sent through /api/workflow-effect with kind "eod_sheet".
+  EOD_SHEET_URL: "https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l",
   // Also handles Report End Time + Report End Date updates for existing jobs.
   // Expects POST body: { jobId, reportEndTime, reportEndDate }
   // Netlify is the sole dispatch-state authority.
@@ -2194,7 +2253,7 @@ function renderJobs(jobs) {
           <span class="status-tag ${statusClass}">${statusLabel}</span>
           ${terminalLocally ? '' : `<div class="job-stage-actions">
             <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">Edit Details</button>
-            <button type="button" class="job-stage-btn reset" data-job-id="${jobId}">Reset Day</button>
+            <button type="button" class="job-stage-btn reset" data-job-id="${jobId}">Complete EOD Sheet</button>
             <button type="button" class="job-stage-btn complete" data-job-id="${jobId}">Completed</button>
             <button type="button" class="job-stage-btn cancel" data-job-id="${jobId}">Cancelled</button>
           </div>`}
@@ -2317,18 +2376,193 @@ async function setJobStage(jobId, action, btn) {
 // Sends the complete current dispatch snapshot so Make can map every field,
 // then clears only the daily schedule in the browser. The Opportunity and its
 // permanent details remain untouched.
-async function resetJobDay(jobId, btn) {
+// When eodSheet is given (the Complete EOD Sheet flow), the sheet is sent to
+// the reset webhook as action "eod_sheet" right after the reset is saved, and
+// the crew release still runs even if the sheet isn't confirmed by Make.
+async function resetJobDay(jobId, btn, eodSheet) {
   const job = dashboardData.jobs.find(j => j.id === jobId);
-  if (!job || !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return;
-  const removedWorkers = getCrew(job).map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
+  if (!job) return false;
+  if (!eodSheet && !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return false;
+  const crewBeforeReset = getCrew(job);
+  const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
   btn.disabled = true;
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reset_dispatch', jobId });
-    if (removedWorkers.length) await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers }, 'Worker release notifications');
-    render(); showToast('Schedule and crew cleared for everyone.');
-  } catch (error) { showToast(error.message, true); }
+    const problems = [];
+    if (eodSheet) {
+      const sheetPayload = { ...eodSheet, action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), crew: crewBeforeReset.map(w => w.name).filter(Boolean) };
+      try { await runSideEffect(CONFIG.EOD_SHEET_URL, sheetPayload, 'EOD sheet', 'eod_sheet'); }
+      catch (error) { problems.push(error.message); }
+    }
+    if (removedWorkers.length) {
+      try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers }, 'Worker release notifications'); }
+      catch (error) { problems.push(error.message); }
+    }
+    render();
+    // The reset is saved either way, so the sheet closes; an unconfirmed
+    // effect must be checked in Make's history rather than resent.
+    if (problems.length) { showToast(problems.join(' '), true); return true; }
+    showToast(eodSheet ? 'EOD sheet sent. Schedule and crew cleared for everyone.' : 'Schedule and crew cleared for everyone.');
+    return true;
+  } catch (error) { showToast(error.message, true); return false; }
   finally { btn.disabled = false; }
 }
+
+/* ---------- Complete EOD Sheet (Job Costing Worksheet) ---------- */
+// Mirrors the "Job Costing" tab of Job_Costing_Worksheet_V2.xlsx row for row.
+const EOD_SECTIONS = [
+  { key: 'interior', label: 'Interior', categories: ['Labor', 'Hotel', 'Hauling', 'Equipment', 'Equipment', 'Fuel', 'Misc'] },
+  { key: 'exterior', label: 'Exterior', categories: ['Labor', 'Hauling', 'Equipment', 'Equipment', 'Equipment', 'Fuel', 'Misc'] },
+  { key: 'grading', label: 'Grading', categories: ['Labor', 'Hauling', 'Equipment', 'Fuel', 'Misc'] }
+];
+// From the "Concrete & Cost Reference" tab: picking one of these as a line's
+// description fills in its rate (only when the rate box is still empty).
+const EOD_RATE_REFERENCE = [
+  ['General Clean Up Labor (8 HR min) / Trash Pick Up Labor (4 HR min)', 50, 'Hour'],
+  ['Leadsman - General Clean Up (8 HR min) / Driver - Trash Pick Up (5 HR min)', 50, 'Hour'],
+  ['Skilled Labor (8 HR min)', 65, 'Hour'],
+  ['Skilled Leadsman Labor (8 HR min)', 85, 'Hour'],
+  ['Full Truck Load (excludes dump fees)', 375, 'Trip'],
+  ['1/2 Truck Load (excludes dump fees)', 175, 'Trip'],
+  ['Dump Fees', 106, 'Ton'],
+  ['Bobcat with Operator', 155, 'Hour'],
+  ['Mini Excavator with Operator', 155, 'Hour'],
+  ['Bobcat with Operator and Breaker', 185, 'Hour'],
+  ['Mini Excavator with Operator and Breaker', 185, 'Hour'],
+  ['40 Yard Container - Within Orange County', 800, 'Container'],
+  ['40 Yard Container - Outside Orange County', 900, 'Container'],
+  ['Low Boy - Clean Concrete or Dirt Only', 800, 'Container'],
+  ['Low Boy - Mixed Dirt and Concrete Only', 850, 'Container'],
+  ['Gas Compressor', 110, 'Day'], ['Compactor', 110, 'Day'], ['Generator', 125, 'Day'],
+  ['Pressure Washer', 95, 'Day'], ['Gas Water Pump', 65, 'Day'], ['Fan Blowers', 35, 'Day'],
+  ['Multi-Tool and Blade', 25, 'Day'], ['Shop Vac', 25, 'Day'], ['Chipping Hammer', 65, 'Day'],
+  ['60 lb. Jack Hammer and Cord', 85, 'Day'],
+  ['Tow-Behind Compressor, 90 lb. Jack Hammer, Hoses, Diesel Fuel and Delivery', 575, 'Day'],
+  ['Bobcat Breaker', 275, 'Day'], ['Cordless Rotary Hammer Drill Set', 30, 'Day'],
+  ['Skill Saw and Blade', 25, 'Day'], ['Quickie Saw and Blade', 135, 'Day'],
+  ['Small Grinder and Blade', 35, 'Day'], ['Large Grinder and Blade', 65, 'Day'],
+  ['Industrial Weed Cutter and Blade', 45, 'Day'], ['Sawzall and Blade', 25, 'Day'],
+  ['Chain Saw and Chain', 85, 'Day'], ['50 ft. 12 Gauge Extension Cord', 25, 'Day']
+];
+const eodOverlay = document.getElementById('eodOverlay');
+const eodSheetEl = document.getElementById('eodSheet');
+let eodJobId = '';
+let eodTriggerBtn = null;
+const eodMoney = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
+const eodNum = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const eodRound = n => Math.round(n * 100) / 100;
+const eodEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+document.getElementById('eodRateReference').innerHTML = EOD_RATE_REFERENCE
+  .map(([name, rate, unit]) => `<option value="${eodEsc(name)}">$${rate} / ${eodEsc(unit)}</option>`).join('');
+
+function renderEodSections() {
+  document.getElementById('eodSections').innerHTML = EOD_SECTIONS.map(section => `
+    <div class="eod-section" data-section="${section.key}">
+      <h3>${section.label}</h3>
+      <div class="eod-table-wrap"><table class="eod-table">
+        <colgroup><col><col><col class="c-qty"><col class="c-rate"><col class="c-total"></colgroup>
+        <thead><tr><th>Category</th><th>Description</th><th>Qty</th><th>Rate ($)</th><th style="text-align:right">Line total</th></tr></thead>
+        <tbody>
+          ${section.categories.map((cat, i) => `<tr class="eod-line" data-category="${cat}" data-line="${i + 1}">
+            <td class="eod-cat">${cat}</td>
+            <td><input type="text" class="eod-desc" list="eodRateReference" aria-label="${section.label} ${cat} description"></td>
+            <td><input type="number" class="eod-qty" min="0" step="any" inputmode="decimal" aria-label="${section.label} ${cat} quantity"></td>
+            <td><input type="number" class="eod-rate" min="0" step="any" inputmode="decimal" aria-label="${section.label} ${cat} rate"></td>
+            <td class="eod-line-total">$0.00</td>
+          </tr>`).join('')}
+          <tr class="eod-subtotal-row"><td colspan="4">${section.label.toUpperCase()} SUBTOTAL</td><td class="eod-subtotal">$0.00</td></tr>
+        </tbody>
+      </table></div>
+    </div>`).join('');
+}
+
+// Reads the form into the payload shape sent to Make. Every template line is
+// included (blank ones too) so row positions stay stable for mapping.
+function collectEodSheet() {
+  const sections = EOD_SECTIONS.map(section => {
+    const el = eodSheetEl.querySelector(`.eod-section[data-section="${section.key}"]`);
+    const lines = [...el.querySelectorAll('.eod-line')].map(row => {
+      const qty = eodNum(row.querySelector('.eod-qty').value), rate = eodNum(row.querySelector('.eod-rate').value);
+      return { section: section.label, category: row.dataset.category, line: Number(row.dataset.line),
+        description: row.querySelector('.eod-desc').value.trim(), qty, rate, lineTotal: eodRound(qty * rate) };
+    });
+    return { key: section.key, section: section.label, lines, subtotal: eodRound(lines.reduce((sum, l) => sum + l.lineTotal, 0)) };
+  });
+  const totalJobCost = eodRound(sections.reduce((sum, s) => sum + s.subtotal, 0));
+  const markupPercent = eodNum(document.getElementById('eodMarkup').value);
+  const bySection = Object.fromEntries(sections.map(s => [s.key, s]));
+  return {
+    jobName: document.getElementById('eodJobName').value.trim(),
+    date: document.getElementById('eodDate').value,
+    submittedAt: new Date().toISOString(),
+    sections,
+    lines: sections.flatMap(s => s.lines),
+    interiorSubtotal: bySection.interior.subtotal,
+    exteriorSubtotal: bySection.exterior.subtotal,
+    gradingSubtotal: bySection.grading.subtotal,
+    totalJobCost,
+    markupPercent,
+    totalPriceToCustomer: eodRound(totalJobCost * (1 + markupPercent / 100))
+  };
+}
+
+function recalcEodSheet() {
+  const sheet = collectEodSheet();
+  sheet.sections.forEach(section => {
+    const el = eodSheetEl.querySelector(`.eod-section[data-section="${section.key}"]`);
+    el.querySelectorAll('.eod-line').forEach((row, i) => { row.querySelector('.eod-line-total').textContent = eodMoney(section.lines[i].lineTotal); });
+    el.querySelector('.eod-subtotal').textContent = eodMoney(section.subtotal);
+  });
+  document.getElementById('eodTotalCost').textContent = eodMoney(sheet.totalJobCost);
+  document.getElementById('eodTotalPrice').textContent = eodMoney(sheet.totalPriceToCustomer);
+  return sheet;
+}
+
+function localIsoDate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function openEodSheet(jobId, btn) {
+  const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId);
+  if (!job) { showToast("Couldn't find that job — try refreshing.", true); return; }
+  eodJobId = jobId; eodTriggerBtn = btn || null;
+  renderEodSections();
+  const client = getClientName(job);
+  document.getElementById('eodJobName').value = [client, job.name].filter(Boolean).join(' — ');
+  document.getElementById('eodDate').value = (typeof getReportDate === 'function' && getReportDate(job)) || localIsoDate();
+  document.getElementById('eodMarkup').value = '';
+  recalcEodSheet();
+  eodOverlay.classList.add('open'); eodSheetEl.classList.add('open');
+}
+function closeEodSheet() {
+  eodOverlay.classList.remove('open'); eodSheetEl.classList.remove('open');
+  eodJobId = ''; eodTriggerBtn = null;
+}
+
+eodSheetEl.addEventListener('input', e => {
+  if (e.target.classList.contains('eod-desc')) {
+    const match = EOD_RATE_REFERENCE.find(([name]) => name === e.target.value);
+    const rateInput = e.target.closest('tr').querySelector('.eod-rate');
+    if (match && !rateInput.value) rateInput.value = match[1];
+  }
+  recalcEodSheet();
+});
+document.getElementById('closeEodSheet').addEventListener('click', closeEodSheet);
+document.getElementById('cancelEodSheet').addEventListener('click', closeEodSheet);
+eodOverlay.addEventListener('click', closeEodSheet);
+document.getElementById('submitEodSheet').addEventListener('click', async () => {
+  const submitBtn = document.getElementById('submitEodSheet');
+  const sheet = recalcEodSheet();
+  if (!sheet.date) { showToast('Add the date for this EOD sheet.', true); return; }
+  if (!sheet.lines.some(l => l.description || l.qty || l.rate)) { showToast('Fill in at least one line before submitting.', true); return; }
+  const original = submitBtn.textContent;
+  submitBtn.disabled = true; submitBtn.textContent = 'Submitting...';
+  try {
+    const result = await resetJobDay(eodJobId, eodTriggerBtn || submitBtn, sheet);
+    if (result) closeEodSheet();
+  } finally { submitBtn.disabled = false; submitBtn.textContent = original; }
+});
 
 
 async function saveJobTimes(jobId, reportDate, reportTime, endDate, endTime, saveBtn) {
@@ -2387,7 +2621,7 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
 
   const resetBtn = e.target.closest('.job-stage-btn.reset');
   if (resetBtn) {
-    resetJobDay(resetBtn.dataset.jobId, resetBtn);
+    openEodSheet(resetBtn.dataset.jobId, resetBtn);
     return;
   }
 
@@ -3919,12 +4153,13 @@ async function retryCrm(jobId) {
   const res = await fetchWithTimeout('/api/sync-retry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId }) }, 45000);
   if (!res.ok) throw new Error('GHL is still unavailable. Dispatch state remains saved.');
 }
-async function runSideEffect(url, payload, label) {
+async function runSideEffect(url, payload, label, kindOverride) {
   // State is already committed. Never reapply it to retry a notification.
   try {
     const kinds = { [CONFIG.MOVE_WORKER_URL]: 'workers', [CONFIG.DRIVER_ASSIGNMENT_URL]: 'drivers', [CONFIG.EDIT_JOB_DETAILS_URL]: 'job_details', [CONFIG.CREATE_JOB_URL]: 'job_stage', [CONFIG.LOGISTICS_CREATE_URL]: 'container', [CONFIG.DRIVER_LOG_URL]: 'driver_log' };
     const requestId = lastCommittedRequests.get(String(payload.moveId || payload.jobId || payload.opportunityId || ''));
-    const response = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, kind: kinds[url], payload }) }, 45000);
+    // kindOverride lets two effects share one webhook URL (EOD sheet + worker release).
+    const response = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, kind: kindOverride || kinds[url], payload }) }, 45000);
     const text = await response.text();
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     let result; try { result = JSON.parse(text); } catch { throw new Error('Make did not confirm completion. Add the final JSON response from the setup guide.'); }

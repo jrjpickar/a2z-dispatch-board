@@ -9,7 +9,14 @@ const workflows = {
   job_details: ['JOB_DETAILS_WEBHOOK', 'https://hook.us2.make.com/urj9p6bifsl1m9s72y8sq02zn2gydv59'],
   job_stage: ['JOB_ACTION_WEBHOOK', 'https://hook.us2.make.com/s2ijm77vf023z47b1dncn4jm9yt11w1d'],
   container: ['BOOK_CONTAINER_WEBHOOK', 'https://hook.us2.make.com/30np7d1bieaapqcluxlkxdgbg8l5pw2w'],
-  driver_log: ['DRIVER_LOG_WEBHOOK', 'https://hook.us2.make.com/tp2wwcdltmjyi1gsrc9mhywksiygqouo']
+  driver_log: ['DRIVER_LOG_WEBHOOK', 'https://hook.us2.make.com/tp2wwcdltmjyi1gsrc9mhywksiygqouo'],
+  // Complete EOD Sheet: same webhook the job Reset Day already posts to (workers),
+  // routed in Make on action "eod_sheet". Follows WORKER_EFFECT_WEBHOOK if that is set.
+  eod_sheet: ['EOD_SHEET_WEBHOOK', 'https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l']
+};
+const webhookUrl = kind => {
+  const [env, fallback] = workflows[kind];
+  return process.env[env] || (kind === 'eod_sheet' && process.env.WORKER_EFFECT_WEBHOOK) || fallback;
 };
 export default async function handler(request) {
   try {
@@ -38,9 +45,8 @@ export default async function handler(request) {
     });
     if (claimed === 'confirmed') return json({ ok: true, replayed: true });
     if (claimed !== 'new') return json({ error: 'Workflow was already attempted. Check Make history before rerunning to avoid duplicate notifications.', status: claimed }, 409);
-    const [env, fallback] = workflows[kind];
     try {
-      const response = await fetch(process.env[env] || fallback, {
+      const response = await fetch(webhookUrl(kind), {
         method: 'POST', signal: AbortSignal.timeout(20000),
         headers: { 'content-type': 'application/json', ...(process.env.MAKE_API_KEY ? { 'x-make-apikey': process.env.MAKE_API_KEY } : {}) },
         body: JSON.stringify({ ...payload, eventId: effectId })

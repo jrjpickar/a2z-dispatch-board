@@ -14,6 +14,12 @@ At the END of each successful worker assign/remove, driver assign/remove, job ed
 
 Never return success before the actual work finishes or from an error/ignore route. Plain `Accepted` means queued, not confirmed; the dashboard will flag it.
 
+## Complete EOD Sheet route (worker webhook)
+
+The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing Worksheet to the same worker webhook Reset Day already used: `https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l` (or `EOD_SHEET_WEBHOOK` / `WORKER_EFFECT_WEBHOOK` if set in Netlify). Add a router path filtered on `action` = `eod_sheet` and end it with the `{"ok":true}` Webhook response above. The existing `action` = `remove` path still fires afterwards to release the crew.
+
+Payload fields: `action`, `jobId`, `opportunityId`, `jobName`, `jobAddress`, `clientName`, `date`, `submittedAt`, `crew` (names), `lines[]` (each: `section`, `category`, `line`, `description`, `qty`, `rate`, `lineTotal`; all 19 template rows, blanks included), `sections[]` (each: `key`, `section`, `lines`, `subtotal`), `interiorSubtotal`, `exteriorSubtotal`, `gradingSubtotal`, `totalJobCost`, `markupPercent` (e.g. `20` = 20%), `totalPriceToCustomer`, `eventId`.
+
 ## 2. Return the created opportunity ID
 
 Your existing job-create and standalone-container-create routes must end with:
