@@ -2511,8 +2511,33 @@ function collectEodSheet() {
     gradingSubtotal: bySection.grading.subtotal,
     totalJobCost,
     markupPercent,
-    totalPriceToCustomer: eodRound(totalJobCost * (1 + markupPercent / 100))
+    totalPriceToCustomer: eodRound(totalJobCost * (1 + markupPercent / 100)),
+    ...eodSheetFields(sections, markupPercent)
   };
+}
+
+// Flat fields for the Make -> Google Sheets values batchUpdate, named exactly
+// like its placeholders: INTERIOR_LABOR_DESC / _QTY / _RATE, ...,
+// INTERIOR_EQUIPMENT_1_DESC (repeated categories are numbered; a single one,
+// like Grading Equipment, isn't), plus MARKUP_PERCENT. Blank boxes send "" so
+// the sheet cell stays empty. MARKUP_PERCENT is sent as e.g. "20%" so
+// USER_ENTERED stores 0.2 in the % cell E38 (a bare 20 would mean 2000%).
+function eodSheetFields(sections, markupPercent) {
+  const fields = {};
+  sections.forEach(section => {
+    const counts = {};
+    section.lines.forEach(l => { counts[l.category] = (counts[l.category] || 0) + 1; });
+    const seen = {};
+    section.lines.forEach(l => {
+      seen[l.category] = (seen[l.category] || 0) + 1;
+      const key = `${section.section}_${l.category}${counts[l.category] > 1 ? '_' + seen[l.category] : ''}`.toUpperCase();
+      fields[`${key}_DESC`] = l.description || '';
+      fields[`${key}_QTY`] = l.qty ? l.qty : '';
+      fields[`${key}_RATE`] = l.rate ? l.rate : '';
+    });
+  });
+  fields.MARKUP_PERCENT = markupPercent ? `${markupPercent}%` : '';
+  return fields;
 }
 
 function recalcEodSheet() {

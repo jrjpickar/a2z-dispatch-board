@@ -20,6 +20,8 @@ The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing
 
 Payload fields: `action`, `jobId`, `opportunityId`, `jobName`, `jobAddress`, `clientName`, `date`, `submittedAt`, `crew` (names), `removedWorkers[]` (each: `contactId`, `workerName`, `workerPhone`), `lines[]` (each: `section`, `category`, `line`, `description`, `qty`, `rate`, `lineTotal`; all 19 template rows, blanks included), `sections[]` (each: `key`, `section`, `lines`, `subtotal`), `interiorSubtotal`, `exteriorSubtotal`, `gradingSubtotal`, `totalJobCost`, `markupPercent` (e.g. `20` = 20%), `totalPriceToCustomer`, `eventId`, and `file`.
 
+Google Sheets fields (top level, named to match the values batchUpdate placeholders): `INTERIOR_LABOR_DESC/_QTY/_RATE`, `INTERIOR_HOTEL_*`, `INTERIOR_HAULING_*`, `INTERIOR_EQUIPMENT_1_*`, `INTERIOR_EQUIPMENT_2_*`, `INTERIOR_FUEL_*`, `INTERIOR_MISC_*`, `EXTERIOR_LABOR_*`, `EXTERIOR_HAULING_*`, `EXTERIOR_EQUIPMENT_1_*` to `_3_*`, `EXTERIOR_FUEL_*`, `EXTERIOR_MISC_*`, `GRADING_LABOR_*`, `GRADING_HAULING_*`, `GRADING_EQUIPMENT_*`, `GRADING_FUEL_*`, `GRADING_MISC_*`, and `MARKUP_PERCENT` (sent like `"20%"` so USER_ENTERED stores 0.2). Blank boxes arrive as `""`. Map them as `{{2.INTERIOR_LABOR_DESC}}` etc. (module 2 = the webhook).
+
 `file` is the filled-in Job Costing Worksheet as a real .xlsx (built from `templates/Job_Costing_Worksheet_V2.xlsx`, all four tabs, formatting and formulas intact): `file.fileName`, `file.mimeType`, `file.size` (bytes) and `file.data` (the file's bytes, base64). To use it as binary in Make (Google Drive upload, email attachment, etc.) set the module's file name to `{{file.fileName}}` and its data to `{{toBinary(file.data; "base64")}}`.
 
 ## 2. Return the created opportunity ID
