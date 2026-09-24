@@ -374,6 +374,7 @@
     flex-direction: column;
   }
   .sheet.open { transform: translateX(0); }
+  .sheet:not(.open) { box-shadow: none; } /* keeps closed sheets' shadow off the page edge */
   .sheet-head {
     background: linear-gradient(135deg, var(--ink) 0%, #2c2d30 100%);
     color: #fff;
@@ -565,6 +566,26 @@
   }
   .split-day-switch input:checked + .split-day-slider { background: var(--orange); }
   .split-day-switch input:checked + .split-day-slider::after { transform: translateX(16px); }
+  .night-field { margin-top: -4px; }
+  .night-toggle { display:flex; align-items:center; gap:10px; padding:9px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--stripe); cursor:pointer; text-transform:none; letter-spacing:0; }
+  .field label.night-toggle { display:flex; margin-bottom:0; text-transform:none; letter-spacing:0; font-weight:400; font-size:12px; color:var(--ink-soft); }
+  .night-toggle:has(input:checked) { border-color:#3d4a7a; background:#eef0fa; }
+  .night-toggle:has(input:focus-visible) { outline:2px solid var(--orange); outline-offset:2px; }
+  .night-toggle-text { display:grid; gap:1px; font-size:12px; color:var(--ink-soft); font-weight:400; }
+  .night-toggle-text b { font-size:13px; color:var(--ink); font-weight:600; }
+  .night-toggle input:checked + .split-day-slider { background:#3d4a7a; }
+  .night-hint { margin:6px 2px 0; font-size:12px; color:#3d4a7a; font-weight:600; }
+  .night-hint.bad { color:var(--danger); }
+  .night-badge { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:1px 7px; border-radius:999px; background:#3d4a7a; color:#fff; vertical-align:1px; margin-left:4px; }
+  .time-edit-wrap .night-badge { align-self:flex-start; justify-self:start; width:auto; margin:2px 0 0; }
+  .night-inline { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--ink-soft); cursor:pointer; white-space:nowrap; }
+  .night-inline input { accent-color:#3d4a7a; margin:0; }
+  body.dark-mode .night-toggle { background:#1b1d20; border-color:#3b3f43; }
+  body.dark-mode .night-toggle:has(input:checked) { background:#20263d; border-color:#5b6ab0; }
+  body.dark-mode .night-toggle-text b { color:#f1f3f4; }
+  body.dark-mode .night-hint { color:#a9b4ec; }
+  body.dark-mode .night-badge { background:#5b6ab0; }
+  body.dark-mode .night-inline { color:#b8bdc2; }
   .split-day-empty { display: none; padding: 5px 2px; color: var(--ink-soft); font-size: 11px; }
   .crew-assign-panel.no-available:not(.include-booked) .split-day-empty { display: block; }
   .crew-assign-confirm {
@@ -875,6 +896,184 @@
   body.dark-mode .eod-table input, body.dark-mode .eod-summary input { background: #2a2618 !important; }
   body.dark-mode .eod-summary { border-color: #f1f3f4; }
   body.dark-mode .eod-table td { border-color: #33373b; }
+  /* ---------- Project Schedule (Contract jobs) ---------- */
+  .job-stage-btn.schedule { border: 1px solid var(--ink); color: var(--ink); }
+  .job-stage-btn.schedule:hover { background: var(--ink); color: #fff; }
+  .job-stage-btn.schedule.sent::after { content: ' \2713'; }
+  body.dark-mode .job-stage-btn.schedule { background:#26303a!important; color:#d9e4ee; border-color:#4b5a68 }
+  .sheet.ps-sheet { width: 1120px; }
+  .ps-layout { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 1000px) { .ps-layout { grid-template-columns: minmax(0, 1fr); } }
+  .ps-editor .field { margin-bottom: 12px; }
+  .ps-group { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
+  .ps-group h3 { margin: 0 0 8px; font-size: 12px; color: var(--orange-dark); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .ps-hint { font-size: 12px; color: var(--ink-soft); margin: -4px 0 10px; }
+  .ps-mode { display: grid; grid-template-columns: 1fr 1fr auto; margin-bottom: 8px; }
+  .ps-mode .segmented-option { padding: 8px 6px; font-size: 12px; line-height: 1.25; }
+  .ps-phase { border: 1px solid var(--border); border-radius: var(--radius); background: var(--stripe); padding: 9px; margin-bottom: 8px; }
+  .ps-phase.off { opacity: .55; }
+  .ps-phase-top { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .ps-phase-top input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--orange); }
+  .ps-phase input[type=text], .ps-phase input[type=number], .ps-phase textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius); font: inherit; font-size: 13px; background: #fff; }
+  .ps-phase .ps-name { font-weight: 600; }
+  .ps-phase textarea { min-height: 40px; resize: vertical; font-size: 12px; margin-bottom: 6px; }
+  .ps-phase-row { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 8px; align-items: start; }
+  .ps-phase-row:has(> :nth-child(3)) { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr) minmax(0,.9fr); }
+  .ps-phase-row label, .ps-rates label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft); margin-bottom: 4px; }
+  .ps-plan { display: grid; grid-template-columns: 1fr 1fr; }
+  .ps-plan .segmented-option { padding: 6px 4px; font-size: 12px; }
+  .ps-remove { background: none; border: 0; color: var(--ink-soft); font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; }
+  .ps-phase details { margin-top: 6px; } .ps-phase summary { cursor: pointer; font-size: 11px; color: var(--ink-soft); }
+  .ps-rates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+  .ps-calc { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); margin-top: 6px; }
+  .ps-calc b { color: var(--ink); font-weight: 600; }
+  .ps-note { font-size: 12px; margin: 0 0 12px; padding: 6px 10px; background: var(--gold-tint-soft); border-left: 3px solid var(--gold); }
+  .ps-note[hidden] { display: none; }
+  .ps-preview-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 6px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .ps-paper { background: #fff; color: #15191c; border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+  .ps-foot-link { margin-right: auto; font-size: 12px; font-weight: 600; color: var(--orange-dark); align-self: center; }
+  body.dark-mode .ps-phase { background:#1b1d20; border-color:#3b3f43 }
+  body.dark-mode .ps-calc b { color:#f1f3f4 }
+  body.dark-mode .ps-note { background:#2a2618; color:#f1f3f4 }
+  body.dark-mode .ps-group { border-color:#3b3f43 }
+  /* The preview is a paper document: it stays light in dark mode. */
+  .pss { --s-ink:#15191C; --s-muted:#5A646A; --s-line:#BFC7C9; --s-vis:#F2B705; color:var(--s-ink); background:#fff; font-family:'Inter',Arial,sans-serif; font-size:11px; line-height:1.38; padding:26px 28px; display:grid; gap:14px; }
+  .pss-head { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; border-bottom:3px solid var(--s-ink); padding-bottom:7px; flex-wrap:wrap; }
+  .pss-co { font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:.08em; text-transform:uppercase; font-size:12px; color:#e8622c; }
+  .pss-title { font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; line-height:1; margin:2px 0 0; text-transform:uppercase; }
+  .pss-issued { font-size:10px; color:var(--s-muted); text-align:right; display:grid; gap:2px; }
+  .pss-meta { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border:1px solid var(--s-line); margin:0; }
+  .pss-meta > div { padding:5px 8px; border-right:1px solid var(--s-line); border-bottom:1px solid var(--s-line); min-width:0; }
+  .pss-meta > div.last-col { border-right:0; } .pss-meta > div.last-row { border-bottom:0; }
+  .pss-meta dt { font-size:8.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--s-muted); font-weight:600; }
+  .pss-meta dd { margin:1px 0 0; font-weight:600; font-size:11.5px; min-height:16px; overflow-wrap:anywhere; }
+  .pss-meta dd.blank { border-bottom:1px solid var(--s-ink); }
+  .pss-meta .wide { grid-column:span 2; }
+  .pss-scroll { overflow-x:auto; }
+  .pss-table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; min-width:520px; }
+  .pss-table th { font-size:8.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--s-muted); text-align:left; font-weight:600; padding:4px 5px; border-bottom:2px solid var(--s-ink); background:none; }
+  .pss-table td { padding:6px 5px; border-bottom:1px solid var(--s-line); vertical-align:top; color:var(--s-ink); background:#fff; }
+  .pss-table .n { text-align:right; font-family:'IBM Plex Mono',monospace; font-size:11.5px; white-space:nowrap; }
+  .pss-table th.n { font-family:inherit; font-size:8.5px; }
+  .pss-table .num { font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; line-height:1; width:22px; }
+  .pss-table .pname { font-weight:600; font-size:11.5px; }
+  .pss-table .scope { color:var(--s-muted); font-size:10px; margin-top:1px; }
+  .pss-table .dates { display:block; font-size:9px; color:var(--s-muted); font-family:'Inter',Arial,sans-serif; }
+  .pss-empty { padding:16px; text-align:center; color:var(--s-muted); border:1px dashed var(--s-line); }
+  .pss-totals { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); background:var(--s-ink); color:#fff; }
+  .pss-totals > div { padding:7px 9px; border-right:1px solid rgba(255,255,255,.18); }
+  .pss-totals > div:last-child { border-right:0; }
+  .pss-totals .v { font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; line-height:1; }
+  .pss-totals .k { font-size:8.5px; text-transform:uppercase; letter-spacing:.09em; opacity:.8; margin-top:3px; }
+  .pss-lower { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:16px; align-items:start; }
+  .pss-h { font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.05em; font-size:14px; margin:0 0 5px; display:flex; align-items:center; gap:8px; color:var(--s-ink); }
+  .pss-stripe { flex:1; height:6px; background:repeating-linear-gradient(-45deg,var(--s-vis) 0 6px,var(--s-ink) 6px 12px); }
+  .pss-check { list-style:none; margin:0; padding:0; }
+  .pss-check li { display:grid; grid-template-columns:12px minmax(0,1fr) 36px; gap:7px; align-items:start; padding:4px 0; border-bottom:1px solid var(--s-line); }
+  .pss-check li.headrow { border-bottom:1px solid var(--s-ink); padding-top:0; font-size:8.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--s-muted); font-weight:600; }
+  .pss-box { width:10px; height:10px; border:1.5px solid var(--s-ink); margin-top:2px; }
+  .pss-init { border-bottom:1px solid var(--s-ink); height:13px; }
+  .pss-role { font-size:8.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--s-muted); font-weight:600; }
+  .pss-lines { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 56px; gap:7px; margin:0 0 10px; }
+  .pss-line { border-bottom:1px solid var(--s-ink); height:20px; }
+  .pss-cap { font-size:8.5px; color:var(--s-muted); margin-top:2px; }
+  .pss-complete { border:1.5px solid var(--s-ink); padding:7px 9px; }
+  .pss-foot { border-top:1px solid var(--s-line); padding-top:5px; font-size:9px; color:var(--s-muted); }
+  @media (max-width: 640px) { .pss { padding:16px 14px; } .pss-meta { grid-template-columns:repeat(2,minmax(0,1fr)); } .pss-totals { grid-template-columns:repeat(2,minmax(0,1fr)); } .pss-lower { grid-template-columns:minmax(0,1fr); } .ps-phase-row { grid-template-columns:minmax(0,1fr); } }
+  /* ---------- Schedule tab: interactive timeline ---------- */
+  .psv-gantt-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .psv-mode { display:inline-grid; grid-template-columns:repeat(3,auto); }
+  .psv-mode .segmented-option { padding:5px 10px; font-size:11px; }
+  .psv-hint { margin:-6px 0 0; font-size:12px; color:var(--ink-soft); }
+  .psv-gantt-label { display:flex; align-items:center; justify-content:flex-start; gap:6px; min-width:0; text-align:left; }
+  .psv-gantt-label > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .psv-grip { flex:none; background:none; border:0; padding:2px 3px; color:var(--grey-dark); cursor:grab; font-size:14px; line-height:1; border-radius:3px; touch-action:none; }
+  .psv-grip:hover { color:var(--ink); background:var(--stripe); }
+  .psv-grip:focus-visible, .psv-bar:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+  .psv-track { background: linear-gradient(to right, rgba(28,29,31,.07) 1px, transparent 1px) 0 0 / calc(100% / var(--days)) 100%, var(--stripe); }
+  .psv-bar { cursor:grab; touch-action:none; user-select:none; padding:0 12px; transition:left .12s ease, width .12s ease; }
+  .psv-bar-text { pointer-events:none; overflow:hidden; text-overflow:ellipsis; }
+  .psv-h { position:absolute; top:0; bottom:0; width:9px; cursor:ew-resize; }
+  .psv-h.l { left:0; } .psv-h.r { right:0; }
+  .psv-h::after { content:''; position:absolute; top:6px; bottom:6px; width:2px; border-radius:1px; background:rgba(255,255,255,.75); opacity:0; transition:opacity .12s ease; }
+  .psv-h.l::after { left:3px; } .psv-h.r::after { right:3px; }
+  .psv-bar:hover .psv-h::after, .psv-bar:focus-visible .psv-h::after { opacity:1; }
+  .psv-gantt.dragging { user-select:none; }
+  .psv-gantt.dragging .psv-bar { transition:none; }
+  .psv-gantt.drag-move, .psv-gantt.drag-move .psv-bar, .psv-gantt.drag-reorder, .psv-gantt.drag-reorder .psv-grip { cursor:grabbing; }
+  .psv-gantt.drag-left, .psv-gantt.drag-right, .psv-gantt.drag-left .psv-bar, .psv-gantt.drag-right .psv-bar { cursor:ew-resize; }
+  .psv-gantt-row.active .psv-bar { box-shadow:0 0 0 2px var(--ink), 0 4px 10px rgba(0,0,0,.2); }
+  .psv-gantt-row.active .psv-gantt-label { color:var(--orange-dark); }
+  .psv-chip.dirty { background:var(--orange-tint); color:var(--orange-dark); }
+  body.dark-mode .psv-chip.dirty { background:#3a2418; color:#f0a47a; }
+  body.dark-mode .psv-track { background: linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px) 0 0 / calc(100% / var(--days)) 100%, #1b1d20; }
+  body.dark-mode .psv-grip { color:#8a9096; } body.dark-mode .psv-grip:hover { background:#303438; color:#f1f3f4; }
+  body.dark-mode .psv-gantt-row.active .psv-bar { box-shadow:0 0 0 2px #f1f3f4; }
+  @media (max-width: 760px) { .psv-bar { padding:0 8px; } .psv-h { width:12px; } }
+  /* ---------- Schedule tab ---------- */
+  #scheduleDispatchView { padding: 18px 24px 30px; }
+  .psv-head { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .psv-head h2 { margin:0; font-size:18px; }
+  .psv-head p { margin:2px 0 0; color:var(--ink-soft); font-size:13px; }
+  .psv-head-actions { display:flex; gap:10px; align-items:center; font-size:12px; color:var(--ink-soft); }
+  .psv-head-actions a { color:var(--orange-dark); font-weight:600; }
+  .psv-empty { background:var(--card); border:1px dashed var(--border); padding:28px; text-align:center; color:var(--ink-soft); border-radius:8px; }
+  .psv-job { background:var(--card); border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+  .psv-job summary { list-style:none; cursor:pointer; display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; gap:14px; align-items:center; padding:13px 16px; }
+  .psv-job summary::-webkit-details-marker { display:none; }
+  .psv-job summary:hover { background:var(--orange-tint-soft); }
+  .psv-job summary:focus-visible { outline:2px solid var(--orange); outline-offset:-2px; }
+  .psv-caret { width:8px; height:8px; border-right:2px solid var(--ink-soft); border-bottom:2px solid var(--ink-soft); transform:rotate(-45deg); transition:transform .15s ease; }
+  .psv-job[open] .psv-caret { transform:rotate(45deg); }
+  .psv-title { display:grid; min-width:0; } .psv-title b { font-weight:600; } .psv-title span { color:var(--ink-soft); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .psv-stats { font-size:12px; color:var(--ink-soft); white-space:nowrap; font-variant-numeric:tabular-nums; } .psv-stats b { color:var(--ink); }
+  .psv-chip { font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+  .psv-chip.none { background:var(--stripe); color:var(--ink-soft); }
+  .psv-chip.saved { background:var(--gold-tint); color:#7a5f0c; }
+  .psv-chip.sent { background:#dcefe3; color:#1f6b43; }
+  .psv-body { border-top:1px solid var(--border); padding:16px; display:grid; gap:14px; }
+  .psv-body h4 { margin:0; font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); }
+  .psv-empty-note { margin:0; color:var(--ink-soft); font-size:13px; }
+  .psv-totals { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+  .psv-totals > div { border:1px solid var(--border); border-radius:6px; padding:10px 12px; text-align:center; }
+  .psv-totals b { display:block; font-family:'Oswald',sans-serif; font-size:26px; line-height:1.1; color:var(--orange-dark); }
+  .psv-totals span { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); font-weight:600; }
+  .psv-gantt { display:grid; gap:6px; }
+  .psv-gantt-row { display:grid; grid-template-columns:150px minmax(0,1fr); gap:10px; align-items:center; }
+  .psv-gantt-label { font-size:12px; font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .psv-axis-row { align-items:end; }
+  .psv-axis { position:relative; height:30px; border-bottom:1px solid var(--border); }
+  .psv-tick { position:absolute; bottom:3px; font-size:10px; color:var(--ink-soft); line-height:1.15; padding-left:4px; border-left:1px solid var(--border); white-space:nowrap; }
+  .psv-tick em { display:block; font-style:normal; font-size:9px; opacity:.8; }
+  .psv-track { position:relative; height:24px; background:var(--stripe); border-radius:4px; }
+  .psv-bar { position:absolute; top:0; bottom:0; border-radius:4px; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; padding:0 7px; overflow:hidden; white-space:nowrap; min-width:22px; box-shadow:inset 0 -2px 0 rgba(0,0,0,.12); }
+  .psv-table-wrap { overflow-x:auto; }
+  .psv-table { width:100%; border-collapse:collapse; font-size:13px; min-width:520px; }
+  .psv-table th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:6px 8px; border-bottom:2px solid var(--ink); }
+  .psv-table td { padding:7px 8px; border-bottom:1px solid var(--stripe); vertical-align:top; }
+  .psv-table .n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .psv-table small { display:block; font-size:10px; color:var(--ink-soft); }
+  .psv-dot { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:7px; vertical-align:0; }
+  .psv-meta { margin:0; font-size:12px; color:var(--ink-soft); }
+  .psv-actions { display:flex; gap:10px; flex-wrap:wrap; }
+  .psv-actions .btn-ghost { color:var(--ink-soft); border-color:var(--border); text-decoration:none; display:inline-flex; align-items:center; }
+  @media (max-width: 760px) {
+    #scheduleDispatchView { padding:12px 10px 24px; }
+    .psv-job summary { grid-template-columns:auto minmax(0,1fr); }
+    .psv-job summary .psv-stats, .psv-job summary .psv-chip { grid-column:2; justify-self:start; white-space:normal; }
+    .psv-totals { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .psv-gantt-row { grid-template-columns:86px minmax(0,1fr); }
+  }
+  body.dark-mode .psv-job, body.dark-mode .psv-empty { background:#222427; border-color:#3b3f43; }
+  body.dark-mode .psv-job summary:hover { background:#2b2622; }
+  body.dark-mode .psv-body, body.dark-mode .psv-totals > div, body.dark-mode .psv-axis, body.dark-mode .psv-tick { border-color:#3b3f43; }
+  body.dark-mode .psv-track { background:#1b1d20; }
+  body.dark-mode .psv-totals b { color:#f0915f; }
+  body.dark-mode .psv-table th { border-color:#f1f3f4; } body.dark-mode .psv-table td { border-color:#33373b; }
+  body.dark-mode .psv-chip.none { background:#303438; color:#b8bdc2; }
+  body.dark-mode .psv-chip.saved { background:#3a321f; color:#f4d36b; }
+  body.dark-mode .psv-chip.sent { background:#1d3528; color:#8fd6ab; }
+  body.dark-mode .psv-stats b, body.dark-mode .psv-title b { color:#f1f3f4; }
 </style>
 </head>
 <body>
@@ -894,6 +1093,7 @@
 <div class="dispatch-view-tabs" role="tablist" aria-label="Dispatch views">
   <button class="dispatch-view-tab active" id="laborViewTab" data-view="labor" role="tab" aria-selected="true">Labor Dispatch</button>
   <button class="dispatch-view-tab" id="logisticsViewTab" data-view="logistics" role="tab" aria-selected="false">Logistics</button>
+  <button class="dispatch-view-tab" id="scheduleViewTab" data-view="schedule" role="tab" aria-selected="false">Schedule</button>
 </div>
 
 <div class="dispatch-view" id="laborDispatchView">
@@ -958,6 +1158,14 @@
     </div>
   </div>
 </div>
+</div>
+
+<div class="dispatch-view" id="scheduleDispatchView" hidden>
+  <div class="psv-head">
+    <div><h2>Project Schedules</h2><p>Contract (Demo) jobs. Expand a job to see its phases and timeline.</p></div>
+    <div class="psv-head-actions"><span id="psViewCount"></span><a href="/api/project-schedule?blank=1" target="_blank" rel="noopener">Blank PDF</a></div>
+  </div>
+  <div id="psList"></div>
 </div>
 
 <div class="dispatch-view" id="logisticsDispatchView" hidden>
@@ -1095,6 +1303,13 @@
         <input type="time" id="jobEndTime">
       </div>
     </div>
+    <div class="field night-field">
+      <label class="night-toggle" for="jobNightWork">
+        <span class="split-day-switch"><input type="checkbox" id="jobNightWork"><span class="split-day-slider"></span></span>
+        <span class="night-toggle-text"><b>Night work</b><span>PM start, finishes the next morning. The end date rolls to the next day for you.</span></span>
+      </label>
+      <p class="night-hint" id="jobNightWorkHint" hidden></p>
+    </div>
     <div class="field">
       <label for="scopeWork">Scope of Work</label>
       <textarea id="scopeWork" placeholder="Sequenced scope, work order..."></textarea>
@@ -1174,6 +1389,13 @@
         <option value="net-60">net-60</option>
       </select>
     </div>
+    <div class="field night-field">
+      <label class="night-toggle" for="editNightWork">
+        <span class="split-day-switch"><input type="checkbox" id="editNightWork"><span class="split-day-slider"></span></span>
+        <span class="night-toggle-text"><b>Night work</b><span>PM start, finishes the next morning. Report times on the board can then end after midnight.</span></span>
+      </label>
+      <p class="night-hint" id="editNightWorkHint" hidden></p>
+    </div>
     <div class="field">
       <label for="editScopeWork">Scope of Work</label>
       <textarea id="editScopeWork" placeholder="Sequenced scope, work order..."></textarea>
@@ -1251,6 +1473,64 @@
     <button class="btn-ghost" id="clearEodSheet" style="color:var(--ink-soft); border-color:var(--border); margin-right:auto;">Clear sheet</button>
     <button class="btn-ghost" id="cancelEodSheet" style="color:var(--ink-soft); border-color:var(--border);">Close</button>
     <button class="btn-primary" id="submitEodSheet">Submit EOD Sheet</button>
+  </div>
+</div>
+
+<!-- Project Schedule: Contract (Demo) jobs only. Phase-by-phase crew, work
+     days and dumpster loads, a safety checklist and sign-off. Submitting
+     posts to /api/project-schedule, which draws the PDF and sends it to Make
+     as a binary file (multipart field "file"). Drafts stay on this device. -->
+<div class="overlay" id="psOverlay"></div>
+<div class="sheet ps-sheet" id="psSheet" aria-labelledby="psTitle">
+  <div class="sheet-head">
+    <h2 id="psTitle">Project Schedule</h2>
+    <button id="closePsSheet" aria-label="Close">&times;</button>
+  </div>
+  <div class="sheet-body">
+    <p class="ps-note" id="psNote" hidden></p>
+    <div class="ps-layout">
+      <form class="ps-editor" id="psForm" autocomplete="off">
+        <div class="field"><label for="psJobName">Job</label><input type="text" id="psJobName" maxlength="150"></div>
+        <div class="field"><label for="psJobAddr">Site address</label><input type="text" id="psJobAddr" maxlength="200"></div>
+        <div class="field-row">
+          <div class="field"><label for="psStart">Job start date</label><input type="date" id="psStart"></div>
+          <div class="field"><label for="psSf">Building size (SF)</label><input type="number" id="psSf" min="0" step="100" inputmode="numeric" placeholder="e.g. 17000"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="psDumpSize">Dumpster size (yd³)</label><input type="number" id="psDumpSize" min="1" step="1" inputmode="numeric"></div>
+          <div class="field"><label for="psUsable">Usable capacity (yd³)</label><input type="number" id="psUsable" min="1" step="1" inputmode="numeric"></div>
+        </div>
+        <div class="ps-group">
+          <h3>Schedule mode</h3>
+          <div class="segmented ps-mode" id="psMode" role="group" aria-label="Schedule mode">
+            <button type="button" class="segmented-option" data-mode="seq">One crew, in order</button>
+            <button type="button" class="segmented-option" data-mode="par">Separate crews at once</button>
+            <button type="button" class="segmented-option" data-mode="custom">Custom</button>
+          </div>
+          <p class="ps-hint" id="psModeHint"></p>
+        </div>
+        <div class="ps-group">
+          <h3>Phases <button type="button" class="job-stage-btn edit" id="psAddPhase">+ Add phase</button></h3>
+          <p class="ps-hint">Set the crew and the days follow, or set the days and see the crew it takes.</p>
+          <div id="psPhases"></div>
+        </div>
+        <div class="ps-group">
+          <h3>Safety &amp; PPE checklist</h3>
+          <div class="field"><label for="psSafety">One check per line</label><textarea id="psSafety" rows="7"></textarea></div>
+        </div>
+      </form>
+      <div>
+        <div class="ps-preview-label"><span>Preview · this is what goes in the PDF</span><span id="psBasis"></span></div>
+        <div class="ps-paper"><article class="pss" id="psPreview" aria-label="Project schedule preview"></article></div>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <a class="ps-foot-link" href="/api/project-schedule?blank=1" target="_blank" rel="noopener">Blank PDF</a>
+    <button class="btn-ghost" id="resetPsSheet" style="color:var(--ink-soft); border-color:var(--border);">Reset to defaults</button>
+    <button class="btn-ghost" id="cancelPsSheet" style="color:var(--ink-soft); border-color:var(--border);">Close</button>
+    <button class="btn-ghost" id="savePsSheet" style="color:var(--ink); border-color:var(--grey-dark);">Save</button>
+    <button class="btn-primary" id="submitPsSheet">Submit</button>
   </div>
 </div>
 
@@ -1599,6 +1879,40 @@ function getReportEndTime(job) {
   return normalizeTimeForInput(getCustomFieldValue(job.customFields, REPORT_END_TIME_FIELD_ID) || job.reportEndTime || '');
 }
 
+// Night work: PM start, next-morning finish.
+function getNightWork(job) {
+  const shared = getSharedState(job);
+  return !!(shared && (shared.nightWork === true || shared.nightWork === 'true'));
+}
+function addDaysYMD(ymd, n) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || ''); if (!m) return ymd;
+  const d = new Date(+m[1], +m[2] - 1, +m[3] + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// On a night shift an end time at or before the start time means the next morning,
+// so a blank or same-day end date rolls forward one day. An explicit later date is kept.
+function nightEndDate(startDate, startTime, endDate, endTime, night) {
+  const end = endDate || startDate;
+  if (night && startDate && startTime && endTime && end === startDate && endTime <= startTime) return addDaysYMD(startDate, 1);
+  return end;
+}
+function describeNightEnd(startDate, startTime, endDate, endTime) {
+  const rolled = nightEndDate(startDate, startTime, endDate, endTime, true);
+  if (!startDate || !startTime || !endTime) return { text: 'Set the report and end times. An end time earlier than the start means the next morning.', bad: false };
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rolled); const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  const [h, mi] = endTime.split(':').map(Number);
+  const clock = new Date(2000, 0, 1, h, mi).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const bad = parseJobDateTime(rolled, endTime) <= parseJobDateTime(startDate, startTime);
+  return { text: bad ? 'End has to be after the start.' : `Ends ${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${clock}${rolled !== startDate ? ' (next morning)' : ''}.`, bad };
+}
+function updateNightHint(toggleId, startDate, startTime, endDate, endTime) {
+  const hint = document.getElementById(toggleId + 'Hint'); if (!hint) return;
+  const on = document.getElementById(toggleId).checked;
+  hint.hidden = !on; if (!on) return;
+  const info = describeNightEnd(startDate, startTime, endDate, endTime);
+  hint.textContent = info.text; hint.classList.toggle('bad', info.bad);
+}
+
 function getReportEndDate(job) {
   const shared = getSharedState(job);
   if (shared && Object.hasOwn(shared, 'reportEndDate')) return normalizeDateForInput(shared.reportEndDate);
@@ -1861,6 +2175,7 @@ function render() {
 
   renderRoster();
   renderJobs(jobs);
+  if (typeof renderScheduleView === 'function') renderScheduleView();
 }
 
 function renderRoster() {
@@ -2214,6 +2529,7 @@ function renderJobs(jobs) {
     const reportTimeVal = getReportTime(j);
     const endDateVal = getReportEndDate(j);
     const endTimeVal = getReportEndTime(j);
+    const nightWork = getNightWork(j);
 
     const reportCell = timesLocked
       ? `
@@ -2231,7 +2547,7 @@ function renderJobs(jobs) {
     const endCell = timesLocked
       ? `
       <div class="time-edit-wrap locked" data-job-id="${jobId}">
-        <span class="time-locked-display mono">${endDateVal || '—'} ${endTimeVal || ''}</span>
+        <span class="time-locked-display mono">${endDateVal || '—'} ${endTimeVal || ''}</span>${nightWork ? '<span class="night-badge" title="Night work: PM start, next-morning finish">Night</span>' : ''}
         <button type="button" class="time-unlock" title="Unlock to edit report/end time">Edit</button>
       </div>
     `
@@ -2239,6 +2555,7 @@ function renderJobs(jobs) {
       <div class="time-edit-wrap" data-job-id="${jobId}">
         <input type="date" class="end-date-input mono" value="${endDateVal}">
         <input type="time" class="end-time-input mono" value="${endTimeVal}">
+        <label class="night-inline" title="Night work: an end time earlier than the start rolls to the next morning"><input type="checkbox" class="night-input"${nightWork ? ' checked' : ''}> Night</label>
         <button type="button" class="end-save" title="Save report and end date/time">Save</button>
       </div>
     `;
@@ -2263,6 +2580,7 @@ function renderJobs(jobs) {
           <span class="status-tag ${statusClass}">${statusLabel}</span>
           ${terminalLocally ? '' : `<div class="job-stage-actions">
             <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">Edit Details</button>
+            ${isHourlyJob(j) ? '' : `<button type="button" class="job-stage-btn schedule${(psSchedules[jobId] || {}).sentAt ? ' sent' : ''}" data-job-id="${jobId}" title="Project Schedule for this contract job">Project Schedule</button>`}
             <button type="button" class="job-stage-btn reset" data-job-id="${jobId}">Complete EOD Sheet</button>
             <button type="button" class="job-stage-btn complete" data-job-id="${jobId}">Completed</button>
             <button type="button" class="job-stage-btn cancel" data-job-id="${jobId}">Cancelled</button>
@@ -2342,6 +2660,7 @@ async function assignCrew(jobId, workers, confirmBtn) {
   const payload = { action: 'assign', jobId, jobAddress: job.name || '', clientName: getClientName(job), clientPhone: getClientPhone(job),
     scopeOfWork: getScopeOfWork(job), toolsRequired: getToolsRequired(job), monetaryValue: getOpportunityValue(job),
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
+    nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day',
     assignedWorkers: selected.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone })) };
   confirmBtn.disabled = true; const label = confirmBtn.textContent; confirmBtn.textContent = 'Assigning...';
   try {
@@ -2374,9 +2693,14 @@ async function setJobStage(jobId, action, btn) {
   if (!jobId || !['complete', 'cancel'].includes(action)) return;
   if (!confirm(`Mark this job ${action === 'complete' ? 'completed' : 'cancelled'}?`)) return;
   btn.disabled = true;
+  // Read the schedule before closing: completion clears the crew on the board.
+  const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId) || {};
+  const night = getNightWork(job);
+  const stagePayload = { action, jobId, opportunityId: jobId, nightWork: night, shiftType: night ? 'night' : 'day',
+    reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job) };
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action, jobId });
-    await runSideEffect(CONFIG.CREATE_JOB_URL, { action, jobId, opportunityId: jobId }, 'GHL job stage update');
+    await runSideEffect(CONFIG.CREATE_JOB_URL, stagePayload, 'GHL job stage update');
     render(); showToast('Job closed.');
   } catch (error) { showToast(error.message, true); }
   finally { btn.disabled = false; }
@@ -2402,7 +2726,7 @@ async function resetJobDay(jobId, btn, eodSheet) {
       // EOD flow sends ONLY the eod_sheet event -- no separate "remove" call.
       // The crew being released rides along in removedWorkers so Make can
       // handle any release notifications inside the eod_sheet route.
-      const sheetPayload = { ...eodSheet, action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
+      const sheetPayload = { ...eodSheet, action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day', crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
       try { await runSideEffect(CONFIG.EOD_SHEET_URL, sanitizeEodPayload(sheetPayload), 'EOD sheet', 'eod_sheet'); }
       catch (error) { problems.push(error.message); }
     } else if (removedWorkers.length) {
@@ -2752,10 +3076,12 @@ document.getElementById('submitEodSheet').addEventListener('click', async () => 
 });
 
 
-async function saveJobTimes(jobId, reportDate, reportTime, endDate, endTime, saveBtn) {
+async function saveJobTimes(jobId, reportDate, reportTime, endDate, endTime, saveBtn, nightWork = false) {
+  const start = parseJobDateTime(reportDate, reportTime), end = parseJobDateTime(endDate, endTime);
+  if (start && end && end <= start) { showToast(nightWork ? 'End has to be after the start.' : 'End time must be after the start. Working overnight? Tick Night.', true); return; }
   const original = saveBtn.textContent; saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
   try {
-    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'save_times', jobId, reportDate, reportTime, reportEndDate: endDate, reportEndTime: endTime });
+    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'save_times', jobId, reportDate, reportTime, reportEndDate: endDate, reportEndTime: endTime, nightWork });
     delete window.jobTimesLocked[jobId];
     render(); showToast('Report and end times saved.');
   } catch (error) { showToast(error.message, true); }
@@ -2844,7 +3170,9 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
     const reportTimeInput = reportWrap.querySelector('.report-time-input');
     const endDateInput = endWrap.querySelector('.end-date-input');
     const endTimeInput = endWrap.querySelector('.end-time-input');
-    saveJobTimes(jobId, reportDateInput.value, reportTimeInput.value, endDateInput.value, endTimeInput.value, endSaveBtn);
+    const night = !!endWrap.querySelector('.night-input')?.checked;
+    const endDate = nightEndDate(reportDateInput.value, reportTimeInput.value, endDateInput.value, endTimeInput.value, night);
+    saveJobTimes(jobId, reportDateInput.value, reportTimeInput.value, endDate, endTimeInput.value, endSaveBtn, night);
     return;
   }
 
@@ -2951,6 +3279,12 @@ function closeSheetFn() {
   sheet.classList.remove('open');
 }
 
+function refreshBookNightHint() {
+  updateNightHint('jobNightWork', document.getElementById('jobDate').value, document.getElementById('jobTime').value,
+    document.getElementById('jobEndDate').value, document.getElementById('jobEndTime').value);
+}
+['jobDate', 'jobTime', 'jobEndDate', 'jobEndTime', 'jobNightWork'].forEach(id => document.getElementById(id).addEventListener('input', refreshBookNightHint));
+document.getElementById('jobNightWork').addEventListener('change', refreshBookNightHint);
 document.getElementById('newJobBtn').addEventListener('click', openSheet);
 document.getElementById('emptyBookBtn').addEventListener('click', openSheet);
 document.getElementById('closeSheet').addEventListener('click', closeSheetFn);
@@ -3007,7 +3341,8 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     pipelineId: JOB_PIPELINE_IDS[jobType],
     reportDate: reportDateVal,
     reportTime: document.getElementById('jobTime').value,
-    reportEndDate: jobEndDateVal || reportDateVal,
+    nightWork: document.getElementById('jobNightWork').checked,
+    reportEndDate: nightEndDate(reportDateVal, document.getElementById('jobTime').value, jobEndDateVal, document.getElementById('jobEndTime').value, document.getElementById('jobNightWork').checked),
     reportEndTime: document.getElementById('jobEndTime').value,
     scopeOfWork: document.getElementById('scopeWork').value.trim(),
     toolsRequired: Array.from(document.querySelectorAll('#toolsGrid input:checked')).map(c => c.value),
@@ -3066,9 +3401,10 @@ document.getElementById('submitBook').addEventListener('click', async () => {
   const bookStartDT = parseJobDateTime(payload.reportDate, payload.reportTime);
   const bookEndDT = parseJobDateTime(payload.reportEndDate, payload.reportEndTime);
   if (bookStartDT && bookEndDT && bookEndDT <= bookStartDT) {
-    showToast("End time must be after the report start time.", true);
+    showToast(payload.nightWork ? "End has to be after the start." : "End time must be after the report start time. Working overnight? Turn on Night work.", true);
     return;
   }
+  payload.shiftType = payload.nightWork ? 'night' : 'day';
 
   if (!payload.clientPhone || !/^\+1\d{10}$/.test(payload.clientPhone)) {
     showToast("Client phone must be in +15555555555 format.", true);
@@ -3226,6 +3562,8 @@ function openEditJobSheet(jobId) {
   document.getElementById('editJobValue').value = (currentValue === null || currentValue === undefined) ? '' : currentValue;
   document.getElementById('editPaymentTerms').value = getPaymentTerms(job);
   document.getElementById('editScopeWork').value = getScopeOfWork(job) || '';
+  document.getElementById('editNightWork').checked = getNightWork(job);
+  updateNightHint('editNightWork', getReportDate(job), getReportTime(job), getReportEndDate(job), getReportEndTime(job));
 
   const currentTools = getToolsRequired(job).split(',').map(t => t.trim()).filter(Boolean);
   document.querySelectorAll('#editToolsGrid input[type="checkbox"]').forEach(cb => {
@@ -3276,6 +3614,10 @@ document.getElementById('editCrewPlus').addEventListener('click', () => {
   document.getElementById('editCrewCount').textContent = editCrewSize;
 });
 
+document.getElementById('editNightWork').addEventListener('change', () => {
+  const job = (dashboardData.jobs || []).find(j => (j.id || '') === currentEditJobId); if (!job) return;
+  updateNightHint('editNightWork', getReportDate(job), getReportTime(job), getReportEndDate(job), getReportEndTime(job));
+});
 document.getElementById('submitEditJob').addEventListener('click', async () => {
   if (!currentEditJobId) return;
   const jobId = currentEditJobId;
@@ -3331,7 +3673,10 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
     toolsRequired,
     monetaryValue,
     paymentTerms,
-    crewSize: editCrewSize
+    crewSize: editCrewSize,
+    nightWork: document.getElementById('editNightWork').checked,
+    shiftType: document.getElementById('editNightWork').checked ? 'night' : 'day',
+    reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job)
   };
 
   try {
@@ -4274,14 +4619,19 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
 });
 
 document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListener('click', () => {
-  const logistics = tab.dataset.view === 'logistics';
+  const view = tab.dataset.view, logistics = view === 'logistics';
   document.querySelectorAll('.dispatch-view-tab').forEach(btn => { btn.classList.toggle('active', btn === tab); btn.setAttribute('aria-selected', btn === tab ? 'true' : 'false'); });
-  document.getElementById('laborDispatchView').hidden = logistics;
+  document.getElementById('laborDispatchView').hidden = view !== 'labor';
   document.getElementById('logisticsDispatchView').hidden = !logistics;
+  document.getElementById('scheduleDispatchView').hidden = view !== 'schedule';
   if (logistics && !logisticsLoaded) loadLogistics();
+  if (view === 'schedule') { renderScheduleView(); loadProjectSchedules(); }
 }));
 document.getElementById('logisticsSourceFilter').addEventListener('change', renderLogistics);
-document.getElementById('refreshBtn').addEventListener('click', () => document.getElementById('logisticsDispatchView').hidden ? refreshAll() : loadLogistics());
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  if (!document.getElementById('logisticsDispatchView').hidden) return loadLogistics();
+  refreshAll(); loadProjectSchedules();
+});
 
 const themeToggle = document.getElementById('themeToggle');
 function applyDashboardTheme(dark) {
@@ -4397,7 +4747,7 @@ async function runSideEffect(url, payload, label, kindOverride) {
   }
 }
 function editingDispatch() {
-  return stateMutations > 0 || document.querySelector('.overlay.open') || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) ||
+  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) ||
     Object.values(window.jobTimesLocked || {}).some(v => v === false) || Object.values(window.logisticsScheduleOverride || {}).some(v => v.locked === false);
 }
 async function pollSharedState() {
@@ -4419,10 +4769,598 @@ async function pollSharedState() {
   finally { sharedPollBusy = false; }
 }
 
+/* ============================================================
+   PROJECT SCHEDULE (Contract jobs) + SCHEDULE TAB
+   Same four formulas as lib/project-schedule.mjs (the server recomputes
+   everything before drawing the PDF, so these only drive the live preview).
+   ============================================================ */
+const PS_URL = '/api/project-schedule';
+const PS_COMPANY = 'A2Z Construction Services';
+const PS_DEFAULT_PHASES = [
+  { name: 'Furniture & Debris Removal', scope: 'Clear all furniture, fixtures, loose debris, and abandoned contents from the floor.', rate: 3500, yld: 1.5, plan: 'crew', crew: 3, days: 2 },
+  { name: 'Drywall Removal', scope: 'Strip gypsum board from walls and ceilings down to the studs and haul it out.', rate: 800, yld: 3.5, plan: 'crew', crew: 4, days: 6 },
+  { name: 'MEP Removal', scope: 'Pull de-energized electrical, plumbing, and HVAC runs, fixtures, and ductwork.', rate: 700, yld: 1.2, plan: 'crew', crew: 4, days: 7 },
+  { name: 'Stud Cleaning', scope: 'Remove screws, clips, and remnant board so studs and track are left clean.', rate: 1200, yld: 0.1, plan: 'crew', crew: 3, days: 5 },
+  { name: 'Flooring Removal', scope: 'Take up carpet, tile, VCT, and adhesive down to the slab or subfloor.', rate: 900, yld: 1.3, plan: 'crew', crew: 3, days: 7 }
+];
+const PS_DEFAULT_SAFETY = [
+  'Utilities disconnected and verified dead: electrical locked out, water and gas capped',
+  'Hazardous materials survey reviewed; no suspect asbestos or lead left in the work area',
+  'PPE on every worker: hard hat, safety glasses, cut-resistant gloves, safety-toe boots',
+  'Respirators (N95 minimum) issued for drywall and flooring removal',
+  'Dust control set up: poly barriers at openings, misting on, HEPA vac on site',
+  'Floor sweeps at end of every shift; walkways, stairs, and exits kept clear',
+  'Dumpster placed, swap schedule confirmed with hauler, chute or path protected',
+  'Ladders inspected; fire extinguisher and first aid kit on the floor'
+].join('\n');
+const PS_COLORS = ['#4f87b7', '#e8622c', '#3e9b6e', '#c9a227', '#c2527e', '#7a6bb5', '#2f8f9d', '#8a6d3b'];
+const PS_DRAFT_PREFIX = 'psDraft:';
+let psSchedules = {};        // jobId -> saved record from the server
+let psSchedulesLoaded = false;
+let psState = null;          // the sheet being edited: { jobId, version, input }
+let psUid = 0;
+const psOpenJobs = new Set(); // expanded rows on the Schedule tab
+const psEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const psNum = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const psFmt = (n, d = 0) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+function psCalc(p, sf, usable) {
+  const rate = psNum(p.rate);
+  const pd = rate > 0 ? sf / rate : 0;                       // person-days
+  let crew, days;
+  if (p.plan === 'days') {
+    const target = Math.max(1, Math.round(psNum(p.days)) || 1);
+    crew = pd > 0 ? Math.ceil(pd / target) : 0;               // crew worked backward to fit the days
+    days = pd > 0 ? target : 0;
+  } else {
+    crew = Math.max(1, Math.round(psNum(p.crew)) || 1);
+    days = pd > 0 ? Math.ceil(pd / crew) : 0;                  // work days, rounded up
+  }
+  const debris = (sf / 1000) * psNum(p.yld);
+  const loads = usable > 0 && debris > 0 ? Math.ceil(debris / usable) : 0;
+  return { pd, crew, days, debris, loads };
+}
+const psModeLabel = m => m === 'par' ? 'Separate crews at once' : m === 'custom' ? 'Custom (set on the timeline)' : 'One crew, in order';
+function psBuild(input) {
+  const sf = Math.max(0, psNum(input.sf)), usable = psNum(input.usable), mode = input.mode;
+  let cursor = 0;
+  const rows = (input.phases || []).filter(p => p.on !== false).map(p => {
+    const c = psCalc(p, sf, usable);
+    let from = 0, to = 0;
+    if (c.days) {
+      from = mode === 'par' ? 1 : mode === 'custom' ? Math.max(1, Math.round(psNum(p.startDay)) || 1) : cursor + 1;
+      to = from + c.days - 1;
+      if (mode !== 'par' && mode !== 'custom') cursor = to;
+    }
+    return { p, ...c, from, to };
+  });
+  const workdays = Math.max(0, ...rows.map(r => r.to));
+  let peak = 0;
+  for (let d = 1; d <= workdays; d++) peak = Math.max(peak, rows.reduce((a, r) => a + (r.days && r.from <= d && d <= r.to ? r.crew : 0), 0));
+  return { rows, workdays, peak, loads: rows.reduce((a, r) => a + r.loads, 0), crewDays: rows.reduce((a, r) => a + r.crew * r.days, 0) };
+}
+function psParse(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function psWorkday(start, n) { // n = 1-based workday, Mon-Fri
+  const d = new Date(start); const wk = () => d.getDay() === 0 || d.getDay() === 6;
+  while (wk()) d.setDate(d.getDate() + 1);
+  for (let left = n - 1; left > 0;) { d.setDate(d.getDate() + 1); if (!wk()) left--; }
+  return d;
+}
+const psShort = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+const psLong = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+const psMonthDay = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const psWithIds = phases => (phases || []).map(p => ({ ...p, id: 'ps' + (++psUid), on: p.on !== false }));
+
+function psDefaultsFor(job) {
+  return {
+    company: PS_COMPANY, jobName: [getClientName(job), job.name].filter(Boolean).join(' - '), jobAddr: job.name || '',
+    clientName: getClientName(job), start: (typeof getReportDate === 'function' && getReportDate(job)) || '',
+    sf: '', dumpSize: 30, usable: 25, mode: 'seq', phases: psWithIds(PS_DEFAULT_PHASES), safety: PS_DEFAULT_SAFETY
+  };
+}
+function psFromRecord(record) {
+  const input = record.input || {};
+  return { ...input, safety: Array.isArray(input.safety) ? input.safety.join('\n') : (input.safety || ''), phases: psWithIds(input.phases) };
+}
+function psPayload(input) {
+  return { ...input, safety: String(input.safety || '').split('\n').map(s => s.trim()).filter(Boolean),
+    phases: input.phases.map(({ id, ...p }) => p) };
+}
+
+/* ---------- Server ---------- */
+async function loadProjectSchedules() {
+  try {
+    const data = await fetchJsonStrict(PS_URL, 'Project schedules');
+    psSchedules = Object.fromEntries((data.schedules || []).map(r => [r.jobId, r]));
+    psSchedulesLoaded = true;
+  } catch (err) {
+    console.warn('Project schedules failed to load:', err);
+    if (!document.getElementById('scheduleDispatchView').hidden) showToast('Could not load project schedules. Try Refresh.', true);
+  }
+  psRefreshButtons(); renderScheduleView();
+}
+function psRefreshButtons() {
+  document.querySelectorAll('.job-stage-btn.schedule').forEach(btn => btn.classList.toggle('sent', !!(psSchedules[btn.dataset.jobId] || {}).sentAt));
+}
+async function psPostSchedule(jobId, version, input, action) {
+  const res = await fetchWithTimeout(PS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ action, expectedVersion: version, jobId, ...psPayload(input) }) }, 45000);
+  const data = await res.json().catch(() => ({}));
+  if (data.record) { psSchedules[jobId] = data.record; psClearDraft(jobId); delete psTab[jobId]; }
+  if (!res.ok || !data.ok) { const err = new Error(data.error || `Project Schedule could not be saved (HTTP ${res.status}).`); err.record = data.record; throw err; }
+  return data.record;
+}
+async function psPost(action) {
+  try { return await psPostSchedule(psState.jobId, psState.version, psState.input, action); }
+  catch (err) { if (err.record) psState.version = err.record.version; throw err; }
+}
+
+/* ---------- Drafts on this device until saved ---------- */
+function psSaveDraft() {
+  if (!psState) return;
+  try { localStorage.setItem(PS_DRAFT_PREFIX + psState.jobId, JSON.stringify({ input: psState.input, baseVersion: psState.version, savedAt: Date.now() })); } catch {}
+}
+function psReadDraft(jobId) { try { const d = JSON.parse(localStorage.getItem(PS_DRAFT_PREFIX + jobId) || 'null'); return d && d.input ? d : null; } catch { return null; } }
+function psClearDraft(jobId) { try { localStorage.removeItem(PS_DRAFT_PREFIX + jobId); } catch {} }
+
+/* ---------- Sheet ---------- */
+const psOverlay = document.getElementById('psOverlay');
+const psSheetEl = document.getElementById('psSheet');
+const psFields = { psJobName: 'jobName', psJobAddr: 'jobAddr', psStart: 'start', psSf: 'sf', psDumpSize: 'dumpSize', psUsable: 'usable', psSafety: 'safety' };
+
+function openProjectSchedule(jobId) {
+  const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId);
+  if (!job) { showToast("Couldn't find that job. Try refreshing.", true); return; }
+  const record = psSchedules[jobId];
+  const draft = psReadDraft(jobId);
+  const note = document.getElementById('psNote');
+  psState = { jobId, version: record ? record.version : 0, input: record ? psFromRecord(record) : psDefaultsFor(job) };
+  note.hidden = true;
+  if (psTab[jobId] && psTab[jobId].dirty) {
+    psState = { jobId, version: psTab[jobId].version, input: psClone(psTab[jobId].input) };
+    delete psTab[jobId]; psSaveDraft();
+    note.textContent = 'Your timeline changes are carried over. Save or Submit to keep them.';
+    note.hidden = false;
+  } else if (draft && draft.baseVersion === psState.version) {
+    psState.input = { ...draft.input, phases: psWithIds(draft.input.phases) };
+    note.textContent = `Unsaved changes from ${new Date(draft.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} restored.`;
+    note.hidden = false;
+  } else if (draft) {
+    psClearDraft(jobId); // someone saved a newer version since; theirs wins
+  }
+  if (note.hidden && record) {
+    note.textContent = record.sentAt
+      ? `Last sent ${new Date(record.sentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. Submitting again sends an updated PDF.`
+      : 'Saved on the board, not sent yet.';
+    note.hidden = false;
+  }
+  document.getElementById('psTitle').textContent = `Project Schedule · ${job.name || 'Contract job'}`;
+  psFillForm(); psRenderPhases(); psRenderPreview();
+  psOverlay.classList.add('open'); psSheetEl.classList.add('open');
+}
+function closeProjectSchedule() {
+  psOverlay.classList.remove('open'); psSheetEl.classList.remove('open');
+  psState = null;
+}
+function psFillForm() {
+  const input = psState.input;
+  Object.entries(psFields).forEach(([id, key]) => { document.getElementById(id).value = input[key] ?? ''; });
+  const mode = input.mode === 'par' || input.mode === 'custom' ? input.mode : 'seq';
+  document.querySelectorAll('#psMode .segmented-option').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('psModeHint').textContent = mode === 'par'
+    ? 'Every phase starts Day 1 with its own crew. Total days is the longest phase; peak crew is everyone combined.'
+    : mode === 'custom'
+      ? 'Each phase starts on its own day. Set start days here or drag the bars on the Schedule tab. Peak crew counts overlapping phases.'
+      : 'One crew moves through the phases back to back. Day ranges stack; peak crew is the largest single phase.';
+}
+function psRatesSummary(p) { return `Rates: ${psFmt(psNum(p.rate))} SF/person/day · ${psNum(p.yld)} yd³ per 1,000 SF`; }
+function psRenderPhases() {
+  document.getElementById('psPhases').innerHTML = psState.input.phases.map(p => `
+    <div class="ps-phase${p.on ? '' : ' off'}" data-id="${p.id}">
+      <div class="ps-phase-top">
+        <input type="checkbox" data-k="on" ${p.on ? 'checked' : ''} aria-label="Include ${psEsc(p.name)}">
+        <input type="text" class="ps-name" data-k="name" value="${psEsc(p.name)}" maxlength="80" aria-label="Phase name">
+        <button type="button" class="ps-remove" data-act="remove" aria-label="Remove ${psEsc(p.name)}">&times;</button>
+      </div>
+      <textarea data-k="scope" rows="2" maxlength="240" aria-label="Scope of work">${psEsc(p.scope)}</textarea>
+      <div class="ps-phase-row">
+        <div><label>Plan by</label><div class="segmented ps-plan">
+          <button type="button" class="segmented-option${p.plan !== 'days' ? ' active' : ''}" data-plan="crew">Crew</button>
+          <button type="button" class="segmented-option${p.plan === 'days' ? ' active' : ''}" data-plan="days">Days</button>
+        </div></div>
+        <div><label for="psVal-${p.id}">${p.plan === 'days' ? 'Target days' : 'Crew size'}</label>
+          <input type="number" id="psVal-${p.id}" data-k="${p.plan === 'days' ? 'days' : 'crew'}" min="1" step="1" inputmode="numeric" value="${psEsc(p.plan === 'days' ? p.days : p.crew)}"></div>
+        ${psState.input.mode === 'custom' ? `<div><label for="psStartDay-${p.id}">Start day</label><input type="number" id="psStartDay-${p.id}" data-k="startDay" min="1" step="1" inputmode="numeric" value="${psEsc(p.startDay || 1)}"></div>` : ''}
+      </div>
+      <details><summary>${psRatesSummary(p)}</summary><div class="ps-rates">
+        <div><label>SF / person / day</label><input type="number" data-k="rate" min="1" step="50" value="${psEsc(p.rate)}"></div>
+        <div><label>Debris yd³ / 1,000 SF</label><input type="number" data-k="yld" min="0" step="0.1" value="${psEsc(p.yld)}"></div>
+      </div></details>
+      <div class="ps-calc" data-calc="${p.id}"></div>
+    </div>`).join('');
+}
+function psRenderPreview() {
+  const input = psState.input, sch = psBuild(input), start = psParse(input.start);
+  const sf = Math.max(0, psNum(input.sf)), usable = psNum(input.usable);
+  input.phases.forEach(p => {
+    const el = psSheetEl.querySelector(`[data-calc="${p.id}"]`); if (!el) return;
+    const c = psCalc(p, sf, usable);
+    const mid = p.plan === 'days' ? `crew of <b>${c.crew}</b> · <b>${c.days}</b> day${c.days === 1 ? '' : 's'}` : `<b>${c.days}</b> day${c.days === 1 ? '' : 's'}`;
+    el.innerHTML = `${psFmt(c.pd, 1)} person-days → ${mid} · ${psFmt(c.debris, 1)} yd³ = <b>${c.loads}</b> load${c.loads === 1 ? '' : 's'}`;
+  });
+  document.getElementById('psBasis').textContent = sf ? `${psFmt(sf)} SF · ${sch.rows.length} phase${sch.rows.length === 1 ? '' : 's'}` : 'Enter the building size to run the numbers';
+  const rows = sch.rows.map((r, i) => {
+    const range = r.days ? (r.from === r.to ? `Day ${r.from}` : `Day ${r.from}–${r.to}`) : '—';
+    const dates = start && r.days ? `<span class="dates">${psShort(psWorkday(start, r.from))}${r.from !== r.to ? ' – ' + psShort(psWorkday(start, r.to)) : ''}</span>` : '';
+    return `<tr><td class="num">${i + 1}</td><td><div class="pname">${psEsc(r.p.name || 'Untitled phase')}</div>${r.p.scope ? `<div class="scope">${psEsc(r.p.scope)}</div>` : ''}</td>
+      <td class="n">${r.crew}</td><td class="n">${r.days}</td><td class="n">${range}${dates}</td><td class="n">${r.loads}</td></tr>`;
+  }).join('');
+  const finish = start && sch.workdays ? psLong(psWorkday(start, sch.workdays)) : '';
+  const checks = String(input.safety || '').split('\n').map(s => s.trim()).filter(Boolean)
+    .map(s => `<li><span class="pss-box"></span><span>${psEsc(s)}</span><span class="pss-init"></span></li>`).join('');
+  const sig = role => `<div class="pss-role">${role}</div><div class="pss-lines"><div><div class="pss-line"></div><div class="pss-cap">Print name</div></div><div><div class="pss-line"></div><div class="pss-cap">Signature</div></div><div><div class="pss-line"></div><div class="pss-cap">Date</div></div></div>`;
+  const cell = (k, v, cls = '') => `<div class="${cls}"><dt>${k}</dt><dd class="${v ? '' : 'blank'}">${psEsc(v)}</dd></div>`;
+  document.getElementById('psPreview').innerHTML = `
+    <header class="pss-head"><div><div class="pss-co">${psEsc(input.company || PS_COMPANY)}</div><h2 class="pss-title">Project Schedule</h2></div>
+      <div class="pss-issued"><span>Interior demolition · field copy</span><span>Sheet ____ of ____</span></div></header>
+    <dl class="pss-meta">
+      ${cell('Job', input.jobName, 'wide')}${cell('Job start date', start ? psLong(start) : '', 'last-col')}
+      ${cell('Site address', input.jobAddr, 'wide')}${cell('Planned finish', finish, 'last-col')}
+      ${cell('Building size', sf ? `${psFmt(sf)} SF` : '', 'last-row')}${cell('Dumpster load size', `${psFmt(psNum(input.dumpSize))} yd³ roll-off · ${psFmt(usable)} yd³ usable`, 'last-row')}${cell('Schedule mode', psModeLabel(input.mode), 'last-row last-col')}
+    </dl>
+    ${sch.rows.length ? `<div class="pss-scroll"><table class="pss-table"><thead><tr><th>#</th><th>Phase &amp; scope of work</th><th class="n">Crew</th><th class="n">Work days</th><th class="n">Schedule</th><th class="n">Loads</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : '<div class="pss-empty">No phases turned on.</div>'}
+    <div class="pss-totals">
+      <div><div class="v">${sch.workdays}</div><div class="k">Total workdays</div></div>
+      <div><div class="v">${sch.loads}</div><div class="k">Dumpster loads</div></div>
+      <div><div class="v">${sch.crewDays}</div><div class="k">Crew-days of labor</div></div>
+      <div><div class="v">${sch.peak}</div><div class="k">Peak crew on one day</div></div>
+    </div>
+    <div class="pss-lower">
+      <section><h3 class="pss-h">Safety &amp; PPE <span class="pss-stripe" aria-hidden="true"></span></h3>
+        <ul class="pss-check"><li class="headrow"><span></span><span>Superintendent check before work starts</span><span>Init.</span></li>${checks}</ul></section>
+      <section><h3 class="pss-h">Sign-off</h3>${sig('Foreman')}${sig('Superintendent')}
+        <div class="pss-complete"><div class="pss-role">Actual completion date</div><div class="pss-line"></div></div></section>
+    </div>
+    <div class="pss-foot">Work days = (SF ÷ production rate) ÷ crew, rounded up. Loads = debris yd³ ÷ usable capacity, rounded up. Workdays run Mon–Fri.</div>`;
+}
+
+document.getElementById('psForm').addEventListener('submit', e => e.preventDefault());
+document.getElementById('psForm').addEventListener('input', e => {
+  if (!psState) return;
+  const key = psFields[e.target.id];
+  const card = e.target.closest('.ps-phase');
+  if (key) {
+    psState.input[key] = ['sf', 'dumpSize', 'usable'].includes(key) ? (e.target.value === '' ? '' : psNum(e.target.value)) : e.target.value;
+  } else if (card) {
+    const p = psState.input.phases.find(x => x.id === card.dataset.id); const k = e.target.dataset.k; if (!p || !k) return;
+    if (k === 'on') { p.on = e.target.checked; card.classList.toggle('off', !p.on); }
+    else if (['crew', 'days', 'rate', 'yld', 'startDay'].includes(k)) p[k] = e.target.value === '' ? '' : psNum(e.target.value);
+    else p[k] = e.target.value;
+    if (k === 'rate' || k === 'yld') card.querySelector('summary').textContent = psRatesSummary(p);
+  } else return;
+  psSaveDraft(); psRenderPreview();
+});
+document.getElementById('psPhases').addEventListener('click', e => {
+  const card = e.target.closest('.ps-phase'); if (!card || !psState) return;
+  const phases = psState.input.phases, idx = phases.findIndex(x => x.id === card.dataset.id), p = phases[idx];
+  if (e.target.closest('[data-act="remove"]')) { phases.splice(idx, 1); psSaveDraft(); psRenderPhases(); psRenderPreview(); return; }
+  const plan = e.target.dataset.plan;
+  if (plan && plan !== p.plan) {
+    const c = psCalc(p, Math.max(0, psNum(psState.input.sf)), psNum(psState.input.usable)); // carry the result across so nothing jumps
+    if (plan === 'days') p.days = c.days || p.days || 1; else p.crew = c.crew || p.crew || 1;
+    p.plan = plan; psSaveDraft(); psRenderPhases(); psRenderPreview();
+    document.getElementById('psVal-' + p.id)?.focus();
+  }
+});
+document.getElementById('psMode').addEventListener('click', e => {
+  const mode = e.target.dataset.mode; if (!mode || !psState) return;
+  if (mode === 'custom') psToCustom(psState.input); else psState.input.mode = mode;
+  psSaveDraft(); psFillForm(); psRenderPhases(); psRenderPreview();
+});
+document.getElementById('psAddPhase').addEventListener('click', () => {
+  if (!psState) return;
+  const [p] = psWithIds([{ name: 'New phase', scope: '', rate: 1000, yld: 1, plan: 'crew', crew: 3, days: 3 }]);
+  psState.input.phases.push(p); psSaveDraft(); psRenderPhases(); psRenderPreview();
+  const name = psSheetEl.querySelector(`.ps-phase[data-id="${p.id}"] .ps-name`); if (name) { name.focus(); name.select(); }
+});
+document.getElementById('resetPsSheet').addEventListener('click', () => {
+  if (!psState || !confirm('Reset phases, rates and the checklist to the standard defaults? Job info stays.')) return;
+  Object.assign(psState.input, { phases: psWithIds(PS_DEFAULT_PHASES), safety: PS_DEFAULT_SAFETY, mode: 'seq', dumpSize: 30, usable: 25 });
+  psSaveDraft(); psFillForm(); psRenderPhases(); psRenderPreview();
+});
+document.getElementById('closePsSheet').addEventListener('click', closeProjectSchedule);
+document.getElementById('cancelPsSheet').addEventListener('click', closeProjectSchedule);
+psOverlay.addEventListener('click', closeProjectSchedule);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && psSheetEl.classList.contains('open')) closeProjectSchedule(); });
+
+async function psSubmit(action, btn) {
+  if (!psState) return;
+  if (action === 'submit') {
+    if (!(psNum(psState.input.sf) > 0)) { showToast('Enter the building size (SF) before submitting.', true); document.getElementById('psSf').focus(); return; }
+    if (!(psNum(psState.input.usable) > 0)) { showToast('Enter the dumpster usable capacity.', true); return; }
+    if (!psState.input.phases.some(p => p.on)) { showToast('Turn on at least one phase.', true); return; }
+  }
+  const buttons = [document.getElementById('savePsSheet'), document.getElementById('submitPsSheet')];
+  const original = btn.textContent;
+  buttons.forEach(b => { b.disabled = true; }); btn.textContent = action === 'submit' ? 'Sending...' : 'Saving...';
+  try {
+    await psPost(action);
+    showToast(action === 'submit' ? 'Project Schedule sent to Make.' : 'Project Schedule saved.');
+    closeProjectSchedule();
+  } catch (err) {
+    showToast(err.message || 'Project Schedule could not be saved.', true);
+  } finally {
+    buttons.forEach(b => { b.disabled = false; }); btn.textContent = original;
+    psRefreshButtons(); renderScheduleView();
+  }
+}
+document.getElementById('savePsSheet').addEventListener('click', e => psSubmit('save', e.currentTarget));
+document.getElementById('submitPsSheet').addEventListener('click', e => psSubmit('submit', e.currentTarget));
+
+document.getElementById('jobsBody').addEventListener('click', e => {
+  const btn = e.target.closest('.job-stage-btn.schedule');
+  if (btn) openProjectSchedule(btn.dataset.jobId);
+});
+
+/* ---------- Schedule tab: interactive timeline ----------
+   Drag a bar to move it (the schedule becomes Custom), drag either end to
+   change its days (the phase switches to days-first and the crew is worked
+   backward to fit), drag the grip to reorder. Changes stay on this screen
+   until Save changes or Update PDF. */
+const psTab = {};            // jobId -> { version, input, dirty }
+let psDrag = null;
+window.psDragging = false;
+const PS_NAME_COLORS = { 'Furniture & Debris Removal': 0, 'Drywall Removal': 1, 'MEP Removal': 2, 'Stud Cleaning': 3, 'Flooring Removal': 4 };
+function psColor(name) {
+  const k = PS_NAME_COLORS[name]; if (k != null) return PS_COLORS[k];
+  let h = 0; for (const ch of String(name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return PS_COLORS[5 + (h % (PS_COLORS.length - 5))];
+}
+function psTabGet(jobId) {
+  const record = psSchedules[jobId]; if (!record) return null;
+  let t = psTab[jobId];
+  if (!t || (!t.dirty && t.version !== record.version)) t = psTab[jobId] = { version: record.version, input: psFromRecord(record), dirty: false };
+  return t;
+}
+const psClone = v => JSON.parse(JSON.stringify(v));
+function psScale(workdays) { return Math.max(10, workdays + Math.max(4, Math.ceil(workdays * 0.3))); }
+function psTicks(total) {
+  const step = [1, 2, 5, 10, 20, 50, 100].find(s => total / s <= 8) || 200;
+  const ticks = [1];
+  for (let d = step; d <= total; d += step) if (d !== 1) ticks.push(d);
+  return ticks;
+}
+function psBarText(r) { return `${r.days}d · ${r.crew} crew`; }
+function psBarTitle(r, start) {
+  const dates = start && r.days ? ` (${psShort(psWorkday(start, r.from))} – ${psShort(psWorkday(start, r.to))})` : '';
+  return `${r.p.name}: Day ${r.from}–${r.to}${dates} · ${r.crew} crew · ${r.loads} load${r.loads === 1 ? '' : 's'}`;
+}
+function psGantt(jobId, input, sch) {
+  if (!sch.workdays) return '<p class="psv-empty-note">Enter the building size on this schedule to see the timeline.</p>';
+  const S = psScale(sch.workdays), start = psParse(input.start);
+  const axis = psTicks(S).map(d => `<span class="psv-tick" style="left:${((d - 1) / S) * 100}%">Day ${d}${start ? `<em>${psMonthDay(psWorkday(start, d))}</em>` : ''}</span>`).join('');
+  const rows = sch.rows.map(r => {
+    const name = psEsc(r.p.name), color = psColor(r.p.name);
+    const bar = r.days ? `<span class="psv-bar" tabindex="0" data-pid="${r.p.id}" style="left:${((r.from - 1) / S) * 100}%;width:${(r.days / S) * 100}%;background:${color}" title="${psEsc(psBarTitle(r, start))}" aria-label="${psEsc(psBarTitle(r, start))}. Drag to move, drag an end to change days. Arrow keys move one day, Shift plus arrows change length.">
+        <span class="psv-h l" aria-hidden="true"></span><span class="psv-bar-text">${psBarText(r)}</span><span class="psv-h r" aria-hidden="true"></span></span>` : '';
+    return `<div class="psv-gantt-row" data-pid="${r.p.id}">
+      <span class="psv-gantt-label"><button type="button" class="psv-grip" data-pid="${r.p.id}" aria-label="Reorder ${name}. Use arrow up or down." title="Drag to reorder">⠿</button><span title="${name}">${name}</span></span>
+      <span class="psv-track">${bar}</span></div>`;
+  }).join('');
+  return `<div class="psv-gantt" data-job-id="${psEsc(jobId)}" data-scale="${S}" style="--days:${S}">
+    <div class="psv-gantt-row psv-axis-row"><span></span><span class="psv-axis">${axis}</span></div>${rows}</div>`;
+}
+// Update bar positions and totals in place while dragging (no re-render, so the drag isn't interrupted).
+function psApplyGantt(gantt, input) {
+  const S = +gantt.dataset.scale, sch = psBuild(input), start = psParse(input.start);
+  sch.rows.forEach(r => {
+    const bar = gantt.querySelector(`.psv-bar[data-pid="${r.p.id}"]`); if (!bar) return;
+    const to = Math.min(r.to, S), from = Math.min(r.from, S);
+    bar.style.left = `${((from - 1) / S) * 100}%`; bar.style.width = `${(Math.max(1, to - from + 1) / S) * 100}%`;
+    bar.querySelector('.psv-bar-text').textContent = psBarText(r); bar.title = psBarTitle(r, start);
+  });
+  const body = gantt.closest('.psv-body');
+  if (body) [['workdays', sch.workdays], ['loads', sch.loads], ['peak', sch.peak], ['crewDays', sch.crewDays]].forEach(([k, v]) => {
+    const el = body.querySelector(`[data-tot="${k}"]`); if (el) el.textContent = v;
+  });
+}
+function psToCustom(input) {
+  if (input.mode === 'custom') return;
+  psBuild(input).rows.forEach(r => { r.p.startDay = r.from || 1; });
+  input.mode = 'custom';
+}
+function psApplyDelta(base, pid, kind, delta) {
+  const next = psClone(base);
+  const row = psBuild(next).rows.find(r => r.p.id === pid); if (!row) return next;
+  const phase = row.p;
+  if (kind === 'move') { psToCustom(next); phase.startDay = Math.max(1, row.from + delta); }
+  else if (kind === 'right') { phase.plan = 'days'; phase.days = Math.max(1, row.days + delta); }
+  else if (kind === 'left') {
+    const from = Math.min(Math.max(1, row.from + delta), row.to);
+    psToCustom(next); phase.startDay = from; phase.plan = 'days'; phase.days = row.to - from + 1;
+  }
+  return next;
+}
+function psMovePhase(input, pid, beforePid) { // beforePid null = move to end
+  const i = input.phases.findIndex(p => p.id === pid); if (i < 0) return;
+  const [p] = input.phases.splice(i, 1);
+  const j = beforePid ? input.phases.findIndex(x => x.id === beforePid) : -1;
+  if (j < 0) input.phases.push(p); else input.phases.splice(j, 0, p);
+}
+function psCommitTab(jobId, input, focusSel) {
+  const t = psTabGet(jobId); if (!t) return;
+  t.input = input; t.dirty = true;
+  renderScheduleView();
+  if (focusSel) document.querySelector(`.psv-gantt[data-job-id="${CSS.escape(jobId)}"] ${focusSel}`)?.focus();
+}
+
+const psListEl = document.getElementById('psList');
+psListEl.addEventListener('pointerdown', e => {
+  const bar = e.target.closest('.psv-bar'), grip = e.target.closest('.psv-grip');
+  if ((!bar && !grip) || e.button !== 0) return;
+  const gantt = e.target.closest('.psv-gantt'), t = psTabGet(gantt.dataset.jobId); if (!t) return;
+  e.preventDefault();
+  const kind = grip ? 'reorder' : e.target.closest('.psv-h.l') ? 'left' : e.target.closest('.psv-h.r') ? 'right' : 'move';
+  const pid = (bar || grip).dataset.pid, S = +gantt.dataset.scale;
+  const base = psClone(t.input), row = psBuild(base).rows.find(r => r.p.id === pid);
+  psDrag = { jobId: gantt.dataset.jobId, kind, pid, gantt, S, row, base, tentative: base, delta: 0, moved: false,
+    x0: e.clientX, dayW: gantt.querySelector('.psv-track').clientWidth / S };
+  window.psDragging = true;
+  gantt.classList.add('dragging', 'drag-' + kind);
+  gantt.querySelector(`.psv-gantt-row[data-pid="${pid}"]`)?.classList.add('active');
+});
+window.addEventListener('pointermove', e => {
+  const d = psDrag; if (!d) return;
+  if (d.kind === 'reorder') {
+    const rows = [...d.gantt.querySelectorAll('.psv-gantt-row[data-pid]')];
+    const self = rows.find(r => r.dataset.pid === d.pid);
+    const target = rows.find(r => { if (r === self) return false; const b = r.getBoundingClientRect(); return e.clientY >= b.top && e.clientY <= b.bottom; });
+    if (!target) return;
+    const below = rows.indexOf(target) > rows.indexOf(self);
+    const beforeEl = below ? target.nextElementSibling : target;
+    d.gantt.insertBefore(self, beforeEl);
+    const next = psClone(d.tentative);
+    psMovePhase(next, d.pid, beforeEl ? beforeEl.dataset.pid : null);
+    d.tentative = next; d.moved = true;
+    psApplyGantt(d.gantt, d.tentative);
+    return;
+  }
+  let delta = Math.round((e.clientX - d.x0) / d.dayW);
+  // Keep the bar inside the visible days; after release the axis grows so it can go further.
+  if (d.kind === 'move') delta = Math.max(1 - d.row.from, Math.min(delta, d.S - d.row.to));
+  if (d.kind === 'right') delta = Math.max(1 - d.row.days, Math.min(delta, d.S - d.row.to));
+  if (d.kind === 'left') delta = Math.max(1 - d.row.from, Math.min(delta, d.row.days - 1));
+  if (delta === d.delta) return;
+  d.delta = delta; d.moved = delta !== 0;
+  d.tentative = psApplyDelta(d.base, d.pid, d.kind, delta);
+  psApplyGantt(d.gantt, d.tentative);
+});
+function psEndDrag(commit) {
+  const d = psDrag; if (!d) return;
+  psDrag = null; window.psDragging = false;
+  if (commit && d.moved) psCommitTab(d.jobId, d.tentative);
+  else renderScheduleView();
+}
+window.addEventListener('pointerup', () => psEndDrag(true));
+window.addEventListener('pointercancel', () => psEndDrag(false));
+psListEl.addEventListener('keydown', e => {
+  const bar = e.target.closest('.psv-bar'), grip = e.target.closest('.psv-grip');
+  if (!bar && !grip) return;
+  const jobId = e.target.closest('.psv-gantt').dataset.jobId, t = psTabGet(jobId); if (!t) return;
+  const pid = (bar || grip).dataset.pid;
+  const vertical = e.key === 'ArrowUp' || e.key === 'ArrowDown';
+  if (vertical && (grip || e.altKey)) {
+    e.preventDefault();
+    const next = psClone(t.input), active = psBuild(next).rows.map(r => r.p.id), i = active.indexOf(pid);
+    const j = e.key === 'ArrowUp' ? i - 1 : i + 1; if (j < 0 || j >= active.length) return;
+    psMovePhase(next, pid, e.key === 'ArrowUp' ? active[j] : (active[j + 1] || null));
+    psCommitTab(jobId, next, `${grip ? '.psv-grip' : '.psv-bar'}[data-pid="${pid}"]`);
+    return;
+  }
+  if (bar && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    e.preventDefault();
+    const step = e.key === 'ArrowRight' ? 1 : -1;
+    const row = psBuild(t.input).rows.find(r => r.p.id === pid);
+    if (!e.shiftKey && step < 0 && row.from <= 1) return;
+    if (e.shiftKey && step < 0 && row.days <= 1) return;
+    psCommitTab(jobId, psApplyDelta(t.input, pid, e.shiftKey ? 'right' : 'move', step), `.psv-bar[data-pid="${pid}"]`);
+  }
+});
+
+function renderScheduleView() {
+  const host = document.getElementById('psList'); if (!host) return;
+  if (document.getElementById('scheduleDispatchView').hidden || psDrag) return;
+  const jobs = (dashboardData.jobs || []).filter(j => !isHourlyJob(j));
+  document.getElementById('psViewCount').textContent = jobs.length ? `${jobs.length} contract job${jobs.length === 1 ? '' : 's'}` : '';
+  if (!jobs.length) { host.innerHTML = '<div class="psv-empty">No Contract (Demo) jobs on the board right now.</div>'; return; }
+  const list = jobs.map(job => ({ job, record: psSchedules[job.id] }))
+    .sort((a, b) => (!!b.record - !!a.record) || String(a.job.name || '').localeCompare(String(b.job.name || '')));
+  host.innerHTML = list.map(({ job, record }) => {
+    const t = record ? psTabGet(job.id) : null;
+    const input = t ? t.input : null, sch = input ? psBuild(input) : null;
+    const start = input ? psParse(input.start) : null;
+    const finish = start && sch && sch.workdays ? psWorkday(start, sch.workdays) : null;
+    const id = psEsc(job.id);
+    const status = !record ? '<span class="psv-chip none">No schedule</span>'
+      : t.dirty ? '<span class="psv-chip dirty">Unsaved changes</span>'
+      : record.sentAt ? `<span class="psv-chip sent">Sent ${new Date(record.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`
+      : '<span class="psv-chip saved">Saved, not sent</span>';
+    const stats = sch ? `<span class="psv-stats"><b>${sch.workdays}</b> days · <b>${sch.loads}</b> loads · peak crew <b>${sch.peak}</b>${start ? ` · ${psMonthDay(start)} → ${finish ? psMonthDay(finish) : '?'}` : ''}</span>` : '';
+    let body;
+    if (!record) {
+      body = `<div class="psv-body"><p class="psv-empty-note">This job has no Project Schedule yet.</p><div class="psv-actions"><button type="button" class="btn-primary psv-open" data-job-id="${id}">Create schedule</button></div></div>`;
+    } else {
+      const mode = input.mode === 'par' || input.mode === 'custom' ? input.mode : 'seq';
+      const modeBtn = (m, label) => `<button type="button" class="segmented-option${mode === m ? ' active' : ''}" data-tab-mode="${m}" data-job-id="${id}">${label}</button>`;
+      const actions = t.dirty
+        ? `<button type="button" class="btn-primary psv-update" data-job-id="${id}">Update PDF</button>
+           <button type="button" class="btn-ghost psv-save" data-job-id="${id}">Save changes</button>
+           <button type="button" class="btn-ghost psv-discard" data-job-id="${id}">Discard changes</button>`
+        : `<button type="button" class="btn-primary psv-update" data-job-id="${id}">Update PDF</button>
+           <button type="button" class="btn-ghost psv-open" data-job-id="${id}">Edit schedule</button>
+           <a class="btn-ghost psv-pdf" href="${PS_URL}?jobId=${encodeURIComponent(job.id)}&pdf=1" target="_blank" rel="noopener">View PDF</a>`;
+      body = `<div class="psv-body">
+          <div class="psv-totals">
+            <div><b data-tot="workdays">${sch.workdays}</b><span>Workdays</span></div><div><b data-tot="loads">${sch.loads}</b><span>Dumpster loads</span></div>
+            <div><b data-tot="peak">${sch.peak}</b><span>Peak crew</span></div><div><b data-tot="crewDays">${sch.crewDays}</b><span>Crew-days</span></div>
+          </div>
+          <div class="psv-gantt-head"><h4>Schedule at a glance</h4>
+            <div class="segmented psv-mode" role="group" aria-label="Layout">${modeBtn('seq', 'In order')}${modeBtn('par', 'All at once')}${modeBtn('custom', 'Custom')}</div></div>
+          <p class="psv-hint">Drag a bar to move it. Drag either end to change its days; the crew adjusts to fit. Drag ⠿ to reorder. Pick In order or All at once to line everything back up.</p>
+          ${psGantt(job.id, input, sch)}
+          <div class="psv-table-wrap"><table class="psv-table"><thead><tr><th>#</th><th>Phase</th><th class="n">Crew</th><th class="n">Days</th><th class="n">Schedule</th><th class="n">Loads</th></tr></thead><tbody>
+            ${sch.rows.map((r, i) => `<tr><td><span class="psv-dot" style="background:${psColor(r.p.name)}"></span>${i + 1}</td><td>${psEsc(r.p.name)}</td><td class="n">${r.crew}</td><td class="n">${r.days}</td><td class="n">${r.days ? `Day ${r.from}–${r.to}` : '—'}${start && r.days ? `<small>${psShort(psWorkday(start, r.from))} – ${psShort(psWorkday(start, r.to))}</small>` : ''}</td><td class="n">${r.loads}</td></tr>`).join('')}
+          </tbody></table></div>
+          <p class="psv-meta">${psFmt(psNum(input.sf))} SF · ${psFmt(psNum(input.dumpSize))} yd³ box, ${psFmt(psNum(input.usable))} usable · ${psModeLabel(input.mode)} · ${record.sentAt ? `PDF last sent ${new Date(record.sentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'PDF not sent yet'}</p>
+          <div class="psv-actions">${actions}</div>
+        </div>`;
+    }
+    return `<details class="psv-job" data-job-id="${id}"${psOpenJobs.has(job.id) ? ' open' : ''}>
+      <summary><span class="psv-caret" aria-hidden="true"></span><span class="psv-title"><b>${psEsc(getClientName(job) || 'Contract job')}</b><span>${psEsc(job.name || '')}</span></span>${stats}${status}</summary>
+      ${body}
+    </details>`;
+  }).join('');
+}
+psListEl.addEventListener('toggle', e => {
+  const d = e.target.closest && e.target.closest('.psv-job'); if (!d) return;
+  if (d.open) psOpenJobs.add(d.dataset.jobId); else psOpenJobs.delete(d.dataset.jobId);
+}, true);
+psListEl.addEventListener('click', async e => {
+  const open = e.target.closest('.psv-open'); if (open) { openProjectSchedule(open.dataset.jobId); return; }
+  const modeBtn = e.target.closest('[data-tab-mode]');
+  if (modeBtn) {
+    const jobId = modeBtn.dataset.jobId, t = psTabGet(jobId), m = modeBtn.dataset.tabMode;
+    if (!t || t.input.mode === m) return;
+    const next = psClone(t.input);
+    if (m === 'custom') psToCustom(next); else next.mode = m;
+    psCommitTab(jobId, next);
+    return;
+  }
+  const discard = e.target.closest('.psv-discard');
+  if (discard) { delete psTab[discard.dataset.jobId]; renderScheduleView(); return; }
+  const btn = e.target.closest('.psv-save, .psv-update');
+  if (!btn) return;
+  const jobId = btn.dataset.jobId, t = psTabGet(jobId); if (!t) return;
+  const action = btn.classList.contains('psv-update') ? 'submit' : 'save';
+  const buttons = [...btn.closest('.psv-actions').querySelectorAll('button')];
+  const original = btn.textContent;
+  buttons.forEach(b => { b.disabled = true; }); btn.textContent = action === 'submit' ? 'Sending...' : 'Saving...';
+  try {
+    await psPostSchedule(jobId, t.version, t.input, action);
+    showToast(action === 'submit' ? 'PDF updated and sent to Make.' : 'Schedule changes saved.');
+  } catch (err) {
+    showToast(err.message || 'Project Schedule could not be saved.', true);
+    buttons.forEach(b => { b.disabled = false; }); btn.textContent = original;
+  }
+  psRefreshButtons(); renderScheduleView();
+});
+
 /* ---------- Init ---------- */
 fmtDateHeader();
 loadDashboard();
 loadLaborRoster();
+loadProjectSchedules();
 setInterval(pollSharedState, 15000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pollSharedState(); });
 </script>

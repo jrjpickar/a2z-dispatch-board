@@ -1,4 +1,4 @@
-# Deploy A2Z Dispatch 1.3
+# Deploy A2Z Dispatch 1.6
 
 1. Replace the files in your existing Netlify-connected repository with this folder’s contents. Keep the SAME Netlify site and database.
 2. Keep `GHL_API_TOKEN` in Netlify environment variables. Netlify Database supplies `NETLIFY_DB_URL`; never paste it into the page.
@@ -6,6 +6,16 @@
 4. Apply the two small Make response changes in MAKE-SETUP.md.
 5. Deploy normally. Build: `npm run build`. Publish: `public`. Functions: `netlify/functions`. Node: 22 or newer.
 6. Reload all open dashboard tabs after deployment. Old tabs cannot overwrite new state.
+
+## Night work (new in 1.6)
+
+- No setup needed. Make scenarios that receive job payloads now get `nightWork` and `shiftType`; map them where you want them (GHL custom field, worker SMS text, EOD sheet). Existing mappings keep working.
+
+## Project Schedule (new in 1.4)
+
+- Nothing to configure for it to work: the `project_schedules` table is created on first use and Submit posts to the Project Schedule Make webhook already set in the code. Set `PROJECT_SCHEDULE_WEBHOOK` only if you move that scenario.
+- In Make, the Custom Webhook receives the PDF under `file` (binary data + file name). Map `file` straight into a Google Drive upload, email attachment, or GHL file field. Run one Submit with the scenario listening so Make learns the structure.
+- `npm install` picks up the new `pdf-lib` dependency (both lockfiles are updated).
 
 ## Field App (read-only, for drivers and crew)
 

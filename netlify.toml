@@ -88,3 +88,8 @@
   from = "/api/ghl-users"
   to = "/.netlify/functions/ghl-users"
   status = 200
+
+[[redirects]]
+  from = "/api/project-schedule"
+  to = "/.netlify/functions/project-schedule"
+  status = 200

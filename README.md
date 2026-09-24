@@ -1,4 +1,4 @@
-# A2Z Dispatch 1.3
+# A2Z Dispatch 1.6
 
 Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response changes.
 
@@ -7,6 +7,23 @@ Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response ch
 - Deploy this complete project to the existing Netlify site and database.
 
 Includes the backend, edited dashboard, the read-only Field App for drivers/crew, tests, dependency lockfile, and minimal Make JSON templates. Credentials and production site linkage are not included.
+
+## What's new in 1.6
+
+- **Night work.** A Night work switch on Book Job and Edit Job Details, and a Night tick box next to the end time on the board. With it on, an end time earlier than the start (8:00 PM to 5:00 AM) means the next morning: a blank or same-day end date rolls forward one day on its own, and the sheet shows when the shift ends. An explicit later end date is kept as typed. Without it, an overnight end is refused with a hint to turn Night work on.
+- Stored on the job (`nightWork` in shared state; a day reset keeps it) and shown as a NIGHT badge on the board.
+- Sent to Make as `nightWork` (true/false) and `shiftType` ("night"/"day") on: **Completed / Cancelled** (job stage webhook, now also with the job's report/end date and time), the **EOD sheet**, create job, edit job details, and worker assignment notifications. No GHL field is needed; map it in Make where you want it.
+
+## What's new in 1.4
+
+- **Project Schedule for Contract (Demo) jobs.** A "Project Schedule" button on every contract job opens the sheet: building SF, dumpster size, schedule mode, and per-phase crew or target days. The four formulas (person-days, work days rounded up, crew worked backward, dumpster loads) run live with a preview of the printed page.
+- **Save** stores the schedule on the board (shared with every dispatcher, versioned so two people can't overwrite each other). **Submit** saves it, draws the PDF on the server, and posts it to Make as multipart/form-data: the PDF is binary in field `file`, with flat fields (`jobId`, `jobName`, `startDate`, `plannedFinish`, `totalWorkdays`, `totalLoads`, `crewDays`, `peakCrew`, ...) and JSON strings `phases` and `safety`.
+- **Schedule tab.** Lists every contract job; expand one to see its totals, a day-by-day timeline, and the phase table, with Edit and View PDF.
+- **Drag the timeline.** On the Schedule tab, drag a bar to move a phase (the layout becomes Custom), drag either end to change its days (the crew is worked backward to fit), and drag the grip to reorder. Arrow keys move a focused bar, Shift+arrows change its length, Alt+Up/Down reorders. **Update PDF** saves the changes and sends a fresh PDF to the same webhook; **Save changes** keeps them without sending. In order / All at once lines everything back up.
+- Days-first phases now book exactly the days you set (crew = person-days / days, rounded up). Peak crew counts phases that overlap on the same day.
+- **Blank PDF** (`/api/project-schedule?blank=1`) is a fill-by-hand version of the form.
+- Webhook: `https://hook.us2.make.com/ym8j30bvydhops1cbq53y4yjypzx7z8k`. Override with the `PROJECT_SCHEDULE_WEBHOOK` env var. A plain "Accepted" response counts as success; a JSON reply with `ok: false` is shown as an error.
+- New dependency: `pdf-lib` (pinned). New table: `project_schedules` (created automatically).
 
 ## What's new in 1.3
 

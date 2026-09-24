@@ -117,3 +117,16 @@ test('GHL pagination collects all pages and does not silently truncate', async (
   globalThis.fetch = async url => { urls.push(String(url)); const page = new URL(url).searchParams.get('page'); return Response.json({ opportunities: page === '1' ? Array.from({ length: 100 }, (_, i) => ({ id: String(i) })) : [{ id: '100' }] }); };
   try { const list = await searchOpportunities('fake', 'loc', 'pipe'); assert.equal(list.length, 101); assert.equal(urls.length, 2); } finally { globalThis.fetch = original; delete process.env.GHL_API_TOKEN; }
 });
+test('night work: PM start to next-morning end saves, the flag rides along, and a reset keeps it', () => {
+  const night = { reportDate: '2026-09-25', reportTime: '20:00', reportEndDate: '2026-09-26', reportEndTime: '05:00', nightWork: true };
+  const saved = mutateJob(job, { action: 'save_times', ...night });
+  assert.equal(saved.data.nightWork, true); assert.equal(saved.data.reportEndDate, '2026-09-26');
+  assert.throws(() => mutateJob(job, { action: 'save_times', ...night, reportEndDate: '2026-09-25' }), /End time must be after/);
+  const created = mutateJob(null, { action: 'create', ...night, nightWork: 'true', crew: [] });
+  assert.equal(created.data.nightWork, true);
+  const off = mutateJob({ ...job, data: saved.data }, { action: 'update_details', nightWork: false });
+  assert.equal(off.data.nightWork, false);
+  const untouched = mutateJob({ ...job, data: saved.data }, { action: 'update_details', scopeOfWork: 'x' });
+  assert.equal(untouched.data.nightWork, true);
+  assert.equal(mutateJob({ ...job, data: saved.data }, { action: 'reset_dispatch' }).data.nightWork, true);
+});

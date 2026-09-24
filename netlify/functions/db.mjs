@@ -69,5 +69,12 @@ async function createSchema(sql) {
     code text, updated_at timestamptz not null default now()
   )`;
   await sql`alter table dispatch_driver_codes alter column code drop not null`;
+  // Project Schedules for Contract (Demo) jobs: the sheet's inputs, shared by
+  // every dispatcher, plus when it was last sent to Make as a PDF.
+  await sql`create table if not exists project_schedules (
+    job_id text primary key, data jsonb not null default '{}'::jsonb,
+    version integer not null default 1, sent_at timestamptz, sent_file text,
+    updated_at timestamptz not null default now()
+  )`;
   });
 }
