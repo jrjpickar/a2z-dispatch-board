@@ -1,4 +1,4 @@
-# A2Z Dispatch 1.6
+# A2Z Dispatch 1.7
 
 Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response changes.
 
@@ -7,6 +7,13 @@ Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response ch
 - Deploy this complete project to the existing Netlify site and database.
 
 Includes the backend, edited dashboard, the read-only Field App for drivers/crew, tests, dependency lockfile, and minimal Make JSON templates. Credentials and production site linkage are not included.
+
+## What's new in 1.7
+
+- **Project Schedule plans with crew and days together.** Each phase has its own Crew, Work days and Loads boxes; nothing is worked out from building size anymore. Building size, dumpster size and usable capacity are gone from the form, the preview and the PDF. Crew-days = crew x work days.
+- Stretching a bar on the Schedule tab changes only its days; the crew stays as set.
+- Schedules saved before 1.7 are converted once when read, so their crew, days and loads stay the same.
+- The Project Schedule webhook no longer sends `squareFeet`, `dumpsterSize` or `dumpsterUsable`; each phase in `phases` now has `crew`, `workDays`, `loads`, `crewDays`, `fromDay`, `toDay`.
 
 ## What's new in 1.6
 

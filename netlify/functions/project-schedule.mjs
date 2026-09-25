@@ -2,7 +2,7 @@
 //   GET  /api/project-schedule                      -> { schedules: [...] } every saved schedule
 //   GET  /api/project-schedule?blank=1              -> blank PDF form for filling in by hand
 //   GET  /api/project-schedule?jobId=...&pdf=1      -> PDF of that job's saved schedule
-//   POST /api/project-schedule { action: "save",   expectedVersion, jobId, sf, phases, ... }
+//   POST /api/project-schedule { action: "save",   expectedVersion, jobId, start, mode, phases: [{ name, scope, crew, days, loads, startDay }], ... }
 //   POST /api/project-schedule { action: "submit", ... } -> save, draw the PDF, send it to Make
 // Make receives multipart/form-data: the PDF as binary in field "file", plus flat fields.
 import { db, ensureSchema } from './db.mjs';
@@ -44,8 +44,6 @@ export default async function handler(request) {
     const input = normalizeScheduleInput(payload);
     if (!input.jobId) throw new StateError('jobId required');
     if (action === 'submit') {
-      if (!(input.sf > 0)) throw new StateError('Enter the building square footage.');
-      if (!(input.usable > 0)) throw new StateError('Enter the dumpster usable capacity.');
       if (!input.phases.some(p => p.on)) throw new StateError('Turn on at least one phase.');
     }
     let record = await saveProjectSchedule(sql, input, payload.expectedVersion);

@@ -918,7 +918,8 @@
   .ps-phase .ps-name { font-weight: 600; }
   .ps-phase textarea { min-height: 40px; resize: vertical; font-size: 12px; margin-bottom: 6px; }
   .ps-phase-row { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 8px; align-items: start; }
-  .ps-phase-row:has(> :nth-child(3)) { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr) minmax(0,.9fr); }
+  .ps-phase-row { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .ps-phase-row.four { grid-template-columns: repeat(4, minmax(0,1fr)); }
   .ps-phase-row label, .ps-rates label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft); margin-bottom: 4px; }
   .ps-plan { display: grid; grid-template-columns: 1fr 1fr; }
   .ps-plan .segmented-option { padding: 6px 4px; font-size: 12px; }
@@ -1492,14 +1493,7 @@
       <form class="ps-editor" id="psForm" autocomplete="off">
         <div class="field"><label for="psJobName">Job</label><input type="text" id="psJobName" maxlength="150"></div>
         <div class="field"><label for="psJobAddr">Site address</label><input type="text" id="psJobAddr" maxlength="200"></div>
-        <div class="field-row">
-          <div class="field"><label for="psStart">Job start date</label><input type="date" id="psStart"></div>
-          <div class="field"><label for="psSf">Building size (SF)</label><input type="number" id="psSf" min="0" step="100" inputmode="numeric" placeholder="e.g. 17000"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label for="psDumpSize">Dumpster size (yd³)</label><input type="number" id="psDumpSize" min="1" step="1" inputmode="numeric"></div>
-          <div class="field"><label for="psUsable">Usable capacity (yd³)</label><input type="number" id="psUsable" min="1" step="1" inputmode="numeric"></div>
-        </div>
+        <div class="field"><label for="psStart">Job start date</label><input type="date" id="psStart"></div>
         <div class="ps-group">
           <h3>Schedule mode</h3>
           <div class="segmented ps-mode" id="psMode" role="group" aria-label="Schedule mode">
@@ -1511,7 +1505,7 @@
         </div>
         <div class="ps-group">
           <h3>Phases <button type="button" class="job-stage-btn edit" id="psAddPhase">+ Add phase</button></h3>
-          <p class="ps-hint">Set the crew and the days follow, or set the days and see the crew it takes.</p>
+          <p class="ps-hint">Enter the crew and work days for each phase, plus the dumpster loads it will fill.</p>
           <div id="psPhases"></div>
         </div>
         <div class="ps-group">
@@ -4777,11 +4771,11 @@ async function pollSharedState() {
 const PS_URL = '/api/project-schedule';
 const PS_COMPANY = 'A2Z Construction Services';
 const PS_DEFAULT_PHASES = [
-  { name: 'Furniture & Debris Removal', scope: 'Clear all furniture, fixtures, loose debris, and abandoned contents from the floor.', rate: 3500, yld: 1.5, plan: 'crew', crew: 3, days: 2 },
-  { name: 'Drywall Removal', scope: 'Strip gypsum board from walls and ceilings down to the studs and haul it out.', rate: 800, yld: 3.5, plan: 'crew', crew: 4, days: 6 },
-  { name: 'MEP Removal', scope: 'Pull de-energized electrical, plumbing, and HVAC runs, fixtures, and ductwork.', rate: 700, yld: 1.2, plan: 'crew', crew: 4, days: 7 },
-  { name: 'Stud Cleaning', scope: 'Remove screws, clips, and remnant board so studs and track are left clean.', rate: 1200, yld: 0.1, plan: 'crew', crew: 3, days: 5 },
-  { name: 'Flooring Removal', scope: 'Take up carpet, tile, VCT, and adhesive down to the slab or subfloor.', rate: 900, yld: 1.3, plan: 'crew', crew: 3, days: 7 }
+  { name: 'Furniture & Debris Removal', scope: 'Clear all furniture, fixtures, loose debris, and abandoned contents from the floor.', crew: 3, days: 2, loads: 2 },
+  { name: 'Drywall Removal', scope: 'Strip gypsum board from walls and ceilings down to the studs and haul it out.', crew: 4, days: 6, loads: 3 },
+  { name: 'MEP Removal', scope: 'Pull de-energized electrical, plumbing, and HVAC runs, fixtures, and ductwork.', crew: 4, days: 7, loads: 1 },
+  { name: 'Stud Cleaning', scope: 'Remove screws, clips, and remnant board so studs and track are left clean.', crew: 3, days: 5, loads: 1 },
+  { name: 'Flooring Removal', scope: 'Take up carpet, tile, VCT, and adhesive down to the slab or subfloor.', crew: 3, days: 7, loads: 1 }
 ];
 const PS_DEFAULT_SAFETY = [
   'Utilities disconnected and verified dead: electrical locked out, water and gas capped',
@@ -4804,28 +4798,19 @@ const psEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</
 const psNum = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const psFmt = (n, d = 0) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-function psCalc(p, sf, usable) {
-  const rate = psNum(p.rate);
-  const pd = rate > 0 ? sf / rate : 0;                       // person-days
-  let crew, days;
-  if (p.plan === 'days') {
-    const target = Math.max(1, Math.round(psNum(p.days)) || 1);
-    crew = pd > 0 ? Math.ceil(pd / target) : 0;               // crew worked backward to fit the days
-    days = pd > 0 ? target : 0;
-  } else {
-    crew = Math.max(1, Math.round(psNum(p.crew)) || 1);
-    days = pd > 0 ? Math.ceil(pd / crew) : 0;                  // work days, rounded up
-  }
-  const debris = (sf / 1000) * psNum(p.yld);
-  const loads = usable > 0 && debris > 0 ? Math.ceil(debris / usable) : 0;
-  return { pd, crew, days, debris, loads };
+// Crew and days are both set per phase; nothing is derived from building size.
+function psCalc(p) {
+  const crew = Math.min(500, Math.max(1, Math.round(psNum(p.crew)) || 1));
+  const days = Math.min(1000, Math.max(1, Math.round(psNum(p.days)) || 1));
+  const loads = Math.min(999, Math.max(0, Math.round(psNum(p.loads))));
+  return { crew, days, loads, crewDays: crew * days };
 }
 const psModeLabel = m => m === 'par' ? 'Separate crews at once' : m === 'custom' ? 'Custom (set on the timeline)' : 'One crew, in order';
 function psBuild(input) {
-  const sf = Math.max(0, psNum(input.sf)), usable = psNum(input.usable), mode = input.mode;
+  const mode = input.mode;
   let cursor = 0;
   const rows = (input.phases || []).filter(p => p.on !== false).map(p => {
-    const c = psCalc(p, sf, usable);
+    const c = psCalc(p);
     let from = 0, to = 0;
     if (c.days) {
       from = mode === 'par' ? 1 : mode === 'custom' ? Math.max(1, Math.round(psNum(p.startDay)) || 1) : cursor + 1;
@@ -4855,7 +4840,7 @@ function psDefaultsFor(job) {
   return {
     company: PS_COMPANY, jobName: [getClientName(job), job.name].filter(Boolean).join(' - '), jobAddr: job.name || '',
     clientName: getClientName(job), start: (typeof getReportDate === 'function' && getReportDate(job)) || '',
-    sf: '', dumpSize: 30, usable: 25, mode: 'seq', phases: psWithIds(PS_DEFAULT_PHASES), safety: PS_DEFAULT_SAFETY
+    mode: 'seq', phases: psWithIds(PS_DEFAULT_PHASES), safety: PS_DEFAULT_SAFETY
   };
 }
 function psFromRecord(record) {
@@ -4900,13 +4885,13 @@ function psSaveDraft() {
   if (!psState) return;
   try { localStorage.setItem(PS_DRAFT_PREFIX + psState.jobId, JSON.stringify({ input: psState.input, baseVersion: psState.version, savedAt: Date.now() })); } catch {}
 }
-function psReadDraft(jobId) { try { const d = JSON.parse(localStorage.getItem(PS_DRAFT_PREFIX + jobId) || 'null'); return d && d.input ? d : null; } catch { return null; } }
+function psReadDraft(jobId) { try { const d = JSON.parse(localStorage.getItem(PS_DRAFT_PREFIX + jobId) || 'null'); return d && d.input && !('sf' in d.input) ? d : null; } catch { return null; } }
 function psClearDraft(jobId) { try { localStorage.removeItem(PS_DRAFT_PREFIX + jobId); } catch {} }
 
 /* ---------- Sheet ---------- */
 const psOverlay = document.getElementById('psOverlay');
 const psSheetEl = document.getElementById('psSheet');
-const psFields = { psJobName: 'jobName', psJobAddr: 'jobAddr', psStart: 'start', psSf: 'sf', psDumpSize: 'dumpSize', psUsable: 'usable', psSafety: 'safety' };
+const psFields = { psJobName: 'jobName', psJobAddr: 'jobAddr', psStart: 'start', psSafety: 'safety' };
 
 function openProjectSchedule(jobId) {
   const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId);
@@ -4953,7 +4938,6 @@ function psFillForm() {
       ? 'Each phase starts on its own day. Set start days here or drag the bars on the Schedule tab. Peak crew counts overlapping phases.'
       : 'One crew moves through the phases back to back. Day ranges stack; peak crew is the largest single phase.';
 }
-function psRatesSummary(p) { return `Rates: ${psFmt(psNum(p.rate))} SF/person/day · ${psNum(p.yld)} yd³ per 1,000 SF`; }
 function psRenderPhases() {
   document.getElementById('psPhases').innerHTML = psState.input.phases.map(p => `
     <div class="ps-phase${p.on ? '' : ' off'}" data-id="${p.id}">
@@ -4963,32 +4947,23 @@ function psRenderPhases() {
         <button type="button" class="ps-remove" data-act="remove" aria-label="Remove ${psEsc(p.name)}">&times;</button>
       </div>
       <textarea data-k="scope" rows="2" maxlength="240" aria-label="Scope of work">${psEsc(p.scope)}</textarea>
-      <div class="ps-phase-row">
-        <div><label>Plan by</label><div class="segmented ps-plan">
-          <button type="button" class="segmented-option${p.plan !== 'days' ? ' active' : ''}" data-plan="crew">Crew</button>
-          <button type="button" class="segmented-option${p.plan === 'days' ? ' active' : ''}" data-plan="days">Days</button>
-        </div></div>
-        <div><label for="psVal-${p.id}">${p.plan === 'days' ? 'Target days' : 'Crew size'}</label>
-          <input type="number" id="psVal-${p.id}" data-k="${p.plan === 'days' ? 'days' : 'crew'}" min="1" step="1" inputmode="numeric" value="${psEsc(p.plan === 'days' ? p.days : p.crew)}"></div>
+      <div class="ps-phase-row${psState.input.mode === 'custom' ? ' four' : ''}">
+        <div><label for="psCrew-${p.id}">Crew</label><input type="number" id="psCrew-${p.id}" data-k="crew" min="1" step="1" inputmode="numeric" value="${psEsc(p.crew)}"></div>
+        <div><label for="psDays-${p.id}">Work days</label><input type="number" id="psDays-${p.id}" data-k="days" min="1" step="1" inputmode="numeric" value="${psEsc(p.days)}"></div>
+        <div><label for="psLoads-${p.id}">Loads</label><input type="number" id="psLoads-${p.id}" data-k="loads" min="0" step="1" inputmode="numeric" value="${psEsc(p.loads ?? 0)}"></div>
         ${psState.input.mode === 'custom' ? `<div><label for="psStartDay-${p.id}">Start day</label><input type="number" id="psStartDay-${p.id}" data-k="startDay" min="1" step="1" inputmode="numeric" value="${psEsc(p.startDay || 1)}"></div>` : ''}
       </div>
-      <details><summary>${psRatesSummary(p)}</summary><div class="ps-rates">
-        <div><label>SF / person / day</label><input type="number" data-k="rate" min="1" step="50" value="${psEsc(p.rate)}"></div>
-        <div><label>Debris yd³ / 1,000 SF</label><input type="number" data-k="yld" min="0" step="0.1" value="${psEsc(p.yld)}"></div>
-      </div></details>
       <div class="ps-calc" data-calc="${p.id}"></div>
     </div>`).join('');
 }
 function psRenderPreview() {
   const input = psState.input, sch = psBuild(input), start = psParse(input.start);
-  const sf = Math.max(0, psNum(input.sf)), usable = psNum(input.usable);
   input.phases.forEach(p => {
     const el = psSheetEl.querySelector(`[data-calc="${p.id}"]`); if (!el) return;
-    const c = psCalc(p, sf, usable);
-    const mid = p.plan === 'days' ? `crew of <b>${c.crew}</b> · <b>${c.days}</b> day${c.days === 1 ? '' : 's'}` : `<b>${c.days}</b> day${c.days === 1 ? '' : 's'}`;
-    el.innerHTML = `${psFmt(c.pd, 1)} person-days → ${mid} · ${psFmt(c.debris, 1)} yd³ = <b>${c.loads}</b> load${c.loads === 1 ? '' : 's'}`;
+    const c = psCalc(p);
+    el.innerHTML = `<b>${c.crew}</b> crew × <b>${c.days}</b> day${c.days === 1 ? '' : 's'} = <b>${c.crewDays}</b> crew-days`;
   });
-  document.getElementById('psBasis').textContent = sf ? `${psFmt(sf)} SF · ${sch.rows.length} phase${sch.rows.length === 1 ? '' : 's'}` : 'Enter the building size to run the numbers';
+  document.getElementById('psBasis').textContent = `${sch.rows.length} phase${sch.rows.length === 1 ? '' : 's'} · ${sch.workdays} workdays`;
   const rows = sch.rows.map((r, i) => {
     const range = r.days ? (r.from === r.to ? `Day ${r.from}` : `Day ${r.from}–${r.to}`) : '—';
     const dates = start && r.days ? `<span class="dates">${psShort(psWorkday(start, r.from))}${r.from !== r.to ? ' – ' + psShort(psWorkday(start, r.to)) : ''}</span>` : '';
@@ -5005,8 +4980,7 @@ function psRenderPreview() {
       <div class="pss-issued"><span>Interior demolition · field copy</span><span>Sheet ____ of ____</span></div></header>
     <dl class="pss-meta">
       ${cell('Job', input.jobName, 'wide')}${cell('Job start date', start ? psLong(start) : '', 'last-col')}
-      ${cell('Site address', input.jobAddr, 'wide')}${cell('Planned finish', finish, 'last-col')}
-      ${cell('Building size', sf ? `${psFmt(sf)} SF` : '', 'last-row')}${cell('Dumpster load size', `${psFmt(psNum(input.dumpSize))} yd³ roll-off · ${psFmt(usable)} yd³ usable`, 'last-row')}${cell('Schedule mode', psModeLabel(input.mode), 'last-row last-col')}
+      ${cell('Site address', input.jobAddr, 'last-row')}${cell('Schedule mode', psModeLabel(input.mode), 'last-row')}${cell('Planned finish', finish, 'last-row last-col')}
     </dl>
     ${sch.rows.length ? `<div class="pss-scroll"><table class="pss-table"><thead><tr><th>#</th><th>Phase &amp; scope of work</th><th class="n">Crew</th><th class="n">Work days</th><th class="n">Schedule</th><th class="n">Loads</th></tr></thead><tbody>${rows}</tbody></table></div>`
       : '<div class="pss-empty">No phases turned on.</div>'}
@@ -5022,7 +4996,7 @@ function psRenderPreview() {
       <section><h3 class="pss-h">Sign-off</h3>${sig('Foreman')}${sig('Superintendent')}
         <div class="pss-complete"><div class="pss-role">Actual completion date</div><div class="pss-line"></div></div></section>
     </div>
-    <div class="pss-foot">Work days = (SF ÷ production rate) ÷ crew, rounded up. Loads = debris yd³ ÷ usable capacity, rounded up. Workdays run Mon–Fri.</div>`;
+    <div class="pss-foot">Crew-days = crew × work days. Workdays run Mon–Fri; the schedule skips weekends.</div>`;
 }
 
 document.getElementById('psForm').addEventListener('submit', e => e.preventDefault());
@@ -5031,13 +5005,12 @@ document.getElementById('psForm').addEventListener('input', e => {
   const key = psFields[e.target.id];
   const card = e.target.closest('.ps-phase');
   if (key) {
-    psState.input[key] = ['sf', 'dumpSize', 'usable'].includes(key) ? (e.target.value === '' ? '' : psNum(e.target.value)) : e.target.value;
+    psState.input[key] = e.target.value;
   } else if (card) {
     const p = psState.input.phases.find(x => x.id === card.dataset.id); const k = e.target.dataset.k; if (!p || !k) return;
     if (k === 'on') { p.on = e.target.checked; card.classList.toggle('off', !p.on); }
-    else if (['crew', 'days', 'rate', 'yld', 'startDay'].includes(k)) p[k] = e.target.value === '' ? '' : psNum(e.target.value);
+    else if (['crew', 'days', 'loads', 'startDay'].includes(k)) p[k] = e.target.value === '' ? '' : psNum(e.target.value);
     else p[k] = e.target.value;
-    if (k === 'rate' || k === 'yld') card.querySelector('summary').textContent = psRatesSummary(p);
   } else return;
   psSaveDraft(); psRenderPreview();
 });
@@ -5045,13 +5018,6 @@ document.getElementById('psPhases').addEventListener('click', e => {
   const card = e.target.closest('.ps-phase'); if (!card || !psState) return;
   const phases = psState.input.phases, idx = phases.findIndex(x => x.id === card.dataset.id), p = phases[idx];
   if (e.target.closest('[data-act="remove"]')) { phases.splice(idx, 1); psSaveDraft(); psRenderPhases(); psRenderPreview(); return; }
-  const plan = e.target.dataset.plan;
-  if (plan && plan !== p.plan) {
-    const c = psCalc(p, Math.max(0, psNum(psState.input.sf)), psNum(psState.input.usable)); // carry the result across so nothing jumps
-    if (plan === 'days') p.days = c.days || p.days || 1; else p.crew = c.crew || p.crew || 1;
-    p.plan = plan; psSaveDraft(); psRenderPhases(); psRenderPreview();
-    document.getElementById('psVal-' + p.id)?.focus();
-  }
 });
 document.getElementById('psMode').addEventListener('click', e => {
   const mode = e.target.dataset.mode; if (!mode || !psState) return;
@@ -5066,7 +5032,7 @@ document.getElementById('psAddPhase').addEventListener('click', () => {
 });
 document.getElementById('resetPsSheet').addEventListener('click', () => {
   if (!psState || !confirm('Reset phases, rates and the checklist to the standard defaults? Job info stays.')) return;
-  Object.assign(psState.input, { phases: psWithIds(PS_DEFAULT_PHASES), safety: PS_DEFAULT_SAFETY, mode: 'seq', dumpSize: 30, usable: 25 });
+  Object.assign(psState.input, { phases: psWithIds(PS_DEFAULT_PHASES), safety: PS_DEFAULT_SAFETY, mode: 'seq' });
   psSaveDraft(); psFillForm(); psRenderPhases(); psRenderPreview();
 });
 document.getElementById('closePsSheet').addEventListener('click', closeProjectSchedule);
@@ -5077,8 +5043,6 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && psSheetEl.
 async function psSubmit(action, btn) {
   if (!psState) return;
   if (action === 'submit') {
-    if (!(psNum(psState.input.sf) > 0)) { showToast('Enter the building size (SF) before submitting.', true); document.getElementById('psSf').focus(); return; }
-    if (!(psNum(psState.input.usable) > 0)) { showToast('Enter the dumpster usable capacity.', true); return; }
     if (!psState.input.phases.some(p => p.on)) { showToast('Turn on at least one phase.', true); return; }
   }
   const buttons = [document.getElementById('savePsSheet'), document.getElementById('submitPsSheet')];
@@ -5137,7 +5101,7 @@ function psBarTitle(r, start) {
   return `${r.p.name}: Day ${r.from}–${r.to}${dates} · ${r.crew} crew · ${r.loads} load${r.loads === 1 ? '' : 's'}`;
 }
 function psGantt(jobId, input, sch) {
-  if (!sch.workdays) return '<p class="psv-empty-note">Enter the building size on this schedule to see the timeline.</p>';
+  if (!sch.workdays) return '<p class="psv-empty-note">Turn on at least one phase to see the timeline.</p>';
   const S = psScale(sch.workdays), start = psParse(input.start);
   const axis = psTicks(S).map(d => `<span class="psv-tick" style="left:${((d - 1) / S) * 100}%">Day ${d}${start ? `<em>${psMonthDay(psWorkday(start, d))}</em>` : ''}</span>`).join('');
   const rows = sch.rows.map(r => {
@@ -5175,10 +5139,10 @@ function psApplyDelta(base, pid, kind, delta) {
   const row = psBuild(next).rows.find(r => r.p.id === pid); if (!row) return next;
   const phase = row.p;
   if (kind === 'move') { psToCustom(next); phase.startDay = Math.max(1, row.from + delta); }
-  else if (kind === 'right') { phase.plan = 'days'; phase.days = Math.max(1, row.days + delta); }
+  else if (kind === 'right') { phase.days = Math.max(1, row.days + delta); }
   else if (kind === 'left') {
     const from = Math.min(Math.max(1, row.from + delta), row.to);
-    psToCustom(next); phase.startDay = from; phase.plan = 'days'; phase.days = row.to - from + 1;
+    psToCustom(next); phase.startDay = from; phase.days = row.to - from + 1;
   }
   return next;
 }
@@ -5307,12 +5271,12 @@ function renderScheduleView() {
           </div>
           <div class="psv-gantt-head"><h4>Schedule at a glance</h4>
             <div class="segmented psv-mode" role="group" aria-label="Layout">${modeBtn('seq', 'In order')}${modeBtn('par', 'All at once')}${modeBtn('custom', 'Custom')}</div></div>
-          <p class="psv-hint">Drag a bar to move it. Drag either end to change its days; the crew adjusts to fit. Drag ⠿ to reorder. Pick In order or All at once to line everything back up.</p>
+          <p class="psv-hint">Drag a bar to move it. Drag either end to change its days; crew stays as set. Drag ⠿ to reorder. Pick In order or All at once to line everything back up.</p>
           ${psGantt(job.id, input, sch)}
           <div class="psv-table-wrap"><table class="psv-table"><thead><tr><th>#</th><th>Phase</th><th class="n">Crew</th><th class="n">Days</th><th class="n">Schedule</th><th class="n">Loads</th></tr></thead><tbody>
             ${sch.rows.map((r, i) => `<tr><td><span class="psv-dot" style="background:${psColor(r.p.name)}"></span>${i + 1}</td><td>${psEsc(r.p.name)}</td><td class="n">${r.crew}</td><td class="n">${r.days}</td><td class="n">${r.days ? `Day ${r.from}–${r.to}` : '—'}${start && r.days ? `<small>${psShort(psWorkday(start, r.from))} – ${psShort(psWorkday(start, r.to))}</small>` : ''}</td><td class="n">${r.loads}</td></tr>`).join('')}
           </tbody></table></div>
-          <p class="psv-meta">${psFmt(psNum(input.sf))} SF · ${psFmt(psNum(input.dumpSize))} yd³ box, ${psFmt(psNum(input.usable))} usable · ${psModeLabel(input.mode)} · ${record.sentAt ? `PDF last sent ${new Date(record.sentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'PDF not sent yet'}</p>
+          <p class="psv-meta">${psModeLabel(input.mode)} · ${record.sentAt ? `PDF last sent ${new Date(record.sentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'PDF not sent yet'}</p>
           <div class="psv-actions">${actions}</div>
         </div>`;
     }
