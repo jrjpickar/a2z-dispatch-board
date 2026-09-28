@@ -4,6 +4,8 @@ Keep your existing notification and driver-log action modules. No new everyday s
 
 ## 1. Confirm finished actions
 
+**Worker assign sends one run per worker.** When a dispatcher confirms an assignment, the worker scenario gets a separate webhook call for each assignee. Each payload has the job fields plus `workerName`, `workerPhone`, `contactId` at the top level, `assignedWorkers` containing just that one worker (so old mappings still work — no iterator needed), and `workerIndex` / `workerCount` (e.g. 2 of 3). Every run must still end with the `{"ok":true}` response below.
+
 At the END of each successful worker assign/remove, driver assign/remove, job edit/stage, container edit/stage and driver-log route, use **Webhooks → Webhook response**:
 
 - Status: `200`

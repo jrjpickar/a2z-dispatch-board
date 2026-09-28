@@ -588,6 +588,10 @@
   body.dark-mode .night-inline { color:#b8bdc2; }
   .split-day-empty { display: none; padding: 5px 2px; color: var(--ink-soft); font-size: 11px; }
   .crew-assign-panel.no-available:not(.include-booked) .split-day-empty { display: block; }
+  .crew-assign-confirm-bar { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--grey-light); }
+  .crew-assign-panel.has-selection .crew-assign-confirm-bar { display: block; }
+  .crew-assign-summary { font-size: 11px; color: var(--ink-soft); line-height: 1.35; overflow-wrap: anywhere; }
+  .crew-assign-summary b { color: var(--ink); }
   .crew-assign-confirm {
     width: 100%;
     margin-top: 8px;
@@ -2514,7 +2518,10 @@ function renderJobs(jobs) {
                    </label>
                  `;
                }).join('')}
-               <button type="button" class="btn btn-primary crew-assign-confirm">Assign selected</button>
+               <div class="crew-assign-confirm-bar">
+                 <div class="crew-assign-summary"></div>
+                 <button type="button" class="btn btn-primary crew-assign-confirm">Confirm assignment</button>
+               </div>
              </div>
            </div>`
         : `<span class="crew-chip empty-slot">no one available</span>`);
@@ -2647,22 +2654,50 @@ window.logisticsBreakSchedule = loadTimeOverridesFromStorage('logisticsBreakSche
 // backend catches up or the job disappears from the active jobs feed.
 window.jobStageOverride = {};
 
+// Assign flow: nothing is sent while workers are being ticked. The Confirm
+// button only appears once at least one worker is selected; clicking it saves
+// the crew once (shared state), then sends ONE Make payload per assignee so each
+// worker gets their own notification run. Each payload keeps the job fields,
+// adds the worker at the top level, and still carries assignedWorkers (with
+// just that worker) so existing Make mappings keep working.
 async function assignCrew(jobId, workers, confirmBtn) {
   const selected = workers.filter(w => w.phone && w.phone.trim());
   if (!jobId || !selected.length) return showToast('Selected workers need a phone number.', true);
   const job = dashboardData.jobs.find(j => j.id === jobId) || {};
-  const payload = { action: 'assign', jobId, jobAddress: job.name || '', clientName: getClientName(job), clientPhone: getClientPhone(job),
+  const assignedWorkers = selected.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone }));
+  const base = { action: 'assign', jobId, jobAddress: job.name || '', clientName: getClientName(job), clientPhone: getClientPhone(job),
     scopeOfWork: getScopeOfWork(job), toolsRequired: getToolsRequired(job), monetaryValue: getOpportunityValue(job),
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
-    nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day',
-    assignedWorkers: selected.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone })) };
+    nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day' };
   confirmBtn.disabled = true; const label = confirmBtn.textContent; confirmBtn.textContent = 'Assigning...';
   try {
-    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { ...payload, crewChanges: payload.assignedWorkers });
-    await runSideEffect(CONFIG.MOVE_WORKER_URL, payload, 'Worker assignment notifications');
-    showToast('Crew assignment saved.'); render();
-  } catch (error) { showToast(error.message, true); }
-  finally { confirmBtn.disabled = false; confirmBtn.textContent = label; }
+    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { ...base, assignedWorkers, crewChanges: assignedWorkers });
+  } catch (error) {
+    showToast(error.message, true); confirmBtn.disabled = false; confirmBtn.textContent = label; return;
+  }
+  const results = await Promise.allSettled(assignedWorkers.map((worker, index) =>
+    runSideEffect(CONFIG.MOVE_WORKER_URL,
+      { ...base, ...worker, assignedWorkers: [worker], workerIndex: index + 1, workerCount: assignedWorkers.length },
+      `Assignment notification for ${worker.workerName}`,
+      undefined,
+      'assign-' + (String(worker.workerPhone || '').replace(/\D/g, '') || worker.contactId || index))));
+  const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected').map(w => w.workerName);
+  if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
+  else showToast(assignedWorkers.length === 1 ? 'Crew assignment saved.' : `Crew assignment saved — ${assignedWorkers.length} notifications sent.`);
+  render();
+}
+
+function updateCrewAssignSelection(panel) {
+  if (!panel) return;
+  const names = Array.from(panel.querySelectorAll('.crew-worker-select:checked')).map(cb => cb.dataset.name);
+  panel.classList.toggle('has-selection', names.length > 0);
+  const summary = panel.querySelector('.crew-assign-summary');
+  const btn = panel.querySelector('.crew-assign-confirm');
+  if (summary) summary.innerHTML = names.length ? `Assign <b>${names.map(escapeLogisticsHtml).join(', ')}</b>? Each worker gets their own notification.` : '';
+  if (btn && !btn.disabled) btn.textContent = names.length === 1 ? 'Confirm assignment' : `Confirm ${names.length} assignments`;
+  // The jobs table scrolls horizontally, which also clips this dropdown on the
+  // last rows — bring the Confirm button into view when it appears.
+  if (btn && names.length) btn.scrollIntoView({ block: 'nearest' });
 }
 
 
@@ -3176,6 +3211,8 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
 });
 
 document.getElementById('jobsBody').addEventListener('change', (e) => {
+  const workerBox = e.target.closest('.crew-worker-select');
+  if (workerBox) { updateCrewAssignSelection(workerBox.closest('.crew-assign-panel')); return; }
   const splitDayToggle = e.target.closest('.include-booked-toggle');
   if (!splitDayToggle) return;
   const panel = splitDayToggle.closest('.crew-assign-panel');
@@ -3185,6 +3222,7 @@ document.getElementById('jobsBody').addEventListener('change', (e) => {
       cb.checked = false;
     });
   }
+  updateCrewAssignSelection(panel);
 });
 
 /* ---------- Roster tabs / search ---------- */
@@ -4723,13 +4761,13 @@ async function retryCrm(jobId) {
   const res = await fetchWithTimeout('/api/sync-retry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId }) }, 45000);
   if (!res.ok) throw new Error('GHL is still unavailable. Dispatch state remains saved.');
 }
-async function runSideEffect(url, payload, label, kindOverride) {
+async function runSideEffect(url, payload, label, kindOverride, effectKey) {
   // State is already committed. Never reapply it to retry a notification.
   try {
     const kinds = { [CONFIG.MOVE_WORKER_URL]: 'workers', [CONFIG.DRIVER_ASSIGNMENT_URL]: 'drivers', [CONFIG.EDIT_JOB_DETAILS_URL]: 'job_details', [CONFIG.CREATE_JOB_URL]: 'job_stage', [CONFIG.LOGISTICS_CREATE_URL]: 'container', [CONFIG.DRIVER_LOG_URL]: 'driver_log' };
     const requestId = lastCommittedRequests.get(String(payload.moveId || payload.jobId || payload.opportunityId || ''));
     // kindOverride lets two effects share one webhook URL (EOD sheet + worker release).
-    const response = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, kind: kindOverride || kinds[url], payload }) }, 45000);
+    const response = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, kind: kindOverride || kinds[url], payload, ...(effectKey ? { effectKey } : {}) }) }, 45000);
     const text = await response.text();
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     let result; try { result = JSON.parse(text); } catch { throw new Error('Make did not confirm completion. Add the final JSON response from the setup guide.'); }

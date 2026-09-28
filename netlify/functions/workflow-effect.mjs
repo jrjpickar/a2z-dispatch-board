@@ -25,9 +25,12 @@ export default async function handler(request) {
     if (request.method === 'POST') authorizeWrite(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') return json({ issues: await sql`select effect_id as id, kind, status, last_error as error from dispatch_effects where status <> 'confirmed' order by created_at desc limit 50` });
-    const { requestId, kind, payload } = await readPayload(request);
+    const { requestId, kind, payload, effectKey } = await readPayload(request);
     if (!workflows[kind] || !payload || typeof payload !== 'object' || Array.isArray(payload)) throw new StateError('Valid workflow kind and payload required');
-    const effectId = `${requestId}:${kind}`;
+    // effectKey lets one saved change fan out to several webhook calls (e.g. one
+    // worker-assignment notification per assignee), each deduped on its own.
+    const key = String(effectKey || '').replace(/[^\w+.-]/g, '').slice(0, 80);
+    const effectId = key ? `${requestId}:${kind}:${key}` : `${requestId}:${kind}`;
     const fingerprint = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
     const claimed = await sql.begin(async tx => {
       await tx`select pg_advisory_xact_lock(hashtextextended(${effectId}, 0))`;
