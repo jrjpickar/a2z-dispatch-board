@@ -1320,7 +1320,7 @@
   </div>
   <div class="panel" id="fieldAppAccessPanel">
     <div class="panel-head"><h2>Field App Access</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit" id="refreshFieldAppAccess">Refresh</button></div></div>
-    <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number — no code — to see only their assigned route or job, read-only (drivers can also check off stops).</div>
+    <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number (no code) to see only their own route or job. Drivers can also check off stops.</div>
     <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
     <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
   </div>
@@ -1732,7 +1732,7 @@
 <div class="sheet" id="editWorkerSheet" aria-labelledby="editWorkerTitle">
   <div class="sheet-head"><h2 id="editWorkerTitle">Edit worker</h2><button id="closeEditWorker" aria-label="Close">&times;</button></div>
   <div class="sheet-body">
-    <p class="logistics-note">Saves to the worker's GHL contact. The board, open jobs' crews, drivers on open moves and Field App sign-in follow the new name and phone.</p>
+    <p class="logistics-note">Saves to the worker's GHL contact. The board, crews on open jobs, drivers on open moves and Field App sign in all follow the new name and phone.</p>
     <p class="load-state" id="editWorkerLoading">Loading from GHL...</p>
     <div id="editWorkerForm" hidden>
       <div class="field-row">
@@ -2780,8 +2780,8 @@ function renderJobs(jobs) {
                }).join('')}
                <div class="crew-assign-confirm-bar">
                  <div class="crew-assign-summary"></div>
-                 <button type="button" class="btn btn-primary crew-assign-confirm">Confirm assignment</button>
-                 <button type="button" class="btn crew-assign-rapid" title="Assign and send each worker their schedule right away (Make action rapid_assign)">Send schedule now</button>
+                 <button type="button" class="btn btn-primary crew-assign-confirm">Assign selected</button>
+                 <button type="button" class="btn crew-assign-rapid" title="Assign and text each worker their schedule right away">Send schedule now</button>
                </div>
              </div>
            </div>`
@@ -2962,11 +2962,13 @@ function updateCrewAssignSelection(panel) {
   panel.classList.toggle('has-selection', names.length > 0);
   const summary = panel.querySelector('.crew-assign-summary');
   const btn = panel.querySelector('.crew-assign-confirm');
-  if (summary) summary.innerHTML = names.length ? `Assign <b>${names.map(escapeLogisticsHtml).join(', ')}</b>? Each worker gets their own notification.` : '';
-  if (btn && !btn.disabled) btn.textContent = names.length === 1 ? 'Confirm assignment' : `Confirm ${names.length} assignments`;
+  if (summary) summary.innerHTML = names.length ? `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> texts the schedule 12 hours before the start time. <b>Send schedule now</b> texts it right away.` : '';
+  if (btn && !btn.disabled) btn.textContent = 'Assign selected';
   // The jobs table scrolls horizontally, which also clips this dropdown on the
   // last rows — bring the Confirm button into view when it appears.
-  if (btn && names.length) btn.scrollIntoView({ block: 'nearest' });
+  fitCrewPanel();
+  const last = panel.querySelector('.crew-assign-rapid') || btn;
+  if (last && names.length) last.scrollIntoView({ block: 'nearest' });
 }
 
 
@@ -3404,6 +3406,7 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
       if (p !== panel) p.classList.remove('open');
     });
     panel.classList.toggle('open');
+    fitCrewPanel();
     return;
   }
 
@@ -3476,8 +3479,21 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
 
   if (!e.target.closest('.crew-assign-wrap')) {
     document.querySelectorAll('.crew-assign-panel.open').forEach(p => p.classList.remove('open'));
+    fitCrewPanel();
   }
 });
+// The jobs table scrolls sideways, which also clips an open crew picker on the
+// last rows. Give the table just enough room underneath so the whole picker,
+// including Send schedule now, is always visible.
+function fitCrewPanel() {
+  const wrap = document.querySelector('#laborDispatchView .jobs-table-wrap');
+  if (!wrap) return;
+  wrap.style.paddingBottom = '';
+  const panel = document.querySelector('.crew-assign-panel.open');
+  if (!panel) return;
+  const extra = panel.getBoundingClientRect().bottom - wrap.getBoundingClientRect().bottom + 12;
+  if (extra > 0) wrap.style.paddingBottom = `${Math.ceil(extra)}px`;
+}
 
 document.getElementById('jobsBody').addEventListener('change', (e) => {
   const workerBox = e.target.closest('.crew-worker-select');
@@ -5812,7 +5828,7 @@ function renderAdminUsers() {
   document.getElementById('adminUserSearch').parentElement.hidden = !senior;
   document.getElementById('adminUsersNote').textContent = senior
     ? 'You are a senior admin: tap Enroll or Revoke next to anyone in GHL. Admins can add and remove laborers and manage Field App access.'
-    : 'Admins can add and remove laborers and manage Field App access. Only a senior admin can enroll or revoke admins.';
+    : 'Admins can add, edit and remove laborers and manage Field App access.';
   const q = document.getElementById('adminUserSearch').value.trim().toLowerCase();
   const shown = people.filter(p => !q || `${p.name} ${p.email}`.toLowerCase().includes(q))
     .sort((a, b) => (byId.has(b.userId) - byId.has(a.userId)) || a.name.localeCompare(b.name));
