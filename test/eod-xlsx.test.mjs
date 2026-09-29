@@ -22,3 +22,23 @@ test('EOD sheet produces the filled Job Costing workbook as a base64 .xlsx', () 
   assert.match(cell('E38'), /<v>0.2<\/v>/);
   assert.match(cell('E39'), /<v>2148<\/v>/);
 });
+import { eodMultipart, assertEodPayload } from '../lib/eod-xlsx.mjs';
+test('EOD goes to Make as multipart with the workbook as binary and flat fields intact', async () => {
+  const payload = { action: 'eod_sheet', jobId: 'opp123', jobName: 'Acme', date: '2026-09-23', lines, INTERIOR_LABOR_DESC: 'Skilled Labor', nightWork: false, crew: ['Ana'] };
+  const form = eodMultipart(payload, 'req:eod_sheet');
+  const file = form.get('file');
+  assert.equal(file.name, 'EOD Sheet - Acme - 2026-09-23.xlsx');
+  assert.ok(file.size > 10000);
+  assert.equal(readZip(Buffer.from(await file.arrayBuffer())).length, 20);
+  assert.equal(form.get('INTERIOR_LABOR_DESC'), 'Skilled Labor');
+  assert.equal(form.get('action'), 'eod_sheet');
+  assert.equal(form.get('nightWork'), 'false');
+  assert.deepEqual(JSON.parse(form.get('crew')), ['Ana']);
+  assert.equal(JSON.parse(form.get('lines')).length, 19);
+  assert.equal(form.get('eventId'), 'req:eod_sheet');
+});
+test('a blank EOD sheet is never posted', () => {
+  assert.throws(() => assertEodPayload({ action: 'eod_sheet', jobId: 'x', lines: [{ description: '', qty: 0, rate: 0 }] }), /empty/);
+  assert.throws(() => assertEodPayload({ action: 'eod_sheet', lines }), /empty/);
+  assertEodPayload({ action: 'eod_sheet', jobId: 'x', lines });
+});

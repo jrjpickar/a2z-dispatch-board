@@ -1079,6 +1079,88 @@
   body.dark-mode .psv-chip.saved { background:#3a321f; color:#f4d36b; }
   body.dark-mode .psv-chip.sent { background:#1d3528; color:#8fd6ab; }
   body.dark-mode .psv-stats b, body.dark-mode .psv-title b { color:#f1f3f4; }
+
+  /* ---------- Signed-in user, admin tools (1.8) ---------- */
+  .user-chip { position: relative; }
+  .user-chip[hidden] { display: none; }
+  .user-chip-btn { background: rgba(255,255,255,.08); color: #fff; border: 1px solid var(--grey-dark); padding: 7px 10px; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; max-width: 260px; }
+  .user-chip-btn:hover { border-color: #fff; }
+  .user-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-role { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .06em; padding: 2px 6px; border-radius: var(--radius); background: var(--grey-dark); color: #fff; }
+  .user-role.admin { background: var(--orange); }
+  .user-role.locked { background: var(--gold); color: var(--ink); }
+  .user-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 400; min-width: 220px; background: var(--card); color: var(--ink); border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 6px; border-radius: var(--radius); }
+  .user-menu[hidden] { display: none; }
+  .user-menu-who { font-size: 12px; color: var(--ink-soft); padding: 6px 8px 8px; border-bottom: 1px solid var(--stripe); margin-bottom: 4px; overflow-wrap: anywhere; }
+  .user-menu button { display: block; width: 100%; text-align: left; background: transparent; color: var(--ink); padding: 8px; font-size: 13px; }
+  .user-menu button:hover { background: var(--orange-tint-soft); }
+  .user-menu button[hidden] { display: none; }
+  .req-mark { color: var(--danger); font-weight: 700; }
+  .signin-backdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(20,21,23,.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .signin-backdrop[hidden] { display: none; }
+  .signin-card { background: var(--card); color: var(--ink); width: 100%; max-width: 400px; padding: 22px; border-radius: var(--radius); border-top: 4px solid var(--orange); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
+  .signin-card h2 { margin: 0 0 6px; font-size: 18px; }
+  .signin-note { margin: 0 0 14px; font-size: 13px; color: var(--ink-soft); }
+  .signin-error { margin: 4px 0 10px; font-size: 13px; color: var(--danger); }
+  .signin-error[hidden], .signin-skip[hidden] { display: none; }
+  .signin-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  .signin-actions .btn-ghost { color: var(--ink-soft); border-color: var(--border); }
+  .admin-h { font-size: 13px; margin: 18px 0 6px; color: var(--orange-dark); }
+  .admin-h:first-child { margin-top: 0; }
+  .admin-list { list-style: none; margin: 0 0 12px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); }
+  .admin-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--stripe); font-size: 13px; }
+  .admin-list li:last-child { border-bottom: none; }
+  .admin-list .who { min-width: 0; overflow-wrap: anywhere; }
+  .admin-list .who small { display: block; color: var(--ink-soft); font-size: 12px; }
+  .admin-add-row { align-items: flex-end; }
+  .admin-add-btn { flex: 0 0 auto; }
+  .ghl-results { list-style: none; margin: -4px 0 14px; padding: 0; max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  .ghl-results li { padding: 9px 12px; border-bottom: 1px solid var(--stripe); font-size: 13px; }
+  .ghl-results li:last-child { border-bottom: none; }
+  .ghl-results li.ghl-hint { color: var(--ink-soft); }
+  .ghl-results button { display: block; width: 100%; text-align: left; background: transparent; color: var(--ink); padding: 0; font-size: 13px; }
+  .ghl-results button small { display: block; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .ghl-results li.picked { background: var(--orange-tint-soft); }
+  .ghl-picked { border: 1px solid var(--orange); background: var(--orange-tint-soft); padding: 12px; border-radius: var(--radius); margin-bottom: 12px; }
+  .ghl-picked[hidden] { display: none; }
+  .ghl-picked-name { font-weight: 700; }
+  .ghl-picked-meta { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
+  .ghl-roles { display: grid; gap: 6px; font-size: 13px; }
+  .ghl-roles label { display: flex; gap: 8px; align-items: center; }
+  .manual-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 1px 5px; margin-left: 6px; border: 1px solid var(--gold); color: var(--ink-soft); border-radius: var(--radius); }
+  body.dark-mode .user-menu, body.dark-mode .signin-card { background: #222427; color: #f1f3f4; border-color: #3b3f43; }
+  body.dark-mode .user-menu button { color: #f1f3f4; }
+  body.dark-mode .user-menu button:hover, body.dark-mode .ghl-results li.picked { background: #2f2a24; }
+  body.dark-mode .user-menu-who, body.dark-mode .signin-note, body.dark-mode .admin-list .who small, body.dark-mode .ghl-results button small, body.dark-mode .ghl-picked-meta { color: #adb2b7; }
+  body.dark-mode .admin-list, body.dark-mode .ghl-results { border-color: #3b3f43; }
+  body.dark-mode .admin-list li, body.dark-mode .ghl-results li { border-color: #33373b; }
+  body.dark-mode .ghl-results button { color: #f1f3f4; }
+  body.dark-mode .ghl-picked { background: #2a2618; }
+  @media (max-width: 640px) { .user-chip-btn { max-width: 150px; } .admin-add-row { display: block; } }
+
+  /* ---------- Signed-in identity (top left) + Admin page ---------- */
+  .topbar .brand { flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+  .whoami { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--grey); flex-wrap: wrap; min-width: 0; }
+  .whoami-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px; }
+  .whoami .user-role[hidden], .whoami-switch[hidden] { display: none; }
+  .whoami-switch { background: none; color: var(--grey); text-decoration: underline; padding: 0; font-size: 12px; }
+  .whoami-switch:hover { color: #fff; }
+  #adminDispatchView { padding: 18px 24px 30px; }
+  #adminDispatchView[hidden] { display: none; }
+  .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; align-items: start; }
+  .admin-grid .panel, #adminDispatchView > .panel, #adminTools > .panel { padding-bottom: 12px; }
+  #adminDispatchView .admin-list, #adminDispatchView .admin-h, #adminDispatchView .admin-search { margin-left: 16px; margin-right: 16px; }
+  .admin-search input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font: inherit; margin: 4px 0 10px; }
+  .admin-lock { margin-bottom: 16px; }
+  .admin-lock-row { padding: 0 16px 4px; }
+  .admin-pill { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 1px 6px; margin-left: 6px; border-radius: var(--radius); background: var(--orange); color: #fff; vertical-align: 1px; }
+  .admin-pill.you { background: var(--ink-soft); }
+  .roster-remove { background: none; border: 1px solid var(--border); color: var(--danger); font-size: 11px; padding: 3px 7px; margin-left: 6px; }
+  .roster-remove:hover { border-color: var(--danger); }
+  .roster-actions { display: flex; align-items: center; }
+  body.dark-mode .admin-search input { background: #1b1d1f; color: #f1f3f4; border-color: #3b3f43; }
+  body.dark-mode .roster-remove { border-color: #3b3f43; }
+  @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } #adminDispatchView { padding: 12px 10px 24px; } .whoami-text { max-width: 200px; } }
 </style>
 </head>
 <body>
@@ -1086,6 +1168,7 @@
 <div class="topbar">
   <div class="brand">
     <h1>A2Z <span class="tag">DISPATCH</span></h1>
+    <div class="whoami" id="whoami"><span class="whoami-text" id="whoamiText">Signing in through GHL…</span><span class="user-role" id="whoamiRole" hidden></span><button type="button" class="whoami-switch" id="switchUserBtn" hidden>Switch user</button></div>
   </div>
   <div class="date mono" id="todayDate"></div>
   <div class="actions">
@@ -1099,6 +1182,7 @@
   <button class="dispatch-view-tab active" id="laborViewTab" data-view="labor" role="tab" aria-selected="true">Labor Dispatch</button>
   <button class="dispatch-view-tab" id="logisticsViewTab" data-view="logistics" role="tab" aria-selected="false">Logistics</button>
   <button class="dispatch-view-tab" id="scheduleViewTab" data-view="schedule" role="tab" aria-selected="false">Schedule</button>
+  <button class="dispatch-view-tab" id="adminViewTab" data-view="admin" role="tab" aria-selected="false" hidden>Admin</button>
 </div>
 
 <div class="dispatch-view" id="laborDispatchView">
@@ -1123,7 +1207,7 @@
 <div class="layout">
   <!-- Labor roster -->
   <div class="panel">
-    <div class="panel-head"><h2>Labor Roster</h2></div>
+    <div class="panel-head"><h2>Labor Roster</h2><button type="button" class="job-stage-btn edit admin-only" id="rosterAddBtn" hidden>+ Add laborer</button></div>
     <div class="roster-tabs">
       <button class="roster-tab active" data-tab="available">Available</button>
       <button class="roster-tab" data-tab="booked">Booked</button>
@@ -1173,6 +1257,39 @@
   <div id="psList"></div>
 </div>
 
+<div class="dispatch-view" id="adminDispatchView" hidden>
+  <div class="psv-head"><div><h2>Admin</h2><p>Only admins see this page. Changes here apply to everyone on the board.</p></div></div>
+  <div class="panel admin-lock" id="adminLockPanel" hidden>
+    <div class="panel-head"><h2>Admin tools are locked</h2></div>
+    <div class="logistics-note">You're on the admin list, but this browser signed in outside GHL. Open the board from the GHL menu, or enter the admin PIN.</div>
+    <div class="admin-lock-row"><button type="button" class="btn-primary" id="unlockAdminBtn">Unlock with admin PIN</button></div>
+  </div>
+  <div id="adminTools">
+  <div class="admin-grid">
+    <div class="panel">
+      <div class="panel-head"><h2>Admins</h2><span class="mono" id="adminCount">0 ADMINS</span></div>
+      <div class="logistics-note">Admins can add and remove laborers, manage Field App access and enroll other admins. Tap Enroll or Revoke next to anyone in GHL.</div>
+      <div class="admin-search"><input type="search" id="adminUserSearch" placeholder="Search GHL users..." autocomplete="off"></div>
+      <ul class="admin-list" id="adminUserList"><li class="load-state">Loading GHL users...</li></ul>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Laborers</h2><button type="button" class="btn-primary" id="addGhlWorkerBtn">+ Add from GHL</button></div>
+      <div class="logistics-note">Add anyone from GHL contacts to the crew or driver pickers. Removing a Make roster laborer only hides them on the board; GHL is not touched.</div>
+      <h3 class="admin-h">Added from GHL</h3>
+      <ul class="admin-list" id="manualWorkerList"><li class="load-state">None yet.</li></ul>
+      <h3 class="admin-h">Removed from the board</h3>
+      <ul class="admin-list" id="hiddenWorkerList"><li class="load-state">None.</li></ul>
+    </div>
+  </div>
+  <div class="panel" id="fieldAppAccessPanel">
+    <div class="panel-head"><h2>Field App Access</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit" id="refreshFieldAppAccess">Refresh</button></div></div>
+    <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number — no code — to see only their assigned route or job, read-only (drivers can also check off stops).</div>
+    <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
+    <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
+  </div>
+  </div>
+</div>
+
 <div class="dispatch-view" id="logisticsDispatchView" hidden>
   <div id="logisticsBackendStatus" style="display:none; margin:10px 14px; padding:10px 12px; border:1px solid var(--danger); background:#fbeae7; color:var(--danger); font-size:12px; white-space:pre-wrap;"></div>
   <div class="logistics-stats">
@@ -1185,12 +1302,6 @@
     <div class="panel logistics-drivers-panel"><div class="panel-head"><h2>Drivers</h2><span class="mono" id="logisticsDriverCount">0 TOTAL</span></div><ul class="logistics-resource-list" id="logisticsDrivers"></ul></div>
     <div class="panel logistics-assets-panel"><div class="panel-head"><h2>Assets</h2><span class="mono" id="logisticsAssetCount">0 TOTAL</span></div><div class="logistics-note">Drivers and assets stay independent so either can be reassigned.</div><ul class="logistics-resource-list" id="logisticsAssets"></ul></div>
     <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Move</th><th>Destination</th><th>Monetary Value</th><th>Type / Equipment</th><th>Notes</th><th>Route</th><th>Schedule</th><th>Driver</th><th>Asset</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="10" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
-  </div>
-  <div class="panel" id="fieldAppAccessPanel" style="margin-top:16px;">
-    <div class="panel-head"><h2>Field App Access</h2><button type="button" class="job-stage-btn edit" id="refreshFieldAppAccess">Refresh</button></div>
-    <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number — no code — to see only their assigned route or job, read-only (drivers can also check off stops).</div>
-    <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
-    <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
   </div>
 </div>
 
@@ -1264,8 +1375,8 @@
       <input type="text" id="jobAddress" placeholder="Street, City">
     </div>
     <div class="field">
-      <label for="assignedUser">Assigned User <span class="label-optional">(set on the GHL contact if it has no one assigned)</span></label>
-      <select id="assignedUser"><option value="">Loading GHL users...</option></select>
+      <label for="assignedUser">Assigned User <span class="req-mark">*</span> <span class="label-optional">(defaults to you; set on the GHL contact if it has no one assigned)</span></label>
+      <select id="assignedUser" required aria-required="true"><option value="">Loading GHL users...</option></select>
     </div>
     <div class="field">
       <label>Job Type</label>
@@ -1534,7 +1645,66 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Dashboard sign-in: automatic inside GHL (Custom Page REQUEST_USER_DATA, same as the dialer),
+     otherwise a one-time picker. Session lives in a signed cookie for 180 days. -->
+<div class="signin-backdrop" id="signinBackdrop" hidden>
+  <div class="signin-card" role="dialog" aria-modal="true" aria-labelledby="signinTitle">
+    <h2 id="signinTitle">Who's using the board?</h2>
+    <p class="signin-note" id="signinNote">Pick your name once. This browser remembers you after that.</p>
+    <div class="field"><label for="signinUser">Your GHL user</label><select id="signinUser"><option value="">Loading GHL users...</option></select></div>
+    <div class="field" id="signinPinField"><label for="signinPin">Admin PIN <span class="label-optional">(admins only; leave blank otherwise)</span></label><input type="password" id="signinPin" autocomplete="current-password" maxlength="64"></div>
+    <p class="signin-error" id="signinError" hidden></p>
+    <div class="signin-actions">
+      <button type="button" class="btn-ghost signin-skip" id="signinSkip" hidden>Continue without signing in</button>
+      <button type="button" class="btn-primary" id="signinSubmit">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add worker from GHL (admins): search contacts, pick roles, enable Field App. -->
+<div class="overlay" id="ghlWorkerOverlay"></div>
+<div class="sheet" id="ghlWorkerSheet" aria-labelledby="ghlWorkerTitle">
+  <div class="sheet-head"><h2 id="ghlWorkerTitle">Add laborer from GHL</h2><button id="closeGhlWorkerSheet" aria-label="Close">&times;</button></div>
+  <div class="sheet-body">
+    <div class="field"><label for="ghlWorkerSearch">Search GHL contacts</label><input type="search" id="ghlWorkerSearch" placeholder="Name, phone or email" autocomplete="off" maxlength="80"></div>
+    <ul class="ghl-results" id="ghlWorkerResults"><li class="ghl-hint">Type at least 2 letters.</li></ul>
+    <div class="ghl-picked" id="ghlWorkerPicked" hidden>
+      <div class="ghl-picked-name" id="ghlWorkerPickedName"></div>
+      <div class="ghl-picked-meta mono" id="ghlWorkerPickedMeta"></div>
+      <div class="ghl-roles">
+        <label><input type="checkbox" id="ghlWorkerLabor" checked> Crew (labor picker)</label>
+        <label><input type="checkbox" id="ghlWorkerDriver"> Driver (driver picker)</label>
+        <label><input type="checkbox" id="ghlWorkerFieldApp" checked> Enable Field App sign-in</label>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn-ghost" id="cancelGhlWorker" style="color:var(--ink-soft); border-color:var(--border);">Close</button>
+    <button class="btn-primary" id="saveGhlWorker" disabled>Add worker</button>
+  </div>
+</div>
+
 <script>
+/* ---------- Dashboard session (1.8) ----------
+   Every same-origin /api/ call carries the signed session token as a header
+   too, so sign-in still works where the GHL iframe blocks cookies. */
+const A2Z_SESSION_KEY = 'a2zSessionToken';
+let a2zSessionToken = (() => { try { return localStorage.getItem(A2Z_SESSION_KEY) || ''; } catch { return ''; } })();
+function setSessionToken(token) {
+  a2zSessionToken = token || '';
+  try { if (token) localStorage.setItem(A2Z_SESSION_KEY, token); else localStorage.removeItem(A2Z_SESSION_KEY); } catch {}
+}
+(() => {
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    const sameOriginApi = /^\/(api|\.netlify)\//.test(url) || url.startsWith(location.origin + '/api/');
+    if (!sameOriginApi) return nativeFetch(input, init);
+    const headers = new Headers(init.headers || (typeof input !== 'string' && input.headers) || {});
+    if (a2zSessionToken) headers.set('X-A2Z-Session', a2zSessionToken);
+    return nativeFetch(input, { ...init, headers, credentials: 'same-origin' });
+  };
+})();
 /* ============================================================
    CONFIG — replace with your live Make.com webhook URLs
    ============================================================ */
@@ -2143,12 +2313,13 @@ async function loadLaborRoster() {
   document.getElementById('rosterList').innerHTML =
     `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
   try {
-    const data = await fetchJsonStrict(CONFIG.LABOR_ROSTER_URL, 'Labor webhook');
+    const [data] = await Promise.all([fetchJsonStrict(CONFIG.LABOR_ROSTER_URL, 'Labor webhook'), loadManualWorkers()]);
     clearBackendError('Labor webhook');
-    dashboardData.labor = normalizeLabor(data);
+    dashboardData.labor = mergeManualWorkers(normalizeLabor(data), 'labor');
   } catch (err) {
     console.error("Labor roster webhook failed:", err);
-    dashboardData.labor = [];
+    await loadManualWorkers();
+    dashboardData.labor = mergeManualWorkers([], 'labor');
     setBackendError('Labor webhook', err);
   }
   render();
@@ -2202,10 +2373,10 @@ function renderRoster() {
     return `
     <li>
       <div>
-        <div class="worker-name">${w.name}</div>
+        <div class="worker-name">${w.name}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}</div>
         <div class="worker-meta">${w.phone || ''}${w.jobId ? ' · ' + w.jobId : ''}</div>
       </div>
-      <span class="pill ${effectiveStatus === 'available' ? 'avail' : 'booked'}">${effectiveStatus}</span>
+      <div class="roster-actions"><span class="pill ${effectiveStatus === 'available' ? 'avail' : 'booked'}">${effectiveStatus}</span>${currentSession.isAdmin ? `<button type="button" class="roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-manual="${w.manual ? '1' : ''}" title="Remove from the board">Remove</button>` : ''}</div>
     </li>
   `;
   }).join('');
@@ -3280,8 +3451,6 @@ let ghlUsersLoaded = false;
 async function loadGhlUsers() {
   const select = document.getElementById('assignedUser');
   if (ghlUsersLoaded) return;
-  let saved = '';
-  try { saved = localStorage.getItem('a2zBookAssignedUser') || ''; } catch (_) {}
   try {
     const res = await fetchWithTimeout(CONFIG.GHL_USERS_URL, { headers: { Accept: 'application/json' } });
     const data = await res.json().catch(() => ({}));
@@ -3289,12 +3458,12 @@ async function loadGhlUsers() {
     if (!res.ok || !users.length) throw new Error(data.error || 'No users');
     select.innerHTML = '<option value="">Select a GHL user</option>' + users.map(u =>
       `<option value="${escapeAttr(u.id)}">${escapeAttr(u.name)}</option>`).join('');
-    if (saved && users.some(u => u.id === saved)) select.value = saved;
     ghlUsersLoaded = true;
   } catch (err) {
     console.warn('GHL users lookup failed:', err);
-    select.innerHTML = '<option value="">GHL users unavailable (booking still works)</option>';
+    select.innerHTML = '<option value="">GHL users unavailable</option>';
   }
+  prefillAssignedUser();
 }
 function escapeAttr(v) {
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -3302,6 +3471,9 @@ function escapeAttr(v) {
 
 function openSheet() {
   bookingRequestId = null;
+  // Each new booking starts on the signed-in user; changing it sticks for this booking only.
+  delete document.getElementById('assignedUser').dataset.touched;
+  prefillAssignedUser();
   loadGhlUsers();
   overlay.classList.add('open');
   sheet.classList.add('open');
@@ -3387,12 +3559,11 @@ document.getElementById('submitBook').addEventListener('click', async () => {
       ? document.getElementById('assignedUser').selectedOptions[0].textContent : ''
   };
 
-  if (ghlUsersLoaded && !payload.assignedUserId) {
-    showToast('Please select an Assigned User.', true);
+  if (!payload.assignedUserId) {
+    showToast('Assigned User is required.', true);
     document.getElementById('assignedUser').focus();
     return;
   }
-  try { if (payload.assignedUserId) localStorage.setItem('a2zBookAssignedUser', payload.assignedUserId); } catch (_) {}
 
   if (!['net-1', 'net-7', 'net-30', 'net-45', 'net-60'].includes(payload.paymentTerms)) {
     showToast('Please select Payment Terms.', true);
@@ -4024,13 +4195,14 @@ async function loadLogistics() {
       fetchJsonStrict(CONFIG.LOGISTICS_DASHBOARD_URL, 'Logistics webhook'),
       fetchJsonStrict(CONFIG.DRIVER_ROSTER_URL, 'Driver roster webhook'),
       fetchJsonStrict(CONFIG.ASSET_ROSTER_URL, 'Asset roster webhook'),
-      fetchJsonStrict(CONFIG.LOGISTICS_STATE_URL, 'Logistics state')
+      fetchJsonStrict(CONFIG.LOGISTICS_STATE_URL, 'Logistics state'),
+      loadManualWorkers()
     ]);
     const previousMoves = logisticsData.moves.filter(m => m.version);
     logisticsData = normalizeLogisticsPayload(data);
     const moveStates = new Map(((moveStateData && moveStateData.states) || []).map(state => [String(state.moveId || ''), state]));
     logisticsData.moves = (logisticsData.moves || []).map(move => ({ ...move, ...(moveStates.get(String(move.moveId || move.id || '')) || {}) }));
-    logisticsData.drivers = normalizeDriverRoster(driverData);
+    logisticsData.drivers = mergeManualWorkers(normalizeDriverRoster(driverData), 'driver');
     const cachedAssignments = Object.values(window.logisticsAssetAssignments || {}).flatMap(item => Array.isArray(item) ? item : [item]);
     logisticsData.assets = normalizeAssetRoster(assetData).map(asset => {
       const cached = cachedAssignments.find(item => item && String(item.assetId || item.id || '') === String(asset.id || asset.assetId || ''));
@@ -4081,13 +4253,14 @@ async function loadFieldAppAccess() {
 function renderFieldAppAccess() {
   const list = document.getElementById('fieldAppAccessList');
   document.getElementById('fieldAppLink').textContent = `${window.location.origin}/driver/`;
-  const drivers = (logisticsData.drivers || []).map(d => ({ name: d.name, phone: d.phone, role: 'Driver' }));
-  const labor = (dashboardData.labor || []).map(w => ({ name: w.name, phone: w.phone, role: 'Crew' }));
+  const drivers = (logisticsData.drivers || []).map(d => ({ name: d.name, phone: d.phone, role: 'Driver', manual: !!d.manual }));
+  const labor = (dashboardData.labor || []).map(w => ({ name: w.name, phone: w.phone, role: 'Crew', manual: !!w.manual }));
+  const admin = currentSession.isAdmin;
   const merged = new Map();
   [...drivers, ...labor].filter(p => p.name && p.name !== 'Unnamed Driver').forEach(p => {
     const key = fieldAppKeyFor(p);
     const existing = merged.get(key);
-    if (existing) { if (!existing.role.includes(p.role)) existing.role += `/${p.role}`; }
+    if (existing) { if (!existing.role.includes(p.role)) existing.role += `/${p.role}`; existing.manual = existing.manual || p.manual; }
     else merged.set(key, { ...p });
   });
   const people = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -4096,7 +4269,8 @@ function renderFieldAppAccess() {
     const key = fieldAppKeyFor(p);
     const isEnabled = fieldAppEnabled.some(e => e.driverKey === key);
     const statusCell = isEnabled ? '<span class="logistics-status assigned">Enabled</span>' : '<span class="logistics-route">Not enabled</span>';
-    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
+    if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td><td></td></tr>`;
+    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
       + `<td>${isEnabled
         ? `<button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>`
         : `<button type="button" class="job-stage-btn edit field-app-enable" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}" ${p.phone ? '' : 'disabled title="Needs a phone number on file"'}>Enable</button>`}</td></tr>`;
@@ -4656,12 +4830,15 @@ document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListe
   document.getElementById('laborDispatchView').hidden = view !== 'labor';
   document.getElementById('logisticsDispatchView').hidden = !logistics;
   document.getElementById('scheduleDispatchView').hidden = view !== 'schedule';
-  if (logistics && !logisticsLoaded) loadLogistics();
+  document.getElementById('adminDispatchView').hidden = view !== 'admin';
+  if ((logistics || view === 'admin') && !logisticsLoaded) loadLogistics();
+  if (view === 'admin') renderAdminView();
   if (view === 'schedule') { renderScheduleView(); loadProjectSchedules(); }
 }));
 document.getElementById('logisticsSourceFilter').addEventListener('change', renderLogistics);
 document.getElementById('refreshBtn').addEventListener('click', () => {
   if (!document.getElementById('logisticsDispatchView').hidden) return loadLogistics();
+  if (!document.getElementById('adminDispatchView').hidden) { renderAdminView(true); return loadLogistics(); }
   refreshAll(); loadProjectSchedules();
 });
 
@@ -4779,7 +4956,7 @@ async function runSideEffect(url, payload, label, kindOverride, effectKey) {
   }
 }
 function editingDispatch() {
-  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) ||
+  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && !document.activeElement.closest('#signinBackdrop')) ||
     Object.values(window.jobTimesLocked || {}).some(v => v === false) || Object.values(window.logisticsScheduleOverride || {}).some(v => v.locked === false);
 }
 async function pollSharedState() {
@@ -5358,7 +5535,345 @@ psListEl.addEventListener('click', async e => {
   psRefreshButtons(); renderScheduleView();
 });
 
+/* ---------- Signed-in user + admin tools (1.8) ----------
+   Sign-in is automatic when the board is opened inside GHL as a Custom Page
+   (encrypted user context, same as the dialer). Otherwise a one-time picker.
+   The server decides who is an admin (admin list + Jesse Pickar); these
+   controls only hide what the server would refuse anyway. */
+let currentSession = { signedIn: false, user: null, isAdmin: false, needsAdminUnlock: false };
+let sessionGhlUsers = null;
+const sessionEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+async function sessionPost(body) {
+  const res = await fetchWithTimeout('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 20000);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Sign-in failed (HTTP ${res.status})`);
+  return data;
+}
+async function fetchSessionUsers() {
+  if (sessionGhlUsers) return sessionGhlUsers;
+  const res = await fetchWithTimeout(CONFIG.GHL_USERS_URL, { headers: { Accept: 'application/json' } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !Array.isArray(data.users) || !data.users.length) throw new Error(data.error || 'GHL users unavailable');
+  sessionGhlUsers = data.users;
+  return sessionGhlUsers;
+}
+function applySession(info) {
+  currentSession = { signedIn: !!info?.signedIn, user: info?.user || null, isAdmin: !!info?.isAdmin, needsAdminUnlock: !!info?.needsAdminUnlock, via: info?.via || '' };
+  if (info?.token) setSessionToken(info.token);
+  if (!currentSession.signedIn) setSessionToken('');
+  document.body.classList.toggle('is-admin', currentSession.isAdmin);
+  // Top-left identity, like the dialer: "Name · email" plus the role.
+  const text = document.getElementById('whoamiText'), role = document.getElementById('whoamiRole');
+  if (currentSession.signedIn) {
+    text.textContent = [currentSession.user.name, currentSession.user.email].filter(Boolean).join(' · ');
+    role.hidden = false;
+    role.textContent = currentSession.isAdmin ? 'ADMIN' : currentSession.needsAdminUnlock ? 'ADMIN (LOCKED)' : 'USER';
+    role.className = 'user-role' + (currentSession.isAdmin ? ' admin' : currentSession.needsAdminUnlock ? ' locked' : '');
+  } else { text.textContent = 'Not signed in'; role.hidden = true; }
+  // Inside GHL the sign-in follows the GHL user; Switch user is only for the picker.
+  document.getElementById('switchUserBtn').hidden = !currentSession.signedIn || currentSession.via === 'ghl_sso';
+  const adminTab = document.getElementById('adminViewTab');
+  adminTab.hidden = !(currentSession.isAdmin || currentSession.needsAdminUnlock);
+  if (adminTab.hidden && adminTab.classList.contains('active')) document.getElementById('laborViewTab').click();
+  document.getElementById('adminLockPanel').hidden = !currentSession.needsAdminUnlock || currentSession.isAdmin;
+  document.getElementById('adminTools').hidden = !currentSession.isAdmin;
+  document.querySelectorAll('.admin-only').forEach(el => { el.hidden = !currentSession.isAdmin; });
+  prefillAssignedUser();
+  if (typeof renderRoster === 'function') renderRoster();
+  if (typeof renderFieldAppAccess === 'function' && logisticsLoaded) renderFieldAppAccess();
+  if (!document.getElementById('adminDispatchView').hidden) renderAdminView();
+}
+// Same handshake as the Triple Line dialer: ask the GHL parent frame for the
+// logged-in user's encrypted context; the server decrypts it with the
+// Marketplace app's Shared Secret. Only works when embedded as a GHL Custom Page.
+function requestGhlUserContext() {
+  return new Promise((resolve, reject) => {
+    if (window.parent === window) return reject(new Error('Not embedded in HighLevel'));
+    const timeout = setTimeout(() => { window.removeEventListener('message', onMessage); reject(new Error('HighLevel user context timed out')); }, 8000);
+    function onMessage(event) {
+      if (event.source !== window.parent || event.data?.message !== 'REQUEST_USER_DATA_RESPONSE' || !event.data.payload) return;
+      clearTimeout(timeout); window.removeEventListener('message', onMessage); resolve(event.data.payload);
+    }
+    window.addEventListener('message', onMessage);
+    window.parent.postMessage({ message: 'REQUEST_USER_DATA' }, '*');
+  });
+}
+async function initSession() {
+  // Inside GHL: sign in as whoever is logged in to GHL, every load (so
+  // switching GHL users switches the board too).
+  if (window.parent !== window) {
+    try {
+      const encryptedData = await requestGhlUserContext();
+      applySession(await sessionPost({ action: 'ghl', encryptedData }));
+      return;
+    } catch (err) { console.warn('Automatic GHL sign-in failed:', err); }
+  }
+  // Outside GHL (or the handshake failed): reuse this browser's saved session.
+  try {
+    const res = await fetchWithTimeout('/api/session', { headers: { Accept: 'application/json' } }, 15000);
+    const info = await res.json().catch(() => ({}));
+    if (res.ok && info.signedIn) { applySession(info); return; }
+  } catch (err) { console.warn('Session check failed:', err); }
+  applySession({ signedIn: false });
+  openSignin();
+}
+async function openSignin(message) {
+  const backdrop = document.getElementById('signinBackdrop');
+  const select = document.getElementById('signinUser');
+  const err = document.getElementById('signinError');
+  err.hidden = !message; err.textContent = message || '';
+  document.getElementById('signinPin').value = '';
+  backdrop.hidden = false;
+  try {
+    const users = await fetchSessionUsers();
+    select.innerHTML = '<option value="">Select your name</option>' + users.map(u => `<option value="${sessionEsc(u.id)}">${sessionEsc(u.name)}</option>`).join('');
+    if (currentSession.user) select.value = currentSession.user.id;
+    document.getElementById('signinSkip').hidden = true;
+  } catch {
+    select.innerHTML = '<option value="">GHL users unavailable</option>';
+    err.hidden = false; err.textContent = "Couldn't load GHL users. You can keep working without signing in and try again later.";
+    document.getElementById('signinSkip').hidden = false;
+  }
+  select.focus();
+}
+document.getElementById('signinSubmit').addEventListener('click', async () => {
+  const btn = document.getElementById('signinSubmit');
+  const userId = document.getElementById('signinUser').value;
+  const err = document.getElementById('signinError');
+  if (!userId) { err.hidden = false; err.textContent = 'Pick your name first.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const info = await sessionPost({ action: 'signin', source: 'picker', userId, pin: document.getElementById('signinPin').value });
+    applySession(info);
+    document.getElementById('signinBackdrop').hidden = true;
+    showToast(`Signed in as ${info.user.name}.`);
+    if (info.needsAdminUnlock) showToast('You are on the admin list. Open the board inside GHL, or use Unlock admin tools, to turn admin tools on.');
+  } catch (e) { err.hidden = false; err.textContent = e.message; }
+  finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+});
+document.getElementById('signinUser').addEventListener('change', () => { document.getElementById('signinError').hidden = true; });
+document.getElementById('signinSkip').addEventListener('click', () => { document.getElementById('signinBackdrop').hidden = true; });
+document.getElementById('switchUserBtn').addEventListener('click', async () => {
+  try { await sessionPost({ action: 'signout' }); } catch {}
+  applySession({ signedIn: false });
+  openSignin();
+});
+document.getElementById('unlockAdminBtn').addEventListener('click', async () => {
+  const pin = prompt('Admin PIN (DASHBOARD_ADMIN_PIN in Netlify):');
+  if (!pin) return;
+  try { applySession(await sessionPost({ action: 'unlock', pin })); showToast('Admin tools unlocked on this browser.'); }
+  catch (e) { showToast(e.message, true); }
+});
+
+/* Book Job: Assigned User is required and defaults to whoever is signed in. */
+function prefillAssignedUser() {
+  const select = document.getElementById('assignedUser');
+  if (!select || !currentSession.signedIn || select.dataset.touched === '1') return;
+  const id = currentSession.user.id;
+  if (![...select.options].some(o => o.value === id)) {
+    // GHL user list not loaded (or failed): still offer the signed-in user.
+    const opt = document.createElement('option'); opt.value = id; opt.textContent = currentSession.user.name;
+    select.appendChild(opt);
+  }
+  select.value = id;
+}
+document.getElementById('assignedUser').addEventListener('change', e => { e.target.dataset.touched = '1'; });
+
+/* Admin page: enroll / revoke admins among all GHL users. */
+async function adminApi(body) {
+  const res = await fetchWithTimeout('/api/admins', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { headers: { Accept: 'application/json' } }, 20000);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+let adminRowsCache = null;
+function renderAdminUsers() {
+  const list = document.getElementById('adminUserList');
+  const admins = adminRowsCache || [];
+  const byId = new Map(admins.map(a => [a.userId, a]));
+  // Everyone in GHL, plus any admin no longer on the GHL user list.
+  const people = [...(sessionGhlUsers || []).map(u => ({ userId: u.id, name: u.name, email: u.email })), ...admins.filter(a => !(sessionGhlUsers || []).some(u => u.id === a.userId))];
+  const q = document.getElementById('adminUserSearch').value.trim().toLowerCase();
+  const shown = people.filter(p => !q || `${p.name} ${p.email}`.toLowerCase().includes(q))
+    .sort((a, b) => (byId.has(b.userId) - byId.has(a.userId)) || a.name.localeCompare(b.name));
+  document.getElementById('adminCount').textContent = `${admins.length} ADMIN${admins.length === 1 ? '' : 'S'}`;
+  if (!shown.length) { list.innerHTML = `<li class="load-state">${people.length ? 'No one matches.' : 'GHL users could not load.'}</li>`; return; }
+  list.innerHTML = shown.map(p => {
+    const admin = byId.get(p.userId), you = p.userId === currentSession.user?.id;
+    const tags = `${admin ? '<span class="admin-pill">ADMIN</span>' : ''}${you ? '<span class="admin-pill you">YOU</span>' : ''}`;
+    const detail = [p.email, admin?.addedBy === 'bootstrap' ? 'permanent admin' : admin?.addedBy ? 'enrolled by ' + admin.addedBy : ''].filter(Boolean).join(' · ');
+    const action = admin?.addedBy === 'bootstrap' ? ''
+      : admin ? `<button type="button" class="job-stage-btn cancel admin-toggle" data-action="remove" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}">Revoke</button>`
+      : `<button type="button" class="job-stage-btn edit admin-toggle" data-action="add" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}">Enroll</button>`;
+    return `<li><div class="who">${sessionEsc(p.name)}${tags}<small>${sessionEsc(detail)}</small></div>${action}</li>`;
+  }).join('');
+}
+async function renderAdminView(force) {
+  if (!currentSession.isAdmin) return;
+  renderAdminUsers(); renderManualWorkerList();
+  try { await fetchSessionUsers(); } catch {}
+  try { adminRowsCache = (await adminApi()).admins || []; }
+  catch (e) { document.getElementById('adminUserList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; return; }
+  renderAdminUsers();
+  await loadManualWorkers(force); renderManualWorkerList();
+}
+document.getElementById('adminUserSearch').addEventListener('input', renderAdminUsers);
+document.getElementById('adminUserList').addEventListener('click', async e => {
+  const btn = e.target.closest('.admin-toggle'); if (!btn) return;
+  const { action, userId, name } = btn.dataset;
+  const self = userId === currentSession.user?.id;
+  if (action === 'remove' && !confirm(self ? 'Revoke your own admin access? You will lose this page.' : `Revoke admin access for ${name}?`)) return;
+  btn.disabled = true;
+  try {
+    adminRowsCache = (await adminApi({ action, userId })).admins || [];
+    renderAdminUsers();
+    showToast(action === 'add' ? `${name} is now an admin.` : `${name} is no longer an admin.`);
+    if (self) applySession(await (await fetchWithTimeout('/api/session', {}, 15000)).json());
+  } catch (err) { showToast(err.message, true); btn.disabled = false; }
+});
+
+/* Workers added from GHL (admins). Merged into the crew and driver pickers. */
+let manualWorkers = [];
+let hiddenWorkers = [];
+let manualWorkersLoaded = null;
+function loadManualWorkers(force) {
+  if (!manualWorkersLoaded || force) manualWorkersLoaded = fetchJsonStrict('/api/manual-workers', 'Added workers')
+    .then(data => { manualWorkers = Array.isArray(data.workers) ? data.workers : []; hiddenWorkers = Array.isArray(data.hidden) ? data.hidden : []; })
+    .catch(err => { console.warn('Added workers could not load:', err); manualWorkers = manualWorkers || []; });
+  return manualWorkersLoaded;
+}
+const samePerson = (a, b) => (a.id && b.id && a.id === b.id) ||
+  (String(a.phone || '').replace(/\D/g, '').slice(-10) && String(a.phone || '').replace(/\D/g, '').slice(-10) === String(b.phone || '').replace(/\D/g, '').slice(-10)) ||
+  String(a.name || '').trim().toLowerCase() === String(b.name || '').trim().toLowerCase();
+const isHiddenWorker = w => hiddenWorkers.some(h => samePerson({ id: h.contactId, name: h.name, phone: h.phone }, w));
+function mergeManualWorkers(list, role) {
+  // Laborers an admin removed from the board stay off the crew picker.
+  const out = (list || []).filter(p => role !== 'labor' || !isHiddenWorker(p));
+  for (const w of manualWorkers.filter(m => role === 'driver' ? m.driver : m.labor)) {
+    const person = { id: w.contactId, name: w.name, phone: w.phone, status: 'available', jobId: '', manual: true };
+    const existing = out.find(p => samePerson(p, person));
+    if (!existing) out.push(role === 'driver' ? { ...person, license: '', hours: '', moveId: '' } : person);
+  }
+  return out;
+}
+const ghlWorkerOverlay = document.getElementById('ghlWorkerOverlay'), ghlWorkerSheet = document.getElementById('ghlWorkerSheet');
+let ghlWorkerPick = null, ghlSearchTimer = null, ghlSearchSeq = 0;
+function renderManualWorkerList() {
+  const list = document.getElementById('manualWorkerList');
+  list.innerHTML = manualWorkers.length ? manualWorkers.map(w => `<li><div class="who">${sessionEsc(w.name)}<small>${sessionEsc(w.phone || 'no phone')} · ${[w.labor ? 'Crew' : '', w.driver ? 'Driver' : ''].filter(Boolean).join('/')}${w.addedBy ? ' · added by ' + sessionEsc(w.addedBy) : ''}</small></div>`
+    + `<button type="button" class="job-stage-btn cancel manual-remove" data-contact-id="${sessionEsc(w.contactId)}" data-name="${sessionEsc(w.name)}">Remove</button></li>`).join('') : '<li class="load-state">None yet.</li>';
+  const hidden = document.getElementById('hiddenWorkerList');
+  hidden.innerHTML = hiddenWorkers.length ? hiddenWorkers.map(h => `<li><div class="who">${sessionEsc(h.name || h.phone)}<small>${sessionEsc(h.phone || '')}${h.hiddenBy ? ' · removed by ' + sessionEsc(h.hiddenBy) : ''}</small></div>`
+    + `<button type="button" class="job-stage-btn edit hidden-restore" data-key="${sessionEsc(h.key)}" data-name="${sessionEsc(h.name)}">Restore</button></li>`).join('') : '<li class="load-state">None.</li>';
+}
+async function openGhlWorkerSheet() {
+  ghlWorkerPick = null;
+  document.getElementById('ghlWorkerSearch').value = '';
+  document.getElementById('ghlWorkerResults').innerHTML = '<li class="ghl-hint">Type at least 2 letters.</li>';
+  document.getElementById('ghlWorkerPicked').hidden = true;
+  document.getElementById('saveGhlWorker').disabled = true;
+  ghlWorkerOverlay.classList.add('open'); ghlWorkerSheet.classList.add('open');
+  document.getElementById('ghlWorkerSearch').focus();
+  await loadManualWorkers(true);
+}
+function closeGhlWorkerSheet() { ghlWorkerOverlay.classList.remove('open'); ghlWorkerSheet.classList.remove('open'); }
+document.getElementById('addGhlWorkerBtn').addEventListener('click', openGhlWorkerSheet);
+document.getElementById('rosterAddBtn').addEventListener('click', openGhlWorkerSheet);
+['closeGhlWorkerSheet', 'cancelGhlWorker'].forEach(id => document.getElementById(id).addEventListener('click', closeGhlWorkerSheet));
+ghlWorkerOverlay.addEventListener('click', closeGhlWorkerSheet);
+let ghlResults = [];
+document.getElementById('ghlWorkerSearch').addEventListener('input', e => {
+  clearTimeout(ghlSearchTimer);
+  const q = e.target.value.trim();
+  const list = document.getElementById('ghlWorkerResults');
+  if (q.length < 2) { list.innerHTML = '<li class="ghl-hint">Type at least 2 letters.</li>'; return; }
+  ghlSearchTimer = setTimeout(async () => {
+    const seq = ++ghlSearchSeq;
+    list.innerHTML = '<li class="ghl-hint">Searching GHL...</li>';
+    try {
+      const res = await fetchWithTimeout('/api/ghl-contacts?q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } }, 20000);
+      const data = await res.json().catch(() => ({}));
+      if (seq !== ghlSearchSeq) return;
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      ghlResults = data.contacts || [];
+      list.innerHTML = ghlResults.length ? ghlResults.map((c, i) => `<li${ghlWorkerPick && ghlWorkerPick.id === c.id ? ' class="picked"' : ''}><button type="button" data-index="${i}">${sessionEsc(c.name)}<small>${sessionEsc([c.phone, c.email].filter(Boolean).join(' · ') || 'no phone or email')}</small></button></li>`).join('') : '<li class="ghl-hint">No contacts found.</li>';
+    } catch (err) { if (seq === ghlSearchSeq) list.innerHTML = `<li class="ghl-hint">${sessionEsc(err.message)}</li>`; }
+  }, 300);
+});
+document.getElementById('ghlWorkerResults').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-index]'); if (!btn) return;
+  ghlWorkerPick = ghlResults[Number(btn.dataset.index)];
+  document.querySelectorAll('#ghlWorkerResults li').forEach(li => li.classList.toggle('picked', li.contains(btn)));
+  document.getElementById('ghlWorkerPicked').hidden = false;
+  document.getElementById('ghlWorkerPickedName').textContent = ghlWorkerPick.name;
+  document.getElementById('ghlWorkerPickedMeta').textContent = [ghlWorkerPick.phone || 'No phone in GHL (Field App needs one)', ghlWorkerPick.email].filter(Boolean).join(' · ');
+  const existing = manualWorkers.find(w => w.contactId === ghlWorkerPick.id);
+  document.getElementById('ghlWorkerLabor').checked = existing ? existing.labor : true;
+  document.getElementById('ghlWorkerDriver').checked = existing ? existing.driver : false;
+  document.getElementById('ghlWorkerFieldApp').checked = !!ghlWorkerPick.phone;
+  document.getElementById('saveGhlWorker').disabled = false;
+  document.getElementById('saveGhlWorker').textContent = existing ? 'Update worker' : 'Add worker';
+});
+async function manualWorkerApi(body) {
+  const res = await fetchWithTimeout('/api/manual-workers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+async function afterManualWorkersChange(data) {
+  manualWorkers = data.workers || [];
+  if (Array.isArray(data.hidden)) hiddenWorkers = data.hidden;
+  manualWorkersLoaded = Promise.resolve();
+  renderManualWorkerList();
+  await loadLaborRoster();
+  if (logisticsLoaded) { logisticsData.drivers = mergeManualWorkers(logisticsData.drivers.filter(d => !d.manual), 'driver'); renderLogistics(); }
+  await loadFieldAppAccess();
+}
+document.getElementById('saveGhlWorker').addEventListener('click', async () => {
+  if (!ghlWorkerPick) return;
+  const btn = document.getElementById('saveGhlWorker');
+  const labor = document.getElementById('ghlWorkerLabor').checked, driver = document.getElementById('ghlWorkerDriver').checked;
+  if (!labor && !driver) return showToast('Choose Crew, Driver or both.', true);
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Saving...';
+  try {
+    const data = await manualWorkerApi({ action: 'add', contactId: ghlWorkerPick.id, labor, driver, fieldApp: document.getElementById('ghlWorkerFieldApp').checked });
+    await afterManualWorkersChange(data);
+    showToast(`${data.worker.name} added${data.fieldApp ? ' and can sign in to the Field App' : ''}.`);
+    ghlWorkerPick = null; document.getElementById('ghlWorkerPicked').hidden = true; btn.textContent = 'Add worker';
+  } catch (err) { showToast(err.message, true); btn.disabled = false; btn.textContent = label; }
+});
+document.getElementById('hiddenWorkerList').addEventListener('click', async e => {
+  const btn = e.target.closest('.hidden-restore'); if (!btn) return;
+  btn.disabled = true;
+  try { await afterManualWorkersChange(await manualWorkerApi({ action: 'unhide', key: btn.dataset.key, name: btn.dataset.name })); showToast(`${btn.dataset.name} is back on the board.`); }
+  catch (err) { showToast(err.message, true); btn.disabled = false; }
+});
+// Remove a laborer straight from the Labor Roster (admins).
+document.getElementById('rosterList').addEventListener('click', async e => {
+  const btn = e.target.closest('.roster-remove'); if (!btn) return;
+  const { id, name, phone, manual } = btn.dataset;
+  const added = manual ? manualWorkers.find(w => w.contactId === id) : null;
+  if (!confirm(added ? `Remove ${name} from the crew picker? Their GHL contact isn't touched.` : `Remove ${name} from the board? They stay in GHL and the Make roster, and you can restore them on the Admin page.`)) return;
+  btn.disabled = true;
+  try {
+    let data;
+    if (added && added.driver) data = await manualWorkerApi({ action: 'add', contactId: id, labor: false, driver: true, fieldApp: false });
+    else if (added) data = await manualWorkerApi({ action: 'remove', contactId: id });
+    else data = await manualWorkerApi({ action: 'hide', contactId: id, name, phone });
+    await afterManualWorkersChange(data);
+    showToast(`${name} removed from the board.`);
+  } catch (err) { showToast(err.message, true); btn.disabled = false; }
+});
+document.getElementById('manualWorkerList').addEventListener('click', async e => {
+  const btn = e.target.closest('.manual-remove'); if (!btn) return;
+  if (!confirm(`Remove ${btn.dataset.name}? They leave the pickers and lose Field App access. Their GHL contact isn't touched.`)) return;
+  btn.disabled = true;
+  try { await afterManualWorkersChange(await manualWorkerApi({ action: 'remove', contactId: btn.dataset.contactId })); showToast(`${btn.dataset.name} removed.`); }
+  catch (err) { showToast(err.message, true); btn.disabled = false; }
+});
+
 /* ---------- Init ---------- */
+initSession();
 fmtDateHeader();
 loadDashboard();
 loadLaborRoster();

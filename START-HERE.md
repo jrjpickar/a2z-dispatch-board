@@ -1,11 +1,28 @@
-# Deploy A2Z Dispatch 1.6
+# Deploy A2Z Dispatch 1.8
 
 1. Replace the files in your existing Netlify-connected repository with this folder’s contents. Keep the SAME Netlify site and database.
 2. Keep `GHL_API_TOKEN` in Netlify environment variables. Netlify Database supplies `NETLIFY_DB_URL`; never paste it into the page.
 3. **Add a new environment variable: `DRIVER_TOKEN_SECRET`.** This signs the Field App's driver/crew sign-in tokens. Set it to any long random string (e.g. `openssl rand -hex 32`) and never reuse it elsewhere. The build/deploy will still succeed without it, but the Field App's sign-in and route/job endpoints will return a 500 until it's set.
-4. Apply the two small Make response changes in MAKE-SETUP.md.
+4. Apply the Make changes in MAKE-SETUP.md (1.8: the EOD route now receives multipart; redetermine its data structure and remap `file`).
 5. Deploy normally. Build: `npm run build`. Publish: `public`. Functions: `netlify/functions`. Node: 22 or newer.
 6. Reload all open dashboard tabs after deployment. Old tabs cannot overwrite new state.
+
+## Sign-in and admins (new in 1.8)
+
+Automatic sign-in works exactly like the Triple Line dialer: the board runs as a **Custom Page** of your private GHL Marketplace app, asks GHL for the logged-in user (`REQUEST_USER_DATA`), and the server checks GHL's encrypted answer with the app's Shared Secret. No login screen inside GHL.
+
+1. **Add the Custom Page.** In the HighLevel Developer Marketplace, open the same private app the dialer uses (or a new private app). Add a **Custom Page** module in the left navigation, URL = your dispatch Netlify URL (e.g. `https://YOUR-SITE.netlify.app/`), nothing in the query string. Save and update the app installation for the A2Z location.
+2. **Netlify env vars:**
+   - `GHL_APP_SHARED_SECRET`: the app's Shared Secret (Auth/Secrets area). Same value as the dialer's if you reuse its app. Required for automatic sign-in.
+   - `GHL_LOCATION_ID`: only if not `QUcu2PEAxPV1sQm1GQCq`. Users from other locations are refused.
+   - `SESSION_SECRET` (optional): signs board sessions. Falls back to `DRIVER_TOKEN_SECRET`.
+   - `DASHBOARD_ADMIN_PIN` (optional): lets admins turn on admin tools when using the board outside GHL.
+   - `BOOTSTRAP_ADMINS` (optional): permanent admins by name, email or GHL user id. Default `Jesse Pickar,jesse@a2zcs.net`.
+3. **Inside GHL** people are signed in as themselves every time the page opens (switching GHL users switches the board). The session is remembered for 7 days in a signed cookie plus a header copy, since GHL's iframe can block cookies.
+4. **Outside GHL** (bookmark, phone) the board asks once "Who's using the board?" and remembers that browser for 180 days. That picker never grants admin rights by itself: use the admin PIN, or open the board inside GHL once (that session also works outside GHL for 7 days).
+5. **Admin list:** name menu (top right) > Admin settings. Jesse Pickar can't be removed.
+6. Only admins (server-enforced): Enable/Revoke Field App access, Add worker from GHL, edit the admin list.
+7. The GHL API token still needs `users.readonly` and `contacts.readonly`.
 
 ## Night work (new in 1.6)
 

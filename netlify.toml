@@ -93,3 +93,23 @@
   from = "/api/project-schedule"
   to = "/.netlify/functions/project-schedule"
   status = 200
+
+[[redirects]]
+  from = "/api/session"
+  to = "/.netlify/functions/session"
+  status = 200
+
+[[redirects]]
+  from = "/api/admins"
+  to = "/.netlify/functions/admins"
+  status = 200
+
+[[redirects]]
+  from = "/api/ghl-contacts"
+  to = "/.netlify/functions/ghl-contacts"
+  status = 200
+
+[[redirects]]
+  from = "/api/manual-workers"
+  to = "/.netlify/functions/manual-workers"
+  status = 200

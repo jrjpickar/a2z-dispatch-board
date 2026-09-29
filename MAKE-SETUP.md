@@ -1,4 +1,4 @@
-# Make: two small changes
+# Make changes
 
 Keep your existing notification and driver-log action modules. No new everyday scenarios are required.
 
@@ -20,11 +20,23 @@ Never return success before the actual work finishes or from an error/ignore rou
 
 The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing Worksheet to the same worker webhook Reset Day already used: `https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l` (or `EOD_SHEET_WEBHOOK` / `WORKER_EFFECT_WEBHOOK` if set in Netlify). Add a router path filtered on `action` = `eod_sheet` and end it with the `{"ok":true}` Webhook response above. This is the only call the button makes; no separate `remove` event is sent. The released crew is included in `removedWorkers` if you want to notify them from this route.
 
-Payload fields: `action`, `jobId`, `opportunityId`, `jobName`, `jobAddress`, `clientName`, `date`, `submittedAt`, `crew` (names), `removedWorkers[]` (each: `contactId`, `workerName`, `workerPhone`), `lines[]` (each: `section`, `category`, `line`, `description`, `qty`, `rate`, `lineTotal`; all 19 template rows, blanks included), `sections[]` (each: `key`, `section`, `lines`, `subtotal`), `interiorSubtotal`, `exteriorSubtotal`, `gradingSubtotal`, `totalJobCost`, `markupPercent` (e.g. `20` = 20%), `totalPriceToCustomer`, `eventId`, and `file`.
+**1.8 change: the EOD sheet now arrives as `multipart/form-data`** (like the Project Schedule PDF), not JSON. The old JSON body carried the ~200 KB workbook as base64 text and Make was logging those runs with no data. After deploying:
 
-Google Sheets fields (top level, named to match the values batchUpdate placeholders): `INTERIOR_LABOR_DESC/_QTY/_RATE`, `INTERIOR_HOTEL_*`, `INTERIOR_HAULING_*`, `INTERIOR_EQUIPMENT_1_*`, `INTERIOR_EQUIPMENT_2_*`, `INTERIOR_FUEL_*`, `INTERIOR_MISC_*`, `EXTERIOR_LABOR_*`, `EXTERIOR_HAULING_*`, `EXTERIOR_EQUIPMENT_1_*` to `_3_*`, `EXTERIOR_FUEL_*`, `EXTERIOR_MISC_*`, `GRADING_LABOR_*`, `GRADING_HAULING_*`, `GRADING_EQUIPMENT_*`, `GRADING_FUEL_*`, `GRADING_MISC_*`, and `MARKUP_PERCENT` (sent like `"20%"` so USER_ENTERED stores 0.2). Blank boxes arrive as `""`. Map them as `{{2.INTERIOR_LABOR_DESC}}` etc. (module 2 = the webhook).
+1. Open the worker scenario, click the Custom Webhook module, **Redetermine data structure**, then submit one EOD sheet from the board so Make relearns the fields.
+2. `file` is now a real binary file (the filled Job Costing Worksheet .xlsx). In Google Drive upload / email attachment / Slack file modules, map **`file`** directly (Make fills the file name and data). Replace any old `{{toBinary(file.data; "base64")}}` and `{{file.fileName}}` mappings; `fileName` is also sent as its own field.
+3. Flat fields keep their names and arrive as text: `action`, `jobId`, `opportunityId`, `jobName`, `jobAddress`, `clientName`, `date`, `submittedAt`, `interiorSubtotal`, `exteriorSubtotal`, `gradingSubtotal`, `totalJobCost`, `markupPercent`, `totalPriceToCustomer`, `nightWork` (`"true"`/`"false"`), `shiftType`, `fileName`, `eventId`, and every Google Sheets field below. Existing `{{2.INTERIOR_LABOR_DESC}}`-style mappings keep working after step 1.
+4. Lists arrive as JSON text: `lines`, `sections`, `crew`, `removedWorkers`. If a route uses them, wrap with `parseJSON` (e.g. an Iterator over `{{parseJSON(2.removedWorkers)}}`).
+5. Still end the route with the `{"ok":true}` Webhook response.
 
-`file` is the filled-in Job Costing Worksheet as a real .xlsx (built from `templates/Job_Costing_Worksheet_V2.xlsx`, all four tabs, formatting and formulas intact): `file.fileName`, `file.mimeType`, `file.size` (bytes) and `file.data` (the file's bytes, base64). To use it as binary in Make (Google Drive upload, email attachment, etc.) set the module's file name to `{{file.fileName}}` and its data to `{{toBinary(file.data; "base64")}}`.
+Setting `EOD_SHEET_FORMAT=json` in Netlify temporarily restores the old JSON body (with `file.data` base64) while you switch the mapping over.
+
+Lines: all 19 template rows are sent, blanks included (`section`, `category`, `line`, `description`, `qty`, `rate`, `lineTotal`). Blank EOD sheets (no filled line or no job id) are never posted.
+
+Google Sheets fields (top level, named to match the values batchUpdate placeholders): `INTERIOR_LABOR_DESC/_QTY/_RATE`, `INTERIOR_HOTEL_*`, `INTERIOR_HAULING_*`, `INTERIOR_EQUIPMENT_1_*`, `INTERIOR_EQUIPMENT_2_*`, `INTERIOR_FUEL_*`, `INTERIOR_MISC_*`, `EXTERIOR_LABOR_*`, `EXTERIOR_HAULING_*`, `EXTERIOR_EQUIPMENT_1_*` to `_3_*`, `EXTERIOR_FUEL_*`, `EXTERIOR_MISC_*`, `GRADING_LABOR_*`, `GRADING_HAULING_*`, `GRADING_EQUIPMENT_*`, `GRADING_FUEL_*`, `GRADING_MISC_*`, and `MARKUP_PERCENT` (sent like `"20%"` so USER_ENTERED stores 0.2). Blank boxes arrive empty. Map them as `{{2.INTERIOR_LABOR_DESC}}` etc. (module 2 = the webhook).
+
+## Job create: who booked it (1.8)
+
+The create-job payload now also has `bookedBy` and `bookedByUserId` (the signed-in dispatcher). `assignedUserId` / `assignedUserName` are always filled. Map them if you want them in GHL or Slack; nothing breaks if you don't.
 
 ## 2. Return the created opportunity ID
 

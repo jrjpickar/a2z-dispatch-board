@@ -69,6 +69,26 @@ async function createSchema(sql) {
     code text, updated_at timestamptz not null default now()
   )`;
   await sql`alter table dispatch_driver_codes alter column code drop not null`;
+  // Dashboard admins (the admin list on the board). Bootstrap admins from
+  // BOOTSTRAP_ADMINS are added on their first sign-in.
+  await sql`create table if not exists dispatch_admins (
+    user_id text primary key, name text not null default '', email text not null default '',
+    added_by text not null default '', created_at timestamptz not null default now()
+  )`;
+  // Workers an admin added by GHL contact search (not on the Make roster).
+  // Merged into the crew and driver pickers and the Field App Access list.
+  await sql`create table if not exists dispatch_manual_workers (
+    contact_id text primary key, name text not null, phone text not null default '',
+    email text not null default '', is_labor boolean not null default true, is_driver boolean not null default false,
+    added_by text not null default '', created_at timestamptz not null default now()
+  )`;
+  // Roster (Make) laborers an admin removed from the board. Hidden only on
+  // the board; nothing changes in GHL or the Make roster. Restorable.
+  await sql`create table if not exists dispatch_hidden_workers (
+    worker_key text primary key, role text not null default 'labor', name text not null default '',
+    phone text not null default '', contact_id text not null default '', hidden_by text not null default '',
+    created_at timestamptz not null default now()
+  )`;
   // Project Schedules for Contract (Demo) jobs: the sheet's inputs, shared by
   // every dispatcher, plus when it was last sent to Make as a PDF.
   await sql`create table if not exists project_schedules (

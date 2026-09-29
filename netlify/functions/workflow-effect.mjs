@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
-import { eodWorkbookAttachment } from '../../lib/eod-xlsx.mjs';
+import { eodWorkbookAttachment, eodMultipart, assertEodPayload } from '../../lib/eod-xlsx.mjs';
 // Existing workflows retained. Only non-state effects belong in these scenarios.
 const workflows = {
   workers: ['WORKER_EFFECT_WEBHOOK', 'https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l'],
@@ -27,6 +27,9 @@ export default async function handler(request) {
     if (request.method === 'GET') return json({ issues: await sql`select effect_id as id, kind, status, last_error as error from dispatch_effects where status <> 'confirmed' order by created_at desc limit 50` });
     const { requestId, kind, payload, effectKey } = await readPayload(request);
     if (!workflows[kind] || !payload || typeof payload !== 'object' || Array.isArray(payload)) throw new StateError('Valid workflow kind and payload required');
+    // Never post a blank run: every workflow needs its action and record id.
+    if (!String(payload.action || '').trim() || !String(payload.moveId || payload.jobId || payload.opportunityId || '').trim()) throw new StateError('Workflow payload is missing its action or record id; nothing was sent.');
+    if (kind === 'eod_sheet') { try { assertEodPayload(payload); } catch (e) { throw new StateError(e.message); } }
     // effectKey lets one saved change fan out to several webhook calls (e.g. one
     // worker-assignment notification per assignee), each deduped on its own.
     const key = String(effectKey || '').replace(/[^\w+.-]/g, '').slice(0, 80);
@@ -50,13 +53,18 @@ export default async function handler(request) {
     if (claimed === 'confirmed') return json({ ok: true, replayed: true });
     if (claimed !== 'new') return json({ error: 'Workflow was already attempted. Check Make history before rerunning to avoid duplicate notifications.', status: claimed }, 409);
     try {
-      // EOD sheet: attach the filled Job Costing workbook (.xlsx, base64) built
-      // from the real template. Added after fingerprinting so dedupe is unchanged.
-      const outbound = kind === 'eod_sheet' ? { ...payload, file: eodWorkbookAttachment(payload) } : payload;
+      // EOD sheet: multipart/form-data with the filled Job Costing workbook as
+      // binary "file" (same as the Project Schedule PDF). EOD_SHEET_FORMAT=json
+      // restores the old JSON body with base64 file.data.
+      const makeHeaders = process.env.MAKE_API_KEY ? { 'x-make-apikey': process.env.MAKE_API_KEY } : {};
+      const eodJson = process.env.EOD_SHEET_FORMAT === 'json';
+      const body = kind === 'eod_sheet' && !eodJson
+        ? eodMultipart(payload, effectId)
+        : JSON.stringify({ ...payload, ...(kind === 'eod_sheet' ? { file: eodWorkbookAttachment(payload) } : {}), eventId: effectId });
       const response = await fetch(webhookUrl(kind), {
         method: 'POST', signal: AbortSignal.timeout(20000),
-        headers: { 'content-type': 'application/json', ...(process.env.MAKE_API_KEY ? { 'x-make-apikey': process.env.MAKE_API_KEY } : {}) },
-        body: JSON.stringify({ ...outbound, eventId: effectId })
+        headers: typeof body === 'string' ? { 'content-type': 'application/json', ...makeHeaders } : makeHeaders,
+        body
       });
       const result = await response.json();
       if (!response.ok || result.ok !== true) throw new Error(`Make did not confirm completion (HTTP ${response.status})`);

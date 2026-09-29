@@ -1,4 +1,5 @@
-// Dispatcher-only: enable/view/revoke who is allowed to sign in to the
+// Admins only (since 1.8): enable/revoke. Anyone signed in can view.
+// Enable/view/revoke who is allowed to sign in to the
 // read-only field app. Same trust model as the rest of the board (same-origin
 // write) -- see lib/http.mjs authorizeWrite. No access code involved anymore:
 // being on this enabled list, plus knowing your own phone number, is the
@@ -7,6 +8,7 @@ import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { driverKeyFor } from '../../lib/driver-token.mjs';
 import { StateError } from '../../lib/state.mjs';
+import { requireAdmin } from '../../lib/session.mjs';
 
 export default async function handler(request) {
   try {
@@ -17,6 +19,7 @@ export default async function handler(request) {
       const enabled = await sql`select driver_key as "driverKey", name, phone, updated_at as "updatedAt" from dispatch_driver_codes order by name`;
       return json({ enabled });
     }
+    await requireAdmin(request, sql);
     const body = await readPayload(request);
     const name = String(body.name || '').trim();
     const phone = String(body.phone || '').trim();
