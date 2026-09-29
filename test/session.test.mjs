@@ -54,7 +54,7 @@ test('sign-in matching and secrets', () => {
   assert.equal(secretMatches('ab', 'abc'), false);
 });
 test('GHL contacts are summarised for the add-worker search', () => {
-  assert.deepEqual(contactSummary({ id: 'c1', firstName: 'Ana', lastName: 'Lopez', phone: '+15555550100' }), { id: 'c1', name: 'Ana Lopez', phone: '+15555550100', email: '', tags: [] });
+  assert.deepEqual(contactSummary({ id: 'c1', firstName: 'Ana', lastName: 'Lopez', phone: '+15555550100' }), { id: 'c1', name: 'Ana Lopez', firstName: 'Ana', lastName: 'Lopez', phone: '+15555550100', email: '', tags: [] });
 });
 
 function encryptContext(value, passphrase) {
@@ -115,4 +115,16 @@ test('activity log and send history record who did what', async () => {
   assert.deepEqual([latest.actor, latest.action, latest.target], ['Jesse Pickar', 'Enrolled admin', 'Sam Dispatcher']);
   const [sent] = await sendHistory(sql);
   assert.deepEqual([sent.kind, sent.jobId, sent.status], ['eod_sheet', 'job9', 'sent']);
+});
+import { normalizeContactPhone } from '../lib/ghl.mjs';
+test('worker phone edits are saved to GHL in +1 format', () => {
+  assert.equal(normalizeContactPhone('(714) 555-0100'), '+17145550100');
+  assert.equal(normalizeContactPhone('1-714-555-0100'), '+17145550100');
+  assert.equal(normalizeContactPhone('+52 55 1234 5678'), '+525512345678');
+  assert.equal(normalizeContactPhone(''), '');
+  assert.throws(() => normalizeContactPhone('555-0100'), /10-digit/);
+});
+test('the one-time 1.8 migration acknowledged old problems and is repeatable', async () => {
+  const [row] = await sql`select 1 as ok from dispatch_settings where key = 'migration:ack-problems-1.8'`;
+  assert.ok(row);
 });

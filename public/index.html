@@ -1184,6 +1184,9 @@
   body.dark-mode .history-job { border-color: #3b3f43; }
   body.dark-mode .history-job h4 { background: #292c2f; border-color: #3b3f43; }
   body.dark-mode .senior-updated, body.dark-mode .history-row .file, body.dark-mode .activity-row .when, body.dark-mode .history-job h4 small { color: #adb2b7; }
+
+  .field-app-actions { white-space: nowrap; }
+  #editWorkerSheet .ghl-hint { font-size: 12px; color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -1317,8 +1320,8 @@
     <div class="psv-head senior-head"><div><h2>Senior admin</h2><p>Only senior admins see this section.</p></div><button type="button" class="job-stage-btn edit" id="seniorRefresh">Refresh</button></div>
     <div class="admin-grid">
       <div class="panel">
-        <div class="panel-head"><h2>Make / GHL problems</h2><span class="mono" id="problemCount">0</span></div>
-        <div class="logistics-note">Runs Make didn't confirm and GHL schedule syncs that failed. Check Make's history first if a notification may already have gone out; Retry sends the same run again, Mark resolved just clears it.</div>
+        <div class="panel-head"><h2>Make / GHL problems</h2><div class="logistics-toolbar"><span class="mono" id="problemCount">0</span><button type="button" class="job-stage-btn cancel" id="resolveAllProblems" hidden>Mark all resolved</button></div></div>
+        <div class="logistics-note">Runs Make didn't confirm within 45 seconds and GHL schedule syncs that failed. Check Make's history first if a notification may already have gone out; Retry sends the same run again, Mark resolved just clears it.</div>
         <ul class="admin-list admin-list-scroll" id="problemList"><li class="load-state">Loading...</li></ul>
       </div>
       <div class="panel">
@@ -1713,6 +1716,28 @@
       <button type="button" class="btn-ghost signin-skip" id="signinSkip" hidden>Continue without signing in</button>
       <button type="button" class="btn-primary" id="signinSubmit">Sign in</button>
     </div>
+  </div>
+</div>
+
+<!-- Edit worker (admins): name + phone saved straight to the GHL contact. -->
+<div class="overlay" id="editWorkerOverlay"></div>
+<div class="sheet" id="editWorkerSheet" aria-labelledby="editWorkerTitle">
+  <div class="sheet-head"><h2 id="editWorkerTitle">Edit worker</h2><button id="closeEditWorker" aria-label="Close">&times;</button></div>
+  <div class="sheet-body">
+    <p class="logistics-note">Saves to the worker's GHL contact. The board, open jobs' crews, drivers on open moves and Field App sign-in follow the new name and phone.</p>
+    <p class="load-state" id="editWorkerLoading">Loading from GHL...</p>
+    <div id="editWorkerForm" hidden>
+      <div class="field-row">
+        <div class="field"><label for="editWorkerFirst">First name</label><input type="text" id="editWorkerFirst" maxlength="60" autocomplete="off"></div>
+        <div class="field"><label for="editWorkerLast">Last name</label><input type="text" id="editWorkerLast" maxlength="60" autocomplete="off"></div>
+      </div>
+      <div class="field"><label for="editWorkerPhone">Phone</label><input type="tel" id="editWorkerPhone" maxlength="20" inputmode="tel" placeholder="+17145550100"></div>
+      <p class="ghl-hint" id="editWorkerHint"></p>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn-ghost" id="cancelEditWorker" style="color:var(--ink-soft); border-color:var(--border);">Cancel</button>
+    <button class="btn-primary" id="saveEditWorker" disabled>Save to GHL</button>
   </div>
 </div>
 
@@ -4309,14 +4334,14 @@ async function loadFieldAppAccess() {
 function renderFieldAppAccess() {
   const list = document.getElementById('fieldAppAccessList');
   document.getElementById('fieldAppLink').textContent = `${window.location.origin}/driver/`;
-  const drivers = (logisticsData.drivers || []).map(d => ({ name: d.name, phone: d.phone, role: 'Driver', manual: !!d.manual }));
-  const labor = (dashboardData.labor || []).map(w => ({ name: w.name, phone: w.phone, role: 'Crew', manual: !!w.manual }));
+  const drivers = (logisticsData.drivers || []).map(d => ({ id: d.id || '', name: d.name, phone: d.phone, role: 'Driver', manual: !!d.manual }));
+  const labor = (dashboardData.labor || []).map(w => ({ id: w.id || '', name: w.name, phone: w.phone, role: 'Crew', manual: !!w.manual }));
   const admin = currentSession.isAdmin;
   const merged = new Map();
   [...drivers, ...labor].filter(p => p.name && p.name !== 'Unnamed Driver').forEach(p => {
     const key = fieldAppKeyFor(p);
     const existing = merged.get(key);
-    if (existing) { if (!existing.role.includes(p.role)) existing.role += `/${p.role}`; existing.manual = existing.manual || p.manual; }
+    if (existing) { if (!existing.role.includes(p.role)) existing.role += `/${p.role}`; existing.manual = existing.manual || p.manual; existing.id = existing.id || p.id; }
     else merged.set(key, { ...p });
   });
   const people = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -4327,7 +4352,7 @@ function renderFieldAppAccess() {
     const statusCell = isEnabled ? '<span class="logistics-status assigned">Enabled</span>' : '<span class="logistics-route">Not enabled</span>';
     if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td><td></td></tr>`;
     return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
-      + `<td>${isEnabled
+      + `<td class="field-app-actions">${p.id ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${escapeLogisticsHtml(p.id)}" data-name="${escapeLogisticsHtml(p.name)}">Edit</button> ` : ''}${isEnabled
         ? `<button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>`
         : `<button type="button" class="job-stage-btn edit field-app-enable" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}" ${p.phone ? '' : 'disabled title="Needs a phone number on file"'}>Enable</button>`}</td></tr>`;
   }).join('');
@@ -4994,22 +5019,28 @@ async function retryCrm(jobId) {
   const res = await fetchWithTimeout('/api/sync-retry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId }) }, 45000);
   if (!res.ok) throw new Error('GHL is still unavailable. Dispatch state remains saved.');
 }
-async function runSideEffect(url, payload, label, kindOverride, effectKey) {
+// Optimistic: the board treats the Make run as sent right away and carries on.
+// The request keeps going in the background; only if Make still hasn't
+// confirmed after 45 s is it called a problem (a toast, plus the senior admin
+// Make / GHL problems list, where it can be retried).
+const MAKE_CONFIRM_WAIT_MS = 45000;
+function runSideEffect(url, payload, label, kindOverride, effectKey) {
   // State is already committed. Never reapply it to retry a notification.
-  try {
-    const kinds = { [CONFIG.MOVE_WORKER_URL]: 'workers', [CONFIG.DRIVER_ASSIGNMENT_URL]: 'drivers', [CONFIG.EDIT_JOB_DETAILS_URL]: 'job_details', [CONFIG.CREATE_JOB_URL]: 'job_stage', [CONFIG.LOGISTICS_CREATE_URL]: 'container', [CONFIG.DRIVER_LOG_URL]: 'driver_log' };
-    const requestId = lastCommittedRequests.get(String(payload.moveId || payload.jobId || payload.opportunityId || ''));
+  const kinds = { [CONFIG.MOVE_WORKER_URL]: 'workers', [CONFIG.DRIVER_ASSIGNMENT_URL]: 'drivers', [CONFIG.EDIT_JOB_DETAILS_URL]: 'job_details', [CONFIG.CREATE_JOB_URL]: 'job_stage', [CONFIG.LOGISTICS_CREATE_URL]: 'container', [CONFIG.DRIVER_LOG_URL]: 'driver_log' };
+  const requestId = lastCommittedRequests.get(String(payload.moveId || payload.jobId || payload.opportunityId || ''));
+  const started = Date.now();
+  (async () => {
     // kindOverride lets two effects share one webhook URL (EOD sheet + worker release).
-    const response = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, kind: kindOverride || kinds[url], payload, ...(effectKey ? { effectKey } : {}) }) }, 45000);
+    const response = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, kind: kindOverride || kinds[url], payload, ...(effectKey ? { effectKey } : {}) }) }, MAKE_CONFIRM_WAIT_MS + 10000);
     const text = await response.text();
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    let result; try { result = JSON.parse(text); } catch { throw new Error('Make did not confirm completion. Add the final JSON response from the setup guide.'); }
-    if (result.ok !== true) throw new Error('Make did not confirm completion');
-  } catch (error) {
-    const message = `Dispatch saved; ${label.toLowerCase()} not confirmed. Check Make’s execution history before retrying to avoid duplicate messages.`;
-    showPersistentIssue('effect-' + (payload.moveId || payload.jobId || 'unknown'), message);
-    throw new Error(message);
-  }
+    let result = {}; try { result = JSON.parse(text); } catch {}
+    if (!response.ok || result.ok !== true) throw new Error(result.error || `HTTP ${response.status}`);
+  })().catch(error => {
+    console.warn(`${label} not confirmed:`, error);
+    const wait = Math.max(0, MAKE_CONFIRM_WAIT_MS - (Date.now() - started));
+    setTimeout(() => showToast(`${label} didn't go through: Make didn't confirm within 45 seconds. Check Make's history; senior admins can retry it from Admin > Make / GHL problems.`, true), wait);
+  });
+  return Promise.resolve({ ok: true, optimistic: true });
 }
 function editingDispatch() {
   return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && !document.activeElement.closest('#signinBackdrop')) ||
@@ -5800,7 +5831,7 @@ function renderAdminLabor() {
   const shown = all.filter(w => !q || `${w.name} ${w.phone || ''}`.toLowerCase().includes(q));
   document.getElementById('adminLaborCount').textContent = `${all.length}`;
   list.innerHTML = shown.length ? shown.map(w => `<li><div class="who">${sessionEsc(w.name)}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}<small>${sessionEsc(w.phone || 'no phone')}</small></div>`
-    + `<button type="button" class="job-stage-btn cancel roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-manual="${w.manual ? '1' : ''}">Remove</button></li>`).join('')
+    + `<div class="problem-actions">${w.id ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${sessionEsc(w.id)}" data-name="${sessionEsc(w.name)}">Edit</button>` : ''}<button type="button" class="job-stage-btn cancel roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-manual="${w.manual ? '1' : ''}">Remove</button></div></li>`).join('')
     : `<li class="load-state">${all.length ? 'No one matches.' : 'No laborers on the board.'}</li>`;
 }
 document.getElementById('adminLaborSearch').addEventListener('input', renderAdminLabor);
@@ -5829,6 +5860,7 @@ const seniorWhen = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLoca
 function renderProblems(data) {
   const effects = data.effects || [], crm = data.crm || [];
   document.getElementById('problemCount').textContent = String(effects.length + crm.length);
+  document.getElementById('resolveAllProblems').hidden = effects.length < 2;
   const list = document.getElementById('problemList');
   const rows = [
     ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
@@ -5908,6 +5940,63 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
   finally { btn.disabled = false; btn.textContent = 'Save settings'; }
 });
 
+/* Edit worker (admins): first/last name + phone, saved to the GHL contact. */
+const editWorkerOverlay = document.getElementById('editWorkerOverlay'), editWorkerSheet = document.getElementById('editWorkerSheet');
+let editWorkerId = '', editWorkerOriginal = null;
+async function openEditWorker(contactId, name) {
+  editWorkerId = contactId; editWorkerOriginal = null;
+  document.getElementById('editWorkerTitle').textContent = `Edit ${name || 'worker'}`;
+  document.getElementById('editWorkerLoading').hidden = false; document.getElementById('editWorkerLoading').textContent = 'Loading from GHL...';
+  document.getElementById('editWorkerForm').hidden = true;
+  document.getElementById('saveEditWorker').disabled = true;
+  editWorkerOverlay.classList.add('open'); editWorkerSheet.classList.add('open');
+  try {
+    const data = await fetchJsonStrict('/api/manual-workers?contact=' + encodeURIComponent(contactId), 'GHL contact');
+    if (editWorkerId !== contactId) return;
+    editWorkerOriginal = data.contact;
+    const [first, ...rest] = String(data.contact.name || '').split(' ');
+    document.getElementById('editWorkerFirst').value = data.contact.firstName || first || '';
+    document.getElementById('editWorkerLast').value = data.contact.lastName || (data.contact.firstName ? '' : rest.join(' '));
+    document.getElementById('editWorkerPhone').value = data.contact.phone || '';
+    document.getElementById('editWorkerHint').textContent = data.contact.email ? `GHL contact: ${data.contact.email}` : '';
+    document.getElementById('editWorkerLoading').hidden = true;
+    document.getElementById('editWorkerForm').hidden = false;
+    document.getElementById('saveEditWorker').disabled = false;
+    document.getElementById('editWorkerFirst').focus();
+  } catch (err) { document.getElementById('editWorkerLoading').textContent = `Couldn't load this contact from GHL: ${err.message}`; }
+}
+function closeEditWorker() { editWorkerOverlay.classList.remove('open'); editWorkerSheet.classList.remove('open'); editWorkerId = ''; }
+['closeEditWorker', 'cancelEditWorker'].forEach(id => document.getElementById(id).addEventListener('click', closeEditWorker));
+editWorkerOverlay.addEventListener('click', closeEditWorker);
+document.getElementById('adminDispatchView').addEventListener('click', e => {
+  const btn = e.target.closest('.worker-edit'); if (!btn) return;
+  openEditWorker(btn.dataset.id, btn.dataset.name);
+});
+document.getElementById('saveEditWorker').addEventListener('click', async () => {
+  const btn = document.getElementById('saveEditWorker');
+  const firstName = document.getElementById('editWorkerFirst').value.trim(), lastName = document.getElementById('editWorkerLast').value.trim(), phone = document.getElementById('editWorkerPhone').value.trim();
+  if (!firstName) return showToast('First name is required.', true);
+  btn.disabled = true; btn.textContent = 'Saving to GHL...';
+  try {
+    const data = await manualWorkerApi({ action: 'edit', contactId: editWorkerId, firstName, lastName, phone });
+    // Show the new name/phone right away; the roster re-reads from Make too.
+    const patch = list => (list || []).forEach(p => { if (p.id === editWorkerId) Object.assign(p, { name: data.worker.name, phone: data.worker.phone }); });
+    patch(dashboardData.labor); patch(logisticsData.drivers);
+    closeEditWorker();
+    await afterManualWorkersChange(data);
+    if (logisticsLoaded) loadLogistics();
+    pollSharedState();
+    const extra = [data.jobsUpdated ? `${data.jobsUpdated} open job crew${data.jobsUpdated === 1 ? '' : 's'}` : '', data.movesUpdated ? `${data.movesUpdated} move${data.movesUpdated === 1 ? '' : 's'}` : '', data.fieldAppMoved ? 'Field App sign-in moved to the new phone' : ''].filter(Boolean).join(', ');
+    showToast(data.changes.length ? `Saved to GHL: ${data.worker.name}.${extra ? ' Also updated ' + extra + '.' : ''}` : 'No changes to save.');
+  } catch (err) { showToast(err.message, true); }
+  finally { btn.disabled = false; btn.textContent = 'Save to GHL'; }
+});
+document.getElementById('resolveAllProblems').addEventListener('click', async () => {
+  if (!confirm('Clear every Make problem in the list without sending anything? Do this only after checking Make\'s history.')) return;
+  try { renderProblems(await seniorApi('', { action: 'resolve_all' })); showToast('All cleared.'); seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {}); }
+  catch (err) { showToast(err.message, true); }
+});
+
 /* Workers added from GHL (admins). Merged into the crew and driver pickers. */
 let manualWorkers = [];
 let hiddenWorkers = [];
@@ -5937,7 +6026,7 @@ let ghlWorkerPick = null, ghlSearchTimer = null, ghlSearchSeq = 0;
 function renderManualWorkerList() {
   const list = document.getElementById('manualWorkerList');
   list.innerHTML = manualWorkers.length ? manualWorkers.map(w => `<li><div class="who">${sessionEsc(w.name)}<small>${sessionEsc(w.phone || 'no phone')} · ${[w.labor ? 'Crew' : '', w.driver ? 'Driver' : ''].filter(Boolean).join('/')}${w.addedBy ? ' · added by ' + sessionEsc(w.addedBy) : ''}</small></div>`
-    + `<button type="button" class="job-stage-btn cancel manual-remove" data-contact-id="${sessionEsc(w.contactId)}" data-name="${sessionEsc(w.name)}">Remove</button></li>`).join('') : '<li class="load-state">None yet.</li>';
+    + `<div class="problem-actions"><button type="button" class="job-stage-btn edit worker-edit" data-id="${sessionEsc(w.contactId)}" data-name="${sessionEsc(w.name)}">Edit</button><button type="button" class="job-stage-btn cancel manual-remove" data-contact-id="${sessionEsc(w.contactId)}" data-name="${sessionEsc(w.name)}">Remove</button></div></li>`).join('') : '<li class="load-state">None yet.</li>';
   const hidden = document.getElementById('hiddenWorkerList');
   hidden.innerHTML = hiddenWorkers.length ? hiddenWorkers.map(h => `<li><div class="who">${sessionEsc(h.name || h.phone)}<small>${sessionEsc(h.phone || '')}${h.hiddenBy ? ' · removed by ' + sessionEsc(h.hiddenBy) : ''}</small></div>`
     + `<button type="button" class="job-stage-btn edit hidden-restore" data-key="${sessionEsc(h.key)}" data-name="${sessionEsc(h.name)}">Restore</button></li>`).join('') : '<li class="load-state">None.</li>';

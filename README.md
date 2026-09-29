@@ -22,7 +22,10 @@ Includes the backend, edited dashboard, the read-only Field App for drivers/crew
   - **Settings:** default Assigned User for Book Job (default: whoever is signed in), default markup % on the EOD sheet, and an admin PIN (stored hashed; works alongside `DASHBOARD_ADMIN_PIN`).
   - **Activity log:** who enrolled/revoked admins, added/removed/restored laborers, enabled/revoked Field App access, retried or resolved problems, and changed settings.
   - **Send history:** every EOD sheet and Project Schedule PDF sent (or failed), grouped by job, searchable. Starts with this deploy; Project Schedules sent earlier show their last send.
-- The server enforces all of it: admins for laborers and Field App access, senior admins for the admin list and the senior section.
+- **Edit workers** (admins): **Edit** next to a laborer, a GHL-added worker, or anyone in Field App Access opens first name, last name and phone, loaded fresh from GHL. **Save to GHL** writes them to the GHL contact (phone saved as +1XXXXXXXXXX), then the board follows: GHL-added list, Field App sign-in moves to the new phone, crews on open jobs and drivers on open moves get the new name/phone, and the Make roster cache is cleared so the next load re-reads it. If GHL refuses (e.g. duplicate phone), nothing changes and GHL's reason is shown.
+- **Make runs are optimistic.** After a save, notifications / EOD / job stage runs to Make are treated as sent right away. The board waits up to 45 seconds for Make's `{"ok":true}`; only then does it show a toast and list it under Make / GHL problems. A plain "Accepted" reply is named as such (the route is missing its Webhook response). `MAKE_TIMEOUT_MS` changes the server wait.
+- Every Make/GHL problem that existed before this deploy is acknowledged once, automatically, so the list starts clean. **Acknowledge** / **Acknowledge all** clear items without sending anything.
+- The server enforces all of it: admins for laborers, worker edits and Field App access, senior admins for the admin list and the senior section.
 - **Assigned User is required on Book Job** and starts on whoever is signed in. It can be changed per booking; each new booking starts on you again. The server fills in the signed-in user if a booking arrives without one. Make also gets `bookedBy` / `bookedByUserId`.
 
 ## What's new in 1.7

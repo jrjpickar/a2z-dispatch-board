@@ -19,14 +19,18 @@ const KIND_LABELS = { workers: 'Worker notification', drivers: 'Driver notificat
 const recordName = p => p ? String(p.jobName || p.jobAddress || p.clientName || p.workerName || p.driverName || '') : '';
 
 async function problems(sql) {
+  // Nothing counts as a problem until Make has had 45 s to answer. A run still
+  // marked "sending" after that never got an answer (Make or Netlify timed out).
   const effects = (await sql`select effect_id, kind, status, last_error, payload, created_at, updated_at from dispatch_effects
-    where status <> 'confirmed' order by updated_at desc limit 100`).map(r => ({
-      id: r.effect_id, kind: r.kind, label: KIND_LABELS[r.kind] || r.kind, status: r.status, error: r.last_error || '',
+    where status <> 'confirmed' and updated_at < now() - interval '45 seconds'
+    order by updated_at desc limit 100`).map(r => ({
+      id: r.effect_id, kind: r.kind, label: KIND_LABELS[r.kind] || r.kind, status: r.status,
+      error: r.status === 'sending' ? 'No answer from Make (timed out). Check Make history.' : (r.last_error || ''),
       jobId: String(r.payload?.jobId || r.payload?.moveId || r.payload?.opportunityId || ''), name: recordName(r.payload),
       action: String(r.payload?.action || ''), canRetry: !!r.payload && !!workflows[r.kind], at: r.updated_at || r.created_at
     }));
   const crm = (await sql`select c.job_id, c.last_error, c.updated_at, s.data from dispatch_crm_sync c
-    left join job_shared_state s on s.job_id = c.job_id where c.pending = true order by c.updated_at desc limit 100`).map(r => ({
+    left join job_shared_state s on s.job_id = c.job_id where c.pending = true and c.updated_at < now() - interval '45 seconds' order by c.updated_at desc limit 100`).map(r => ({
       jobId: r.job_id, error: r.last_error || '', at: r.updated_at, name: String(r.data?.jobAddress || r.data?.clientName || '')
     }));
   return { effects, crm };
@@ -64,11 +68,11 @@ export default async function handler(request) {
       if (row.status === 'confirmed') return json({ ok: true, ...(await problems(sql)) });
       const label = KIND_LABELS[row.kind] || row.kind, name = recordName(row.payload);
       if (body.action === 'resolve_effect') {
-        await sql`update dispatch_effects set status = 'confirmed', last_error = 'Marked resolved by ' || ${session.name}, updated_at = now() where effect_id = ${effectId}`;
-        await logActivity(sql, session, `Marked ${label} resolved`, name, { effectId });
+        await sql`update dispatch_effects set status = 'confirmed', last_error = 'Acknowledged by ' || ${session.name}, updated_at = now() where effect_id = ${effectId}`;
+        await logActivity(sql, session, `Acknowledged ${label}`, name, { effectId });
         return json({ ok: true, ...(await problems(sql)) });
       }
-      if (!row.payload || !workflows[row.kind]) throw new StateError('This one was sent before retries were possible. Check Make, then use Mark resolved.', 409);
+      if (!row.payload || !workflows[row.kind]) throw new StateError('This one was sent before retries were possible. Check Make, then Acknowledge it.', 409);
       // Same eventId as the first try, so a Make filter on eventId can drop duplicates.
       try {
         const sent = await sendWorkflow(row.kind, row.payload, effectId);
@@ -80,6 +84,12 @@ export default async function handler(request) {
         await logActivity(sql, session, `Retried ${label}`, name, { effectId, result: 'failed', error: error.message });
         return json({ error: `Retry failed: ${error.message}`, ...(await problems(sql)) }, 502);
       }
+      return json({ ok: true, ...(await problems(sql)) });
+    }
+    if (body.action === 'resolve_all') {
+      const cleared = await sql`update dispatch_effects set status = 'confirmed', last_error = 'Acknowledged by ' || ${session.name}, updated_at = now()
+        where status <> 'confirmed' and updated_at < now() - interval '45 seconds' returning effect_id`;
+      await logActivity(sql, session, 'Acknowledged all Make problems', `${cleared.length} runs`);
       return json({ ok: true, ...(await problems(sql)) });
     }
     if (body.action === 'retry_crm') {

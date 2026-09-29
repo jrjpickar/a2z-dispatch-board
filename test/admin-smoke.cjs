@@ -6,7 +6,7 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   const browser = await chromium.launch({ headless: true });
   const users = [{ id: 'uJesse0001', name: 'Jesse Pickar', email: 'jesse@a2zcs.net' }, { id: 'uSam000002', name: 'Sam Dispatcher', email: 'sam@a2zcs.net' }];
   const errors = []; const posts = [];
-  let manual = [], hidden = [], seniorPosts = [];
+  let manual = [], hidden = [], seniorPosts = [], editPosts = [];
   let problemsData = { effects: [{ id: 'req1:eod_sheet', kind: 'eod_sheet', label: 'EOD sheet', status: 'uncertain', error: 'Make did not confirm completion (HTTP 500)', jobId: 'job1', name: 'Test job', action: 'eod_sheet', canRetry: true, at: new Date().toISOString() }], crm: [{ jobId: 'job1', error: 'GHL HTTP 429', at: new Date().toISOString(), name: 'Test job' }] };
   let admins = [{ userId: 'uJesse0001', name: 'Jesse Pickar', email: 'jesse@a2zcs.net', addedBy: 'bootstrap' }];
   async function run(mode) {
@@ -41,6 +41,8 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
         if (view === 'settings') return reply({ defaultAssignedUserId: '', defaultMarkupPercent: 15, adminPinSet: false, envPinSet: false, updated: {} });
       }
       if (u.pathname === '/api/ghl-contacts') return reply({ ok: true, contacts: [{ id: 'cMaria00001', name: 'Maria Gomez', phone: '+15555550199', email: '' }] });
+      if (u.pathname === '/api/manual-workers' && u.searchParams.get('contact')) return reply({ ok: true, contact: { id: 'w1', name: 'Worker Guy', firstName: 'Worker', lastName: 'Guy', phone: '+15555550100', email: 'w@x.com' } });
+      if (u.pathname === '/api/manual-workers' && req.method() === 'POST' && req.postDataJSON().action === 'edit') { const b = req.postDataJSON(); editPosts.push(b); return reply({ ok: true, worker: { id: 'w1', name: `${b.firstName} ${b.lastName}`, phone: '+17145550100' }, changes: ['name'], jobsUpdated: 1, movesUpdated: 0, fieldAppMoved: false, workers: manual, hidden }); }
       if (u.pathname === '/api/manual-workers') {
         if (req.method() === 'POST' && ['hide', 'unhide'].includes(req.postDataJSON().action)) { const b = req.postDataJSON(); hidden = b.action === 'hide' ? [{ key: 'id:' + b.contactId, contactId: b.contactId, name: b.name, phone: b.phone, hiddenBy: 'Jesse Pickar' }] : []; return reply({ ok: true, workers: manual, hidden }); }
         if (req.method() === 'POST') { manual = [{ contactId: 'cMaria00001', name: 'Maria Gomez', phone: '+15555550199', labor: true, driver: true }]; return reply({ ok: true, worker: { name: 'Maria Gomez' }, fieldApp: { driverKey: 'phone:5555550199' }, workers: manual, hidden }); }
@@ -114,6 +116,13 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   assert.ok(fieldRows.includes('Maria Gomez') && fieldRows.includes('Enable'));
   await outer.screenshot({ path: '/tmp/admin.png', fullPage: false });
   await page.click('#cancelGhlWorker'); await page.waitForTimeout(400);
+  // Edit a worker's name/phone -> GHL
+  await page.click('#adminLaborList .worker-edit[data-id="w1"]');
+  await page.waitForFunction(() => document.getElementById('editWorkerFirst').value === 'Worker');
+  await page.fill('#editWorkerLast', 'Smith'); await page.fill('#editWorkerPhone', '714-555-0100');
+  await page.click('#saveEditWorker');
+  await page.waitForFunction(() => !document.getElementById('editWorkerSheet').classList.contains('open'));
+  assert.deepEqual(editPosts[0], { action: 'edit', contactId: 'w1', firstName: 'Worker', lastName: 'Smith', phone: '714-555-0100' });
   // Senior admin tools
   assert.ok(await page.isVisible('#seniorTools'));
   await page.waitForFunction(() => document.getElementById('problemCount').textContent === '2' && document.getElementById('historyList').textContent.includes('Project Schedule PDF'));

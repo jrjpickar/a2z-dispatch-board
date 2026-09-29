@@ -52,6 +52,6 @@ test('sendWorkflow posts EOD as multipart and others as JSON, and needs ok:true'
     assert.ok(calls[0].init.body instanceof FormData);
     await sendWorkflow('job_stage', { action: 'complete', jobId: 'j1' }, 'r:job_stage');
     assert.equal(JSON.parse(calls[1].init.body).eventId, 'r:job_stage');
-    await assert.rejects(sendWorkflow('workers', { action: 'assign', jobId: 'j1' }, 'r:w'), /did not confirm/);
+    await assert.rejects(sendWorkflow('workers', { action: 'assign', jobId: 'j1' }, 'r:w'), /did not answer/);
   } finally { globalThis.fetch = original; }
 });
