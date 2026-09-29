@@ -12,12 +12,12 @@ Includes the backend, edited dashboard, the read-only Field App for drivers/crew
 
 - **Fix: empty Complete EOD runs in Make.** The EOD sheet used to post one big JSON body with the ~200 KB workbook inside it as base64 text, and Make logged those runs with no data. It now posts like the Project Schedule does: `multipart/form-data`, the .xlsx as a real binary `file`, every other field as a plain form field. The dashboard and server also refuse to post a blank EOD (no job id or no filled line). **Make change needed, see MAKE-SETUP.md.** `EOD_SHEET_FORMAT=json` in Netlify brings the old JSON body back if you need it temporarily.
 - **Signed-in user.** Top left under the logo, like the dialer: name, email and ADMIN / USER. Inside GHL it signs in automatically the same way the Triple Line dialer does (GHL Custom Page encrypted user context, checked with `GHL_APP_SHARED_SECRET`). Outside GHL it asks once ("Who's using the board?") and the browser remembers; Switch user shows only then.
-- **Admin page** (new tab to the right of Schedule, admins only):
-  - **Admins:** every GHL user with **Enroll** / **Revoke**. Jesse Pickar is permanent.
-  - **Laborers:** **+ Add from GHL** (contact search; Crew and/or Driver; optional Field App sign-in), the list of people added from GHL, and **Removed from the board** with **Restore**.
+- **Admin page** (new tab to the right of Schedule, admins only). This is the only place laborers are added or removed; the board itself has no add/remove buttons.
+  - **Admins:** senior admins see every GHL user with **Enroll** / **Revoke**; other admins see the admin list read-only.
+  - **Laborers:** **+ Add from GHL** (contact search; Crew and/or Driver; optional Field App sign-in), **On the board** (every laborer, with search and **Remove**), **Added from GHL**, and **Removed from the board** with **Restore**. Removing a Make roster laborer only hides them on the board (GHL and Make untouched).
   - **Field App Access** moved here from Logistics.
-- **Add / remove laborers on the board** (admins): **+ Add laborer** on the Labor Roster header and a **Remove** button on each roster row. Removing someone from the Make roster only hides them on the board (GHL and Make are untouched); restore from the Admin page. Removing someone added from GHL takes them off the crew picker.
-- The server enforces all of it: only admins can change admins, laborers or Field App access.
+- **Senior admin** (Jesse Pickar; `SENIOR_ADMINS`, formerly `BOOTSTRAP_ADMINS`): always admin, can't be revoked, and the only role that can enroll or revoke admins. Shown as SENIOR ADMIN.
+- The server enforces all of it: admins for laborers and Field App access, senior admins for the admin list.
 - **Assigned User is required on Book Job** and starts on whoever is signed in. It can be changed per booking; each new booking starts on you again. The server fills in the signed-in user if a booking arrives without one. Make also gets `bookedBy` / `bookedByUserId`.
 
 ## What's new in 1.7

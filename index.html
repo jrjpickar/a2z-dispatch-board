@@ -1155,11 +1155,9 @@
   .admin-lock-row { padding: 0 16px 4px; }
   .admin-pill { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 1px 6px; margin-left: 6px; border-radius: var(--radius); background: var(--orange); color: #fff; vertical-align: 1px; }
   .admin-pill.you { background: var(--ink-soft); }
-  .roster-remove { background: none; border: 1px solid var(--border); color: var(--danger); font-size: 11px; padding: 3px 7px; margin-left: 6px; }
-  .roster-remove:hover { border-color: var(--danger); }
-  .roster-actions { display: flex; align-items: center; }
+  .admin-list-scroll { max-height: 360px; overflow-y: auto; }
+  .admin-search[hidden] { display: none; }
   body.dark-mode .admin-search input { background: #1b1d1f; color: #f1f3f4; border-color: #3b3f43; }
-  body.dark-mode .roster-remove { border-color: #3b3f43; }
   @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } #adminDispatchView { padding: 12px 10px 24px; } .whoami-text { max-width: 200px; } }
 </style>
 </head>
@@ -1207,7 +1205,7 @@
 <div class="layout">
   <!-- Labor roster -->
   <div class="panel">
-    <div class="panel-head"><h2>Labor Roster</h2><button type="button" class="job-stage-btn edit admin-only" id="rosterAddBtn" hidden>+ Add laborer</button></div>
+    <div class="panel-head"><h2>Labor Roster</h2></div>
     <div class="roster-tabs">
       <button class="roster-tab active" data-tab="available">Available</button>
       <button class="roster-tab" data-tab="booked">Booked</button>
@@ -1268,13 +1266,16 @@
   <div class="admin-grid">
     <div class="panel">
       <div class="panel-head"><h2>Admins</h2><span class="mono" id="adminCount">0 ADMINS</span></div>
-      <div class="logistics-note">Admins can add and remove laborers, manage Field App access and enroll other admins. Tap Enroll or Revoke next to anyone in GHL.</div>
+      <div class="logistics-note" id="adminUsersNote">Admins can add and remove laborers and manage Field App access. Senior admins can also enroll and revoke admins.</div>
       <div class="admin-search"><input type="search" id="adminUserSearch" placeholder="Search GHL users..." autocomplete="off"></div>
       <ul class="admin-list" id="adminUserList"><li class="load-state">Loading GHL users...</li></ul>
     </div>
     <div class="panel">
       <div class="panel-head"><h2>Laborers</h2><button type="button" class="btn-primary" id="addGhlWorkerBtn">+ Add from GHL</button></div>
-      <div class="logistics-note">Add anyone from GHL contacts to the crew or driver pickers. Removing a Make roster laborer only hides them on the board; GHL is not touched.</div>
+      <div class="logistics-note">Add anyone from GHL contacts to the crew or driver pickers. Removing a Make roster laborer only hides them on the board; GHL and Make are not touched.</div>
+      <div class="admin-search"><input type="search" id="adminLaborSearch" placeholder="Search laborers..." autocomplete="off"></div>
+      <h3 class="admin-h">On the board <span class="mono" id="adminLaborCount"></span></h3>
+      <ul class="admin-list admin-list-scroll" id="adminLaborList"><li class="load-state">Loading roster...</li></ul>
       <h3 class="admin-h">Added from GHL</h3>
       <ul class="admin-list" id="manualWorkerList"><li class="load-state">None yet.</li></ul>
       <h3 class="admin-h">Removed from the board</h3>
@@ -2348,6 +2349,7 @@ function render() {
 }
 
 function renderRoster() {
+  if (typeof renderAdminLabor === 'function') renderAdminLabor();
   const search = document.getElementById('rosterSearch').value.toLowerCase();
   const laborList = (dashboardData.labor || []);
   const liveBookedRoster = getLiveBookedIdentifiers();
@@ -2376,7 +2378,7 @@ function renderRoster() {
         <div class="worker-name">${w.name}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}</div>
         <div class="worker-meta">${w.phone || ''}${w.jobId ? ' · ' + w.jobId : ''}</div>
       </div>
-      <div class="roster-actions"><span class="pill ${effectiveStatus === 'available' ? 'avail' : 'booked'}">${effectiveStatus}</span>${currentSession.isAdmin ? `<button type="button" class="roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-manual="${w.manual ? '1' : ''}" title="Remove from the board">Remove</button>` : ''}</div>
+      <span class="pill ${effectiveStatus === 'available' ? 'avail' : 'booked'}">${effectiveStatus}</span>
     </li>
   `;
   }).join('');
@@ -5558,7 +5560,7 @@ async function fetchSessionUsers() {
   return sessionGhlUsers;
 }
 function applySession(info) {
-  currentSession = { signedIn: !!info?.signedIn, user: info?.user || null, isAdmin: !!info?.isAdmin, needsAdminUnlock: !!info?.needsAdminUnlock, via: info?.via || '' };
+  currentSession = { signedIn: !!info?.signedIn, user: info?.user || null, isAdmin: !!info?.isAdmin, isSenior: !!info?.isSenior, needsAdminUnlock: !!info?.needsAdminUnlock, via: info?.via || '' };
   if (info?.token) setSessionToken(info.token);
   if (!currentSession.signedIn) setSessionToken('');
   document.body.classList.toggle('is-admin', currentSession.isAdmin);
@@ -5567,7 +5569,7 @@ function applySession(info) {
   if (currentSession.signedIn) {
     text.textContent = [currentSession.user.name, currentSession.user.email].filter(Boolean).join(' · ');
     role.hidden = false;
-    role.textContent = currentSession.isAdmin ? 'ADMIN' : currentSession.needsAdminUnlock ? 'ADMIN (LOCKED)' : 'USER';
+    role.textContent = currentSession.isSenior ? 'SENIOR ADMIN' : currentSession.isAdmin ? 'ADMIN' : currentSession.needsAdminUnlock ? 'ADMIN (LOCKED)' : 'USER';
     role.className = 'user-role' + (currentSession.isAdmin ? ' admin' : currentSession.needsAdminUnlock ? ' locked' : '');
   } else { text.textContent = 'Not signed in'; role.hidden = true; }
   // Inside GHL the sign-in follows the GHL user; Switch user is only for the picker.
@@ -5692,7 +5694,13 @@ function renderAdminUsers() {
   const admins = adminRowsCache || [];
   const byId = new Map(admins.map(a => [a.userId, a]));
   // Everyone in GHL, plus any admin no longer on the GHL user list.
-  const people = [...(sessionGhlUsers || []).map(u => ({ userId: u.id, name: u.name, email: u.email })), ...admins.filter(a => !(sessionGhlUsers || []).some(u => u.id === a.userId))];
+  const senior = currentSession.isSenior;
+  // Senior admins see everyone in GHL to enroll; other admins just see who the admins are.
+  const people = senior ? [...(sessionGhlUsers || []).map(u => ({ userId: u.id, name: u.name, email: u.email })), ...admins.filter(a => !(sessionGhlUsers || []).some(u => u.id === a.userId))] : admins.map(a => ({ ...a }));
+  document.getElementById('adminUserSearch').parentElement.hidden = !senior;
+  document.getElementById('adminUsersNote').textContent = senior
+    ? 'You are a senior admin: tap Enroll or Revoke next to anyone in GHL. Admins can add and remove laborers and manage Field App access.'
+    : 'Admins can add and remove laborers and manage Field App access. Only a senior admin can enroll or revoke admins.';
   const q = document.getElementById('adminUserSearch').value.trim().toLowerCase();
   const shown = people.filter(p => !q || `${p.name} ${p.email}`.toLowerCase().includes(q))
     .sort((a, b) => (byId.has(b.userId) - byId.has(a.userId)) || a.name.localeCompare(b.name));
@@ -5700,9 +5708,10 @@ function renderAdminUsers() {
   if (!shown.length) { list.innerHTML = `<li class="load-state">${people.length ? 'No one matches.' : 'GHL users could not load.'}</li>`; return; }
   list.innerHTML = shown.map(p => {
     const admin = byId.get(p.userId), you = p.userId === currentSession.user?.id;
-    const tags = `${admin ? '<span class="admin-pill">ADMIN</span>' : ''}${you ? '<span class="admin-pill you">YOU</span>' : ''}`;
-    const detail = [p.email, admin?.addedBy === 'bootstrap' ? 'permanent admin' : admin?.addedBy ? 'enrolled by ' + admin.addedBy : ''].filter(Boolean).join(' · ');
-    const action = admin?.addedBy === 'bootstrap' ? ''
+    const isSeniorRow = admin?.addedBy === 'bootstrap';
+    const tags = `${admin ? `<span class="admin-pill">${isSeniorRow ? 'SENIOR ADMIN' : 'ADMIN'}</span>` : ''}${you ? '<span class="admin-pill you">YOU</span>' : ''}`;
+    const detail = [p.email, isSeniorRow ? 'senior admin, can\'t be revoked' : admin?.addedBy ? 'enrolled by ' + admin.addedBy : ''].filter(Boolean).join(' · ');
+    const action = isSeniorRow || !senior ? ''
       : admin ? `<button type="button" class="job-stage-btn cancel admin-toggle" data-action="remove" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}">Revoke</button>`
       : `<button type="button" class="job-stage-btn edit admin-toggle" data-action="add" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}">Enroll</button>`;
     return `<li><div class="who">${sessionEsc(p.name)}${tags}<small>${sessionEsc(detail)}</small></div>${action}</li>`;
@@ -5710,7 +5719,7 @@ function renderAdminUsers() {
 }
 async function renderAdminView(force) {
   if (!currentSession.isAdmin) return;
-  renderAdminUsers(); renderManualWorkerList();
+  renderAdminUsers(); renderManualWorkerList(); renderAdminLabor();
   try { await fetchSessionUsers(); } catch {}
   try { adminRowsCache = (await adminApi()).admins || []; }
   catch (e) { document.getElementById('adminUserList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; return; }
@@ -5718,6 +5727,18 @@ async function renderAdminView(force) {
   await loadManualWorkers(force); renderManualWorkerList();
 }
 document.getElementById('adminUserSearch').addEventListener('input', renderAdminUsers);
+function renderAdminLabor() {
+  const list = document.getElementById('adminLaborList');
+  if (!list || !currentSession.isAdmin) return;
+  const all = [...(dashboardData.labor || [])].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const q = document.getElementById('adminLaborSearch').value.trim().toLowerCase();
+  const shown = all.filter(w => !q || `${w.name} ${w.phone || ''}`.toLowerCase().includes(q));
+  document.getElementById('adminLaborCount').textContent = `${all.length}`;
+  list.innerHTML = shown.length ? shown.map(w => `<li><div class="who">${sessionEsc(w.name)}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}<small>${sessionEsc(w.phone || 'no phone')}</small></div>`
+    + `<button type="button" class="job-stage-btn cancel roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-manual="${w.manual ? '1' : ''}">Remove</button></li>`).join('')
+    : `<li class="load-state">${all.length ? 'No one matches.' : 'No laborers on the board.'}</li>`;
+}
+document.getElementById('adminLaborSearch').addEventListener('input', renderAdminLabor);
 document.getElementById('adminUserList').addEventListener('click', async e => {
   const btn = e.target.closest('.admin-toggle'); if (!btn) return;
   const { action, userId, name } = btn.dataset;
@@ -5778,7 +5799,6 @@ async function openGhlWorkerSheet() {
 }
 function closeGhlWorkerSheet() { ghlWorkerOverlay.classList.remove('open'); ghlWorkerSheet.classList.remove('open'); }
 document.getElementById('addGhlWorkerBtn').addEventListener('click', openGhlWorkerSheet);
-document.getElementById('rosterAddBtn').addEventListener('click', openGhlWorkerSheet);
 ['closeGhlWorkerSheet', 'cancelGhlWorker'].forEach(id => document.getElementById(id).addEventListener('click', closeGhlWorkerSheet));
 ghlWorkerOverlay.addEventListener('click', closeGhlWorkerSheet);
 let ghlResults = [];
@@ -5848,8 +5868,8 @@ document.getElementById('hiddenWorkerList').addEventListener('click', async e =>
   try { await afterManualWorkersChange(await manualWorkerApi({ action: 'unhide', key: btn.dataset.key, name: btn.dataset.name })); showToast(`${btn.dataset.name} is back on the board.`); }
   catch (err) { showToast(err.message, true); btn.disabled = false; }
 });
-// Remove a laborer straight from the Labor Roster (admins).
-document.getElementById('rosterList').addEventListener('click', async e => {
+// Remove a laborer (Admin page > Laborers on the board).
+document.getElementById('adminLaborList').addEventListener('click', async e => {
   const btn = e.target.closest('.roster-remove'); if (!btn) return;
   const { id, name, phone, manual } = btn.dataset;
   const added = manual ? manualWorkers.find(w => w.contactId === id) : null;

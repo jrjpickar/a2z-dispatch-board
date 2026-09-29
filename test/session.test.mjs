@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { PGlite } from '@electric-sql/pglite';
 import { ensureSchema } from '../netlify/functions/db.mjs';
 import crypto from 'node:crypto';
-import { ghlUserFromContext, signSession, verifySession, sessionFromRequest, sessionInfo, requireAdmin, matchUser, isBootstrapAdmin, secretMatches, sessionCookie } from '../lib/session.mjs';
+import { requireSenior, ghlUserFromContext, signSession, verifySession, sessionFromRequest, sessionInfo, requireAdmin, matchUser, isBootstrapAdmin, secretMatches, sessionCookie } from '../lib/session.mjs';
 import { contactSummary } from '../lib/ghl.mjs';
 process.env.SESSION_SECRET = 'test-secret';
 const pg = new PGlite();
@@ -72,4 +72,23 @@ test('automatic GHL sign-in decrypts the Custom Page user context like the diale
   assert.throws(() => ghlUserFromContext(encryptContext({ ...ctx, activeLocation: 'other' }, 'shared-test-secret')), e => e.status === 403);
   delete process.env.GHL_APP_SHARED_SECRET;
   assert.throws(() => ghlUserFromContext('x'), e => e.status === 503);
+});
+
+test('only senior admins can manage admins', async () => {
+  assert.equal((await sessionInfo(sql, verifySession(signSession(jesse, 'ghl_sso')))).isSenior, true);
+  await requireSenior(req(signSession(jesse, 'ghl_sso')), sql);
+  // Sam is an enrolled admin (earlier test) but not senior.
+  assert.equal((await sessionInfo(sql, verifySession(signSession(sam, 'ghl_sso')))).isSenior, false);
+  await assert.rejects(requireSenior(req(signSession(sam, 'ghl_sso')), sql), e => e.status === 403 && /senior/.test(e.message));
+});
+
+test('the owner email stays a senior admin even if SENIOR_ADMINS is wiped or wrong', () => {
+  const jesseByEmail = { id: 'someOtherId', name: 'J', email: 'Jesse@A2ZCS.net' };
+  for (const value of [undefined, '', '   ', 'someone-else@x.com']) {
+    if (value === undefined) delete process.env.SENIOR_ADMINS; else process.env.SENIOR_ADMINS = value;
+    assert.ok(isBootstrapAdmin(jesseByEmail), `owner kept with SENIOR_ADMINS=${JSON.stringify(value)}`);
+  }
+  process.env.SENIOR_ADMINS = 'someone-else@x.com';
+  assert.ok(!isBootstrapAdmin({ id: 'x', name: 'Jesse Pickar', email: 'other@x.com' }), 'name match only applies to the default');
+  delete process.env.SENIOR_ADMINS;
 });

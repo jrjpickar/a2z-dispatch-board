@@ -23,7 +23,7 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
         if (req.method() === 'GET') return reply({ signedIn: false });
         const b = req.postDataJSON(); const user = b.action === 'ghl' ? (b.encryptedData === 'ENCRYPTED-CTX' ? users[0] : null) : users.find(x => x.id === b.userId);
         if (!user) return reply({ error: 'bad' }, 401);
-        return reply({ ok: true, token: 'tok-' + user.id, signedIn: true, user, via: b.action === 'ghl' ? 'ghl_sso' : 'picker', isAdmin: admin && user.id === 'uJesse0001', needsAdminUnlock: false });
+        return reply({ ok: true, token: 'tok-' + user.id, signedIn: true, user, via: b.action === 'ghl' ? 'ghl_sso' : 'picker', isAdmin: admin && user.id === 'uJesse0001', isSenior: admin && user.id === 'uJesse0001', needsAdminUnlock: false });
       }
       if (u.pathname === '/api/ghl-users') return reply({ ok: true, users });
       if (u.pathname === '/api/admins') {
@@ -59,13 +59,12 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   page = outer.frames().find(f => f.url() === 'https://a2z.test/');
   await page.waitForFunction(() => !document.getElementById('whoamiRole').hidden);
   assert.equal(await page.textContent('#whoamiText'), 'Jesse Pickar · jesse@a2zcs.net');
-  assert.equal(await page.textContent('#whoamiRole'), 'ADMIN');
+  assert.equal(await page.textContent('#whoamiRole'), 'SENIOR ADMIN');
   assert.ok(await page.isHidden('#switchUserBtn'), 'no switch inside GHL');
   assert.ok(await page.isVisible('#adminViewTab'));
-  // Admin can remove a Make-roster laborer from the board.
-  await page.waitForSelector('#rosterList .roster-remove');
-  await page.click('#rosterList .roster-remove[data-name="Worker"]');
-  await page.waitForFunction(() => !dashboardData.labor.some(w => w.name === 'Worker'));
+  // No add/remove on the board itself; that lives on the Admin page.
+  await page.waitForFunction(() => document.getElementById('rosterList').textContent.includes('Worker'));
+  assert.equal(await page.locator('#rosterList button').count(), 0);
   assert.ok(await page.isHidden('#signinBackdrop'));
   const signin = posts.find(p => p.path === '/api/session');
   assert.deepEqual([signin.body.action, signin.body.encryptedData], ['ghl', 'ENCRYPTED-CTX']);
@@ -80,7 +79,10 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   await page.evaluate(() => closeSheetFn());
   // Admin page
   await page.click('#adminViewTab');
-  await page.waitForFunction(() => logisticsLoaded && document.getElementById('hiddenWorkerList').textContent.includes('Worker'));
+  await page.waitForSelector('#adminLaborList .roster-remove[data-name="Worker"]');
+  await page.click('#adminLaborList .roster-remove[data-name="Worker"]');
+  await page.waitForFunction(() => !dashboardData.labor.some(w => w.name === 'Worker') && logisticsLoaded && document.getElementById('hiddenWorkerList').textContent.includes('Worker'));
+  assert.ok(!(await page.textContent('#rosterList')).includes('Worker'));
   assert.ok(await page.isVisible('#fieldAppAccessPanel'));
   await page.waitForSelector('#adminUserList .admin-toggle[data-action="add"]');
   await page.click('#adminUserList .admin-toggle[data-user-id="uSam000002"]');
@@ -115,8 +117,7 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   assert.equal(await page.textContent('#whoamiRole'), 'USER');
   assert.ok(await page.isVisible('#switchUserBtn'));
   assert.ok(await page.isHidden('#adminViewTab'));
-  assert.ok(await page.isHidden('#rosterAddBtn'));
-  assert.equal(await page.locator('#rosterList .roster-remove').count(), 0);
+  assert.equal(await page.locator('#rosterList button').count(), 0);
   await context.close();
   await browser.close();
   assert.deepEqual(errors, []);

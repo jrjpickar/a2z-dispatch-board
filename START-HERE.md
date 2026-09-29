@@ -17,11 +17,11 @@ Automatic sign-in works exactly like the Triple Line dialer: the board runs as a
    - `GHL_LOCATION_ID`: only if not `QUcu2PEAxPV1sQm1GQCq`. Users from other locations are refused.
    - `SESSION_SECRET` (optional): signs board sessions. Falls back to `DRIVER_TOKEN_SECRET`.
    - `DASHBOARD_ADMIN_PIN` (optional): lets admins turn on admin tools when using the board outside GHL.
-   - `BOOTSTRAP_ADMINS` (optional): permanent admins by name, email or GHL user id. Default `Jesse Pickar,jesse@a2zcs.net`.
+   - `SENIOR_ADMINS` (optional, old name `BOOTSTRAP_ADMINS` still works): extra senior admins by name, email or GHL user id, comma separated. `jesse@a2zcs.net` is always a senior admin (built into the code) even if this is deleted, blank or wrong.
 3. **Inside GHL** people are signed in as themselves every time the page opens (switching GHL users switches the board). The session is remembered for 7 days in a signed cookie plus a header copy, since GHL's iframe can block cookies.
 4. **Outside GHL** (bookmark, phone) the board asks once "Who's using the board?" and remembers that browser for 180 days. That picker never grants admin rights by itself: use the admin PIN, or open the board inside GHL once (that session also works outside GHL for 7 days).
-5. **Admin list:** name menu (top right) > Admin settings. Jesse Pickar can't be removed.
-6. Only admins (server-enforced): Enable/Revoke Field App access, Add worker from GHL, edit the admin list.
+5. **Admin tab** (right of Schedule): admins, laborers (add from GHL / remove / restore) and Field App Access. Senior admins (Jesse Pickar) can't be revoked and are the only ones who can enroll or revoke admins.
+6. Server-enforced: admins for laborers and Field App access, senior admins for the admin list.
 7. The GHL API token still needs `users.readonly` and `contacts.readonly`.
 
 ## Night work (new in 1.6)
