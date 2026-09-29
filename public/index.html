@@ -599,6 +599,14 @@
     padding: 6px 10px;
     font-size: 12px;
   }
+  .crew-assign-rapid {
+    width: 100%; margin-top: 6px; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600;
+    background: transparent; color: var(--orange-dark); border: 1px solid var(--orange);
+  }
+  .crew-assign-rapid:hover { background: var(--orange-tint-soft); }
+  .crew-assign-rapid:disabled, .crew-assign-confirm:disabled { opacity: .6; cursor: default; }
+  body.dark-mode .crew-assign-rapid { color: #ff9b6e; border-color: #c94f1f; }
+  body.dark-mode .crew-assign-rapid:hover { background: #35251e; }
   .crew-chip.removable {
     display: inline-flex;
     align-items: center;
@@ -1320,8 +1328,8 @@
     <div class="psv-head senior-head"><div><h2>Senior admin</h2><p>Only senior admins see this section.</p></div><button type="button" class="job-stage-btn edit" id="seniorRefresh">Refresh</button></div>
     <div class="admin-grid">
       <div class="panel">
-        <div class="panel-head"><h2>Make / GHL problems</h2><div class="logistics-toolbar"><span class="mono" id="problemCount">0</span><button type="button" class="job-stage-btn cancel" id="resolveAllProblems" hidden>Mark all resolved</button></div></div>
-        <div class="logistics-note">Runs Make didn't confirm within 45 seconds and GHL schedule syncs that failed. Check Make's history first if a notification may already have gone out; Retry sends the same run again, Mark resolved just clears it.</div>
+        <div class="panel-head"><h2>Make / GHL problems</h2><div class="logistics-toolbar"><span class="mono" id="problemCount">0</span><button type="button" class="job-stage-btn cancel" id="resolveAllProblems" hidden>Acknowledge all</button></div></div>
+        <div class="logistics-note">Runs Make didn't confirm within 45 seconds and GHL schedule syncs that failed. Check Make's history first if a notification may already have gone out; Retry sends the same run again, Acknowledge just clears it.</div>
         <ul class="admin-list admin-list-scroll" id="problemList"><li class="load-state">Loading...</li></ul>
       </div>
       <div class="panel">
@@ -2773,6 +2781,7 @@ function renderJobs(jobs) {
                <div class="crew-assign-confirm-bar">
                  <div class="crew-assign-summary"></div>
                  <button type="button" class="btn btn-primary crew-assign-confirm">Confirm assignment</button>
+                 <button type="button" class="btn crew-assign-rapid" title="Assign and send each worker their schedule right away (Make action rapid_assign)">Send schedule now</button>
                </div>
              </div>
            </div>`
@@ -2912,7 +2921,10 @@ window.jobStageOverride = {};
 // worker gets their own notification run. Each payload keeps the job fields,
 // adds the worker at the top level, and still carries assignedWorkers (with
 // just that worker) so existing Make mappings keep working.
-async function assignCrew(jobId, workers, confirmBtn) {
+// rapid: "Send schedule now". Same assignment on the board, but each worker's
+// Make run (worker webhook) carries action "rapid_assign" so Make can send
+// the schedule immediately. Normal Confirm keeps action "assign".
+async function assignCrew(jobId, workers, confirmBtn, { rapid = false } = {}) {
   const selected = workers.filter(w => w.phone && w.phone.trim());
   if (!jobId || !selected.length) return showToast('Selected workers need a phone number.', true);
   const job = dashboardData.jobs.find(j => j.id === jobId) || {};
@@ -2921,20 +2933,25 @@ async function assignCrew(jobId, workers, confirmBtn) {
     scopeOfWork: getScopeOfWork(job), toolsRequired: getToolsRequired(job), monetaryValue: getOpportunityValue(job),
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
     nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day' };
-  confirmBtn.disabled = true; const label = confirmBtn.textContent; confirmBtn.textContent = 'Assigning...';
+  const bar = confirmBtn.closest('.crew-assign-confirm-bar');
+  const barButtons = bar ? [...bar.querySelectorAll('button')] : [confirmBtn];
+  barButtons.forEach(b => { b.disabled = true; });
+  const label = confirmBtn.textContent; confirmBtn.textContent = rapid ? 'Sending...' : 'Assigning...';
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { ...base, assignedWorkers, crewChanges: assignedWorkers });
   } catch (error) {
-    showToast(error.message, true); confirmBtn.disabled = false; confirmBtn.textContent = label; return;
+    showToast(error.message, true); barButtons.forEach(b => { b.disabled = false; }); confirmBtn.textContent = label; return;
   }
+  const effectBase = rapid ? { ...base, action: 'rapid_assign', rapidAssign: true } : base;
   const results = await Promise.allSettled(assignedWorkers.map((worker, index) =>
     runSideEffect(CONFIG.MOVE_WORKER_URL,
-      { ...base, ...worker, assignedWorkers: [worker], workerIndex: index + 1, workerCount: assignedWorkers.length },
-      `Assignment notification for ${worker.workerName}`,
+      { ...effectBase, ...worker, assignedWorkers: [worker], workerIndex: index + 1, workerCount: assignedWorkers.length },
+      `${rapid ? 'Schedule' : 'Assignment notification'} for ${worker.workerName}`,
       undefined,
-      'assign-' + (String(worker.workerPhone || '').replace(/\D/g, '') || worker.contactId || index))));
+      (rapid ? 'rapid-assign-' : 'assign-') + (String(worker.workerPhone || '').replace(/\D/g, '') || worker.contactId || index))));
   const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected').map(w => w.workerName);
   if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
+  else if (rapid) showToast(assignedWorkers.length === 1 ? 'Crew assigned. Schedule sent now.' : `Crew assigned. Schedule sent now to ${assignedWorkers.length} workers.`);
   else showToast(assignedWorkers.length === 1 ? 'Crew assignment saved.' : `Crew assignment saved — ${assignedWorkers.length} notifications sent.`);
   render();
 }
@@ -3390,7 +3407,7 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
     return;
   }
 
-  const confirmBtn = e.target.closest('.crew-assign-confirm');
+  const confirmBtn = e.target.closest('.crew-assign-confirm, .crew-assign-rapid');
   if (confirmBtn) {
     const wrap = confirmBtn.closest('.crew-assign-wrap');
     const jobId = wrap.dataset.jobId;
@@ -3403,7 +3420,7 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
       showToast("Select at least one new worker.", true);
       return;
     }
-    assignCrew(jobId, workers, confirmBtn);
+    assignCrew(jobId, workers, confirmBtn, { rapid: confirmBtn.classList.contains('crew-assign-rapid') });
     return;
   }
 
@@ -5864,7 +5881,7 @@ function renderProblems(data) {
   const list = document.getElementById('problemList');
   const rows = [
     ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
-      + `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Mark resolved</button></div></li>`),
+      + `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Acknowledge</button></div></li>`),
     ...crm.map(c => `<li><div class="who">GHL schedule sync${c.name ? ' · ' + sessionEsc(c.name) : ''}<small>${sessionEsc([c.jobId, seniorWhen(c.at)].filter(Boolean).join(' · '))}</small>${c.error ? `<small class="err">${sessionEsc(c.error)}</small>` : ''}</div>`
       + `<div class="problem-actions"><button type="button" class="job-stage-btn edit problem-btn" data-action="retry_crm" data-job-id="${sessionEsc(c.jobId)}">Retry</button></div></li>`)
   ];
@@ -5919,7 +5936,7 @@ document.getElementById('problemList').addEventListener('click', async e => {
   try {
     const data = await seniorApi('', action === 'retry_crm' ? { action, jobId: btn.dataset.jobId } : { action, effectId: btn.dataset.id });
     renderProblems(data);
-    showToast(action === 'resolve_effect' ? 'Marked resolved.' : 'Sent. Make/GHL confirmed it.');
+    showToast(action === 'resolve_effect' ? 'Acknowledged.' : 'Sent. Make/GHL confirmed it.');
   } catch (err) { if (err.data?.effects) renderProblems(err.data); showToast(err.message, true); btn.disabled = false; }
   seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {});
 });
@@ -5993,7 +6010,7 @@ document.getElementById('saveEditWorker').addEventListener('click', async () => 
 });
 document.getElementById('resolveAllProblems').addEventListener('click', async () => {
   if (!confirm('Clear every Make problem in the list without sending anything? Do this only after checking Make\'s history.')) return;
-  try { renderProblems(await seniorApi('', { action: 'resolve_all' })); showToast('All cleared.'); seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {}); }
+  try { renderProblems(await seniorApi('', { action: 'resolve_all' })); showToast('All acknowledged.'); seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {}); }
   catch (err) { showToast(err.message, true); }
 });
 
