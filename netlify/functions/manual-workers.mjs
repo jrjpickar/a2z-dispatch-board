@@ -12,6 +12,7 @@ import { StateError } from '../../lib/state.mjs';
 import { requireAdmin } from '../../lib/session.mjs';
 import { getContact } from '../../lib/ghl.mjs';
 import { driverKeyFor } from '../../lib/driver-token.mjs';
+import { logActivity } from '../../lib/activity.mjs';
 
 const hiddenKey = ({ contactId, phone, name }) => {
   const id = String(contactId || '').trim();
@@ -38,6 +39,7 @@ export default async function handler(request) {
       if (body.action === 'hide') await sql`insert into dispatch_hidden_workers (worker_key, role, name, phone, contact_id, hidden_by)
         values (${key}, 'labor', ${name}, ${phone}, ${contactId}, ${session.name}) on conflict (worker_key) do nothing`;
       else await sql`delete from dispatch_hidden_workers where worker_key = ${key}`;
+      await logActivity(sql, session, body.action === 'hide' ? 'Removed laborer from the board' : 'Restored laborer to the board', name || phone, { contactId });
       return json({ ok: true, workers: await rows(sql), hidden: await hiddenRows(sql) });
     }
     const contactId = String(body.contactId || '').trim();
@@ -45,6 +47,7 @@ export default async function handler(request) {
     if (body.action === 'remove') {
       const [row] = await sql`delete from dispatch_manual_workers where contact_id = ${contactId} returning name, phone`;
       if (row && body.revokeFieldApp !== false) await sql`delete from dispatch_driver_codes where driver_key = ${driverKeyFor(row)}`;
+      if (row) await logActivity(sql, session, 'Removed laborer added from GHL', row.name, { contactId });
       return json({ ok: true, workers: await rows(sql), hidden: await hiddenRows(sql) });
     }
     if (body.action !== 'add') throw new StateError('Unknown action');
@@ -66,6 +69,7 @@ export default async function handler(request) {
         on conflict (driver_key) do update set name = excluded.name, phone = excluded.phone, updated_at = now()
         returning driver_key as "driverKey", name, phone`;
     }
+    await logActivity(sql, session, labor ? 'Added laborer from GHL' : 'Updated worker from GHL', contact.name, { contactId: contact.id, labor, driver, fieldApp: !!fieldApp });
     // Adding someone back from GHL also un-hides them if they'd been removed.
     await sql`delete from dispatch_hidden_workers where worker_key = ${hiddenKey({ contactId: contact.id })} or worker_key = ${driverKeyFor(contact)}`;
     return json({ ok: true, worker: contact, fieldApp, workers: await rows(sql), hidden: await hiddenRows(sql) });

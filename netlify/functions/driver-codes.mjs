@@ -9,6 +9,7 @@ import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http
 import { driverKeyFor } from '../../lib/driver-token.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { requireAdmin } from '../../lib/session.mjs';
+import { logActivity } from '../../lib/activity.mjs';
 
 export default async function handler(request) {
   try {
@@ -19,7 +20,7 @@ export default async function handler(request) {
       const enabled = await sql`select driver_key as "driverKey", name, phone, updated_at as "updatedAt" from dispatch_driver_codes order by name`;
       return json({ enabled });
     }
-    await requireAdmin(request, sql);
+    const session = await requireAdmin(request, sql);
     const body = await readPayload(request);
     const name = String(body.name || '').trim();
     const phone = String(body.phone || '').trim();
@@ -27,12 +28,14 @@ export default async function handler(request) {
     const driverKey = driverKeyFor({ name, phone });
     if (body.action === 'revoke') {
       await sql`delete from dispatch_driver_codes where driver_key = ${driverKey}`;
+      await logActivity(sql, session, 'Revoked Field App access', name || phone);
       return json({ ok: true, revoked: true, driverKey });
     }
     const [driver] = await sql`insert into dispatch_driver_codes (driver_key, name, phone, updated_at)
       values (${driverKey}, ${name}, ${phone}, now())
       on conflict (driver_key) do update set name = excluded.name, phone = excluded.phone, updated_at = now()
       returning driver_key as "driverKey", name, phone`;
+    await logActivity(sql, session, 'Enabled Field App access', name || phone);
     return json({ ok: true, driver });
   } catch (error) { return errorResponse(error); }
 }

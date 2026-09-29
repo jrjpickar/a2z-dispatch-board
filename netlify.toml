@@ -113,3 +113,13 @@
   from = "/api/manual-workers"
   to = "/.netlify/functions/manual-workers"
   status = 200
+
+[[redirects]]
+  from = "/api/senior"
+  to = "/.netlify/functions/senior"
+  status = 200
+
+[[redirects]]
+  from = "/api/settings"
+  to = "/.netlify/functions/settings"
+  status = 200

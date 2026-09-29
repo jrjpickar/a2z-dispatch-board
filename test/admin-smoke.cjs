@@ -6,7 +6,8 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   const browser = await chromium.launch({ headless: true });
   const users = [{ id: 'uJesse0001', name: 'Jesse Pickar', email: 'jesse@a2zcs.net' }, { id: 'uSam000002', name: 'Sam Dispatcher', email: 'sam@a2zcs.net' }];
   const errors = []; const posts = [];
-  let manual = [], hidden = [];
+  let manual = [], hidden = [], seniorPosts = [];
+  let problemsData = { effects: [{ id: 'req1:eod_sheet', kind: 'eod_sheet', label: 'EOD sheet', status: 'uncertain', error: 'Make did not confirm completion (HTTP 500)', jobId: 'job1', name: 'Test job', action: 'eod_sheet', canRetry: true, at: new Date().toISOString() }], crm: [{ jobId: 'job1', error: 'GHL HTTP 429', at: new Date().toISOString(), name: 'Test job' }] };
   let admins = [{ userId: 'uJesse0001', name: 'Jesse Pickar', email: 'jesse@a2zcs.net', addedBy: 'bootstrap' }];
   async function run(mode) {
     const context = await browser.newContext();
@@ -29,6 +30,15 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
       if (u.pathname === '/api/admins') {
         if (req.method() === 'POST') { const b = req.postDataJSON(); admins = b.action === 'add' ? [...admins, { userId: b.userId, name: 'Sam Dispatcher', email: 'sam@a2zcs.net', addedBy: 'Jesse Pickar' }] : admins.filter(a => a.userId !== b.userId); }
         return reply({ ok: true, admins });
+      }
+      if (u.pathname === '/api/settings') return reply({ defaultAssignedUserId: '', defaultMarkupPercent: 15 });
+      if (u.pathname === '/api/senior') {
+        if (req.method() === 'POST') { const b = req.postDataJSON(); seniorPosts.push(b); if (b.action === 'save_settings') return reply({ ok: true, settings: { defaultAssignedUserId: b.defaultAssignedUserId, defaultMarkupPercent: Number(b.defaultMarkupPercent), adminPinSet: !!b.adminPin, envPinSet: false, updated: {} } }); problemsData = { effects: [], crm: [] }; return reply({ ok: true, ...problemsData }); }
+        const view = u.searchParams.get('view');
+        if (view === 'problems') return reply(problemsData);
+        if (view === 'activity') return reply({ activity: [{ id: 1, at: new Date().toISOString(), actor: 'Jesse Pickar', action: 'Enrolled admin', target: 'Sam Dispatcher' }] });
+        if (view === 'history') return reply({ sends: [{ id: 1, at: new Date().toISOString(), kind: 'eod_sheet', jobId: 'job1', jobName: 'Test job', fileName: 'EOD Sheet - Test job.xlsx', status: 'sent' }, { id: 2, at: new Date().toISOString(), kind: 'project_schedule', jobId: 'job1', jobName: 'Test job', fileName: 'Project Schedule - Test job.pdf', status: 'sent' }] });
+        if (view === 'settings') return reply({ defaultAssignedUserId: '', defaultMarkupPercent: 15, adminPinSet: false, envPinSet: false, updated: {} });
       }
       if (u.pathname === '/api/ghl-contacts') return reply({ ok: true, contacts: [{ id: 'cMaria00001', name: 'Maria Gomez', phone: '+15555550199', email: '' }] });
       if (u.pathname === '/api/manual-workers') {
@@ -104,6 +114,19 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   assert.ok(fieldRows.includes('Maria Gomez') && fieldRows.includes('Enable'));
   await outer.screenshot({ path: '/tmp/admin.png', fullPage: false });
   await page.click('#cancelGhlWorker'); await page.waitForTimeout(400);
+  // Senior admin tools
+  assert.ok(await page.isVisible('#seniorTools'));
+  await page.waitForFunction(() => document.getElementById('problemCount').textContent === '2' && document.getElementById('historyList').textContent.includes('Project Schedule PDF'));
+  assert.ok((await page.textContent('#activityList')).includes('Jesse Pickar'));
+  await page.click('#problemList .problem-btn[data-action="retry_effect"]');
+  await page.waitForFunction(() => document.getElementById('problemCount').textContent === '0');
+  assert.deepEqual(seniorPosts[0], { action: 'retry_effect', effectId: 'req1:eod_sheet' });
+  assert.equal(await page.inputValue('#setMarkup'), '15');
+  await page.selectOption('#setDefaultUser', 'uSam000002'); await page.fill('#setMarkup', '20'); await page.fill('#setPin', '9876');
+  await page.click('#saveSettings');
+  await page.waitForFunction(() => boardDefaults.defaultAssignedUserId === 'uSam000002');
+  assert.deepEqual(seniorPosts[1], { action: 'save_settings', defaultAssignedUserId: 'uSam000002', defaultMarkupPercent: '20', adminPin: '9876' });
+  await page.evaluate(() => document.getElementById('seniorTools').scrollIntoView());
   await outer.screenshot({ path: '/tmp/adminsheet.png' });
   await context.close();
   // 2. Regular user without link: picker, no admin controls.
@@ -118,6 +141,7 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   assert.ok(await page.isVisible('#switchUserBtn'));
   assert.ok(await page.isHidden('#adminViewTab'));
   assert.equal(await page.locator('#rosterList button').count(), 0);
+  assert.ok(await page.isHidden('#seniorTools'));
   await context.close();
   await browser.close();
   assert.deepEqual(errors, []);

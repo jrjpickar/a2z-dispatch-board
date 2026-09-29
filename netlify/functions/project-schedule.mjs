@@ -8,6 +8,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
+import { logSend } from '../../lib/activity.mjs';
 import {
   normalizeScheduleInput, projectSchedulePdf, scheduleFileName, sendProjectSchedule,
   listProjectSchedules, getProjectSchedule, saveProjectSchedule, markProjectScheduleSent
@@ -51,7 +52,9 @@ export default async function handler(request) {
       try {
         const sent = await sendProjectSchedule(input);
         record = await markProjectScheduleSent(sql, input.jobId, sent.fileName);
+        await logSend(sql, { kind: 'project_schedule', jobId: input.jobId, jobName: input.jobName || input.jobAddr, fileName: sent.fileName, status: 'sent' });
       } catch (error) {
+        await logSend(sql, { kind: 'project_schedule', jobId: input.jobId, jobName: input.jobName || input.jobAddr, status: 'failed', detail: error.message });
         // The schedule is saved either way; hand back the new version with the error.
         return json({ error: error.message, record }, error.status || 502);
       }

@@ -17,7 +17,12 @@ Includes the backend, edited dashboard, the read-only Field App for drivers/crew
   - **Laborers:** **+ Add from GHL** (contact search; Crew and/or Driver; optional Field App sign-in), **On the board** (every laborer, with search and **Remove**), **Added from GHL**, and **Removed from the board** with **Restore**. Removing a Make roster laborer only hides them on the board (GHL and Make untouched).
   - **Field App Access** moved here from Logistics.
 - **Senior admin** (Jesse Pickar; `SENIOR_ADMINS`, formerly `BOOTSTRAP_ADMINS`): always admin, can't be revoked, and the only role that can enroll or revoke admins. Shown as SENIOR ADMIN.
-- The server enforces all of it: admins for laborers and Field App access, senior admins for the admin list.
+- **Senior admin section** (bottom of the Admin page, senior admins only):
+  - **Make / GHL problems:** Make runs that weren't confirmed (EOD, notifications, job stage/details, driver logs) and GHL schedule syncs that failed, with **Retry** (same run and eventId sent again) and **Mark resolved**. Runs from before this deploy can only be marked resolved (their payload wasn't kept).
+  - **Settings:** default Assigned User for Book Job (default: whoever is signed in), default markup % on the EOD sheet, and an admin PIN (stored hashed; works alongside `DASHBOARD_ADMIN_PIN`).
+  - **Activity log:** who enrolled/revoked admins, added/removed/restored laborers, enabled/revoked Field App access, retried or resolved problems, and changed settings.
+  - **Send history:** every EOD sheet and Project Schedule PDF sent (or failed), grouped by job, searchable. Starts with this deploy; Project Schedules sent earlier show their last send.
+- The server enforces all of it: admins for laborers and Field App access, senior admins for the admin list and the senior section.
 - **Assigned User is required on Book Job** and starts on whoever is signed in. It can be changed per booking; each new booking starts on you again. The server fills in the signed-in user if a booking arrives without one. Make also gets `bookedBy` / `bookedByUserId`.
 
 ## What's new in 1.7

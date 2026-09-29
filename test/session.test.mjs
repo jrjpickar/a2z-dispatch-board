@@ -92,3 +92,27 @@ test('the owner email stays a senior admin even if SENIOR_ADMINS is wiped or wro
   assert.ok(!isBootstrapAdmin({ id: 'x', name: 'Jesse Pickar', email: 'other@x.com' }), 'name match only applies to the default');
   delete process.env.SENIOR_ADMINS;
 });
+import { saveSettings, publicSettings, seniorSettings, storedPinMatches } from '../lib/settings.mjs';
+import { logActivity, recentActivity, logSend, sendHistory } from '../lib/activity.mjs';
+test('senior settings save defaults and a hashed admin PIN', async () => {
+  const changed = await saveSettings(sql, { defaultAssignedUserId: 'uSamDispatch02', defaultMarkupPercent: '20', adminPin: '4321' }, 'Jesse Pickar');
+  assert.deepEqual(changed, ['default Assigned User', 'default markup %', 'admin PIN changed']);
+  assert.deepEqual(await publicSettings(sql), { defaultAssignedUserId: 'uSamDispatch02', defaultMarkupPercent: 20 });
+  const [row] = await sql`select value from dispatch_settings where key = 'adminPin'`;
+  assert.ok(!JSON.stringify(row.value).includes('4321'), 'PIN is never stored in plain text');
+  assert.equal(await storedPinMatches(sql, '4321'), true);
+  assert.equal(await storedPinMatches(sql, '0000'), false);
+  assert.equal((await seniorSettings(sql)).adminPinSet, true);
+  await saveSettings(sql, { clearAdminPin: true, defaultMarkupPercent: '' }, 'Jesse Pickar');
+  assert.equal(await storedPinMatches(sql, '4321'), false);
+  assert.equal((await publicSettings(sql)).defaultMarkupPercent, '');
+  await assert.rejects(saveSettings(sql, { defaultMarkupPercent: 'abc' }, 'x'), /Markup/);
+});
+test('activity log and send history record who did what', async () => {
+  await logActivity(sql, { uid: jesse.id, name: 'Jesse Pickar' }, 'Enrolled admin', 'Sam Dispatcher', { userId: sam.id });
+  await logSend(sql, { kind: 'eod_sheet', jobId: 'job9', jobName: 'Acme', fileName: 'EOD Sheet - Acme.xlsx', status: 'sent' });
+  const [latest] = await recentActivity(sql);
+  assert.deepEqual([latest.actor, latest.action, latest.target], ['Jesse Pickar', 'Enrolled admin', 'Sam Dispatcher']);
+  const [sent] = await sendHistory(sql);
+  assert.deepEqual([sent.kind, sent.jobId, sent.status], ['eod_sheet', 'job9', 'sent']);
+});

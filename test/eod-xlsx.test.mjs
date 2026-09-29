@@ -42,3 +42,16 @@ test('a blank EOD sheet is never posted', () => {
   assert.throws(() => assertEodPayload({ action: 'eod_sheet', lines }), /empty/);
   assertEodPayload({ action: 'eod_sheet', jobId: 'x', lines });
 });
+import { sendWorkflow } from '../lib/effects.mjs';
+test('sendWorkflow posts EOD as multipart and others as JSON, and needs ok:true', async () => {
+  const calls = []; const original = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { calls.push({ url, init }); return new Response(JSON.stringify({ ok: calls.length !== 3 }), { status: 200 }); };
+  try {
+    const sent = await sendWorkflow('eod_sheet', { action: 'eod_sheet', jobId: 'j1', jobName: 'Acme', date: '2026-09-23', lines }, 'r:eod_sheet');
+    assert.equal(sent.fileName, 'EOD Sheet - Acme - 2026-09-23.xlsx');
+    assert.ok(calls[0].init.body instanceof FormData);
+    await sendWorkflow('job_stage', { action: 'complete', jobId: 'j1' }, 'r:job_stage');
+    assert.equal(JSON.parse(calls[1].init.body).eventId, 'r:job_stage');
+    await assert.rejects(sendWorkflow('workers', { action: 'assign', jobId: 'j1' }, 'r:w'), /did not confirm/);
+  } finally { globalThis.fetch = original; }
+});

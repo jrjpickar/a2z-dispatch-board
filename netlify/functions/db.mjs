@@ -89,6 +89,22 @@ async function createSchema(sql) {
     phone text not null default '', contact_id text not null default '', hidden_by text not null default '',
     created_at timestamptz not null default now()
   )`;
+  // Senior admin tools (1.8): activity log, send history, settings, and the
+  // payload kept on each Make workflow so a failed one can be retried.
+  await sql`create table if not exists dispatch_activity (
+    id bigserial primary key, at timestamptz not null default now(), actor_id text not null default '',
+    actor_name text not null default '', action text not null, target text not null default '', detail jsonb not null default '{}'::jsonb
+  )`;
+  await sql`create index if not exists dispatch_activity_at_idx on dispatch_activity (at desc)`;
+  await sql`create table if not exists dispatch_send_log (
+    id bigserial primary key, at timestamptz not null default now(), kind text not null, job_id text not null default '',
+    job_name text not null default '', file_name text not null default '', status text not null, detail text not null default ''
+  )`;
+  await sql`create index if not exists dispatch_send_log_job_idx on dispatch_send_log (job_id, at desc)`;
+  await sql`create table if not exists dispatch_settings (
+    key text primary key, value jsonb not null, updated_by text not null default '', updated_at timestamptz not null default now()
+  )`;
+  await sql`alter table dispatch_effects add column if not exists payload jsonb`;
   // Project Schedules for Contract (Demo) jobs: the sheet's inputs, shared by
   // every dispatcher, plus when it was last sent to Make as a PDF.
   await sql`create table if not exists project_schedules (

@@ -7,11 +7,14 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
+import { storedPinMatches } from '../../lib/settings.mjs';
 import {
   sessionFromRequest, sessionInfo, signSession, sessionCookie, clearSessionCookie, ghlUsers, matchUser,
   isBootstrapAdmin, secretMatches, ghlUserFromContext
 } from '../../lib/session.mjs';
 
+// Admin PIN: the Netlify env var, or the one a senior admin set on the Admin page.
+const pinOk = async (sql, pin) => !!pin && (secretMatches(pin, process.env.DASHBOARD_ADMIN_PIN) || await storedPinMatches(sql, pin));
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
@@ -30,7 +33,7 @@ export default async function handler(request) {
     } else if (body.action === 'unlock') {
       const current = sessionFromRequest(request);
       if (!current) throw new StateError('Sign in first.', 401);
-      if (!secretMatches(body.pin, process.env.DASHBOARD_ADMIN_PIN)) throw new StateError(process.env.DASHBOARD_ADMIN_PIN ? 'That admin PIN is not right.' : 'No DASHBOARD_ADMIN_PIN is set in Netlify. Open the board inside GHL instead.', 403);
+      if (!(await pinOk(sql, body.pin))) throw new StateError('That admin PIN is not right (or no admin PIN is set). Open the board inside GHL instead.', 403);
       user = { id: current.uid, name: current.name, email: current.email }; via = 'pin';
     } else if (body.action === 'signin') {
       let users;
@@ -38,7 +41,7 @@ export default async function handler(request) {
       catch { throw new StateError('Could not load the GHL user list to sign you in. Try again in a minute.', 502); }
       user = matchUser(users, { userId: body.userId });
       if (!user) throw new StateError('Pick your name from the list.', 401);
-      via = body.pin && secretMatches(body.pin, process.env.DASHBOARD_ADMIN_PIN) ? 'pin' : 'picker';
+      via = body.pin && (await pinOk(sql, body.pin)) ? 'pin' : 'picker';
     } else throw new StateError('Unknown session action');
 
     // Keep the bootstrap admin (Jesse Pickar) on the admin list so it shows up there.

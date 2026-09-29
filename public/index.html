@@ -1159,6 +1159,31 @@
   .admin-search[hidden] { display: none; }
   body.dark-mode .admin-search input { background: #1b1d1f; color: #f1f3f4; border-color: #3b3f43; }
   @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } #adminDispatchView { padding: 12px 10px 24px; } .whoami-text { max-width: 200px; } }
+
+  /* ---------- Senior admin tools ---------- */
+  #seniorTools[hidden] { display: none; }
+  #seniorTools { margin-top: 22px; }
+  .senior-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .senior-form { padding: 14px 16px 6px; }
+  #adminDispatchView .panel-head + .admin-list { margin-top: 12px; }
+  .senior-check { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: -4px 0 12px; }
+  .senior-save { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .senior-updated { font-size: 12px; color: var(--ink-soft); }
+  .problem-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .admin-list .who small.err { color: var(--danger); }
+  .activity-row .when { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+  .history-groups { margin: 0 16px; }
+  .history-job { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; }
+  .history-job h4 { margin: 0; padding: 8px 12px; font-size: 13px; background: var(--stripe); border-bottom: 1px solid var(--border); }
+  .history-job h4 small { font-weight: 400; color: var(--ink-soft); margin-left: 6px; }
+  .history-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 12px; font-size: 12px; border-bottom: 1px solid var(--stripe); }
+  .history-row:last-child { border-bottom: none; }
+  .history-row .kind { font-weight: 600; }
+  .history-row .file { color: var(--ink-soft); overflow-wrap: anywhere; }
+  .history-row .st-failed { color: var(--danger); font-weight: 600; }
+  body.dark-mode .history-job { border-color: #3b3f43; }
+  body.dark-mode .history-job h4 { background: #292c2f; border-color: #3b3f43; }
+  body.dark-mode .senior-updated, body.dark-mode .history-row .file, body.dark-mode .activity-row .when, body.dark-mode .history-job h4 small { color: #adb2b7; }
 </style>
 </head>
 <body>
@@ -1287,6 +1312,35 @@
     <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number — no code — to see only their assigned route or job, read-only (drivers can also check off stops).</div>
     <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
     <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
+  </div>
+  <div id="seniorTools" hidden>
+    <div class="psv-head senior-head"><div><h2>Senior admin</h2><p>Only senior admins see this section.</p></div><button type="button" class="job-stage-btn edit" id="seniorRefresh">Refresh</button></div>
+    <div class="admin-grid">
+      <div class="panel">
+        <div class="panel-head"><h2>Make / GHL problems</h2><span class="mono" id="problemCount">0</span></div>
+        <div class="logistics-note">Runs Make didn't confirm and GHL schedule syncs that failed. Check Make's history first if a notification may already have gone out; Retry sends the same run again, Mark resolved just clears it.</div>
+        <ul class="admin-list admin-list-scroll" id="problemList"><li class="load-state">Loading...</li></ul>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Settings</h2></div>
+        <div class="senior-form">
+          <div class="field"><label for="setDefaultUser">Default Assigned User (Book Job)</label><select id="setDefaultUser"><option value="">Whoever is signed in</option></select></div>
+          <div class="field"><label for="setMarkup">Default markup % (EOD sheet)</label><input type="number" id="setMarkup" min="0" max="1000" step="0.1" inputmode="decimal" placeholder="Blank"></div>
+          <div class="field"><label for="setPin">Admin PIN <span class="label-optional" id="pinStatus"></span></label><input type="password" id="setPin" autocomplete="new-password" maxlength="64" placeholder="Leave blank to keep"></div>
+          <label class="senior-check"><input type="checkbox" id="clearPin"> Remove the admin PIN set here</label>
+          <div class="senior-save"><span class="senior-updated" id="settingsUpdated"></span><button type="button" class="btn-primary" id="saveSettings">Save settings</button></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Activity log</h2><span class="mono" id="activityCount">0</span></div>
+        <ul class="admin-list admin-list-scroll" id="activityList"><li class="load-state">Loading...</li></ul>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Send history</h2><span class="mono" id="historyCount">0</span></div>
+        <div class="admin-search"><input type="search" id="historySearch" placeholder="Search by job..." autocomplete="off"></div>
+        <div class="admin-list-scroll history-groups" id="historyList"><p class="load-state">Loading...</p></div>
+      </div>
+    </div>
   </div>
   </div>
 </div>
@@ -3176,7 +3230,7 @@ function closeEodSheet() {
 function fillEodDefaults(job) {
   document.getElementById('eodJobName').value = cleanEodText([getClientName(job), job.name].filter(Boolean).join(' - '));
   document.getElementById('eodDate').value = (typeof getReportDate === 'function' && getReportDate(job)) || localIsoDate();
-  document.getElementById('eodMarkup').value = '';
+  document.getElementById('eodMarkup').value = typeof boardDefaults !== 'undefined' && boardDefaults.defaultMarkupPercent !== '' ? boardDefaults.defaultMarkupPercent : '';
 }
 
 /* EOD drafts: one per job, kept in this browser's localStorage until the
@@ -5579,6 +5633,7 @@ function applySession(info) {
   if (adminTab.hidden && adminTab.classList.contains('active')) document.getElementById('laborViewTab').click();
   document.getElementById('adminLockPanel').hidden = !currentSession.needsAdminUnlock || currentSession.isAdmin;
   document.getElementById('adminTools').hidden = !currentSession.isAdmin;
+  document.getElementById('seniorTools').hidden = !currentSession.isSenior;
   document.querySelectorAll('.admin-only').forEach(el => { el.hidden = !currentSession.isAdmin; });
   prefillAssignedUser();
   if (typeof renderRoster === 'function') renderRoster();
@@ -5668,9 +5723,18 @@ document.getElementById('unlockAdminBtn').addEventListener('click', async () => 
 });
 
 /* Book Job: Assigned User is required and defaults to whoever is signed in. */
+let boardDefaults = { defaultAssignedUserId: '', defaultMarkupPercent: '' };
+async function loadBoardDefaults() {
+  try { boardDefaults = { ...boardDefaults, ...(await fetchJsonStrict('/api/settings', 'Board settings')) }; } catch {}
+  prefillAssignedUser();
+}
 function prefillAssignedUser() {
   const select = document.getElementById('assignedUser');
-  if (!select || !currentSession.signedIn || select.dataset.touched === '1') return;
+  if (!select || select.dataset.touched === '1') return;
+  // A senior admin can set a fixed default; otherwise it's whoever is signed in.
+  const fixed = boardDefaults.defaultAssignedUserId && [...select.options].some(o => o.value === boardDefaults.defaultAssignedUserId);
+  if (fixed) { select.value = boardDefaults.defaultAssignedUserId; return; }
+  if (!currentSession.signedIn) return;
   const id = currentSession.user.id;
   if (![...select.options].some(o => o.value === id)) {
     // GHL user list not loaded (or failed): still offer the signed-in user.
@@ -5720,6 +5784,7 @@ function renderAdminUsers() {
 async function renderAdminView(force) {
   if (!currentSession.isAdmin) return;
   renderAdminUsers(); renderManualWorkerList(); renderAdminLabor();
+  if (currentSession.isSenior) loadSeniorTools();
   try { await fetchSessionUsers(); } catch {}
   try { adminRowsCache = (await adminApi()).admins || []; }
   catch (e) { document.getElementById('adminUserList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; return; }
@@ -5751,6 +5816,96 @@ document.getElementById('adminUserList').addEventListener('click', async e => {
     showToast(action === 'add' ? `${name} is now an admin.` : `${name} is no longer an admin.`);
     if (self) applySession(await (await fetchWithTimeout('/api/session', {}, 15000)).json());
   } catch (err) { showToast(err.message, true); btn.disabled = false; }
+});
+
+/* Senior admin tools: problems + retry, settings, activity log, send history. */
+async function seniorApi(view, body) {
+  const res = await fetchWithTimeout(view ? '/api/senior?view=' + view : '/api/senior', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { headers: { Accept: 'application/json' } }, 30000);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const err = new Error(data.error || `HTTP ${res.status}`); err.data = data; throw err; }
+  return data;
+}
+const seniorWhen = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+function renderProblems(data) {
+  const effects = data.effects || [], crm = data.crm || [];
+  document.getElementById('problemCount').textContent = String(effects.length + crm.length);
+  const list = document.getElementById('problemList');
+  const rows = [
+    ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
+      + `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Mark resolved</button></div></li>`),
+    ...crm.map(c => `<li><div class="who">GHL schedule sync${c.name ? ' · ' + sessionEsc(c.name) : ''}<small>${sessionEsc([c.jobId, seniorWhen(c.at)].filter(Boolean).join(' · '))}</small>${c.error ? `<small class="err">${sessionEsc(c.error)}</small>` : ''}</div>`
+      + `<div class="problem-actions"><button type="button" class="job-stage-btn edit problem-btn" data-action="retry_crm" data-job-id="${sessionEsc(c.jobId)}">Retry</button></div></li>`)
+  ];
+  list.innerHTML = rows.length ? rows.join('') : '<li class="load-state">Nothing stuck. Every Make run and GHL sync went through.</li>';
+}
+function renderActivity(items) {
+  document.getElementById('activityCount').textContent = String(items.length);
+  document.getElementById('activityList').innerHTML = items.length ? items.map(a => `<li class="activity-row"><div class="who"><b>${sessionEsc(a.actor || 'Someone')}</b> ${sessionEsc(a.action.charAt(0).toLowerCase() + a.action.slice(1))}${a.target ? ': ' + sessionEsc(a.target) : ''}</div><span class="when">${seniorWhen(a.at)}</span></li>`).join('') : '<li class="load-state">No activity yet.</li>';
+}
+let seniorSends = [];
+function renderHistory() {
+  const q = document.getElementById('historySearch').value.trim().toLowerCase();
+  const shown = seniorSends.filter(s => !q || `${s.jobName} ${s.jobId}`.toLowerCase().includes(q));
+  document.getElementById('historyCount').textContent = String(seniorSends.length);
+  const groups = new Map();
+  for (const item of shown) { const k = item.jobId || item.jobName; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(item); }
+  const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
+  document.getElementById('historyList').innerHTML = groups.size ? [...groups.values()].map(items => `<div class="history-job"><h4>${sessionEsc(items[0].jobName || 'Job')}<small>${sessionEsc(items[0].jobId || '')} · ${items.length} sent</small></h4>`
+    + items.map(i => `<div class="history-row"><div><span class="kind">${kindLabel(i.kind)}</span> <span class="file">${sessionEsc(i.fileName || i.detail || '')}</span></div><div>${i.status === 'failed' ? '<span class="st-failed">FAILED</span> ' : ''}${seniorWhen(i.at)}</div></div>`).join('') + '</div>').join('')
+    : `<p class="load-state">${seniorSends.length ? 'No jobs match.' : 'Nothing sent yet. EOD sheets and Project Schedule PDFs show here once sent.'}</p>`;
+}
+function renderSettings(st) {
+  const select = document.getElementById('setDefaultUser');
+  select.innerHTML = '<option value="">Whoever is signed in</option>' + (sessionGhlUsers || []).map(u => `<option value="${sessionEsc(u.id)}">${sessionEsc(u.name)}</option>`).join('');
+  select.value = st.defaultAssignedUserId || '';
+  document.getElementById('setMarkup').value = st.defaultMarkupPercent === '' || st.defaultMarkupPercent == null ? '' : st.defaultMarkupPercent;
+  document.getElementById('setPin').value = '';
+  document.getElementById('clearPin').checked = false;
+  document.getElementById('pinStatus').textContent = `(${st.adminPinSet ? 'set here' : 'not set here'}${st.envPinSet ? '; Netlify PIN also works' : ''})`;
+  const last = Object.values(st.updated || {}).sort((a, b) => new Date(b.at) - new Date(a.at))[0];
+  document.getElementById('settingsUpdated').textContent = last ? `Last changed by ${last.by} ${seniorWhen(last.at)}` : '';
+}
+async function loadSeniorTools() {
+  if (!currentSession.isSenior) return;
+  try { await fetchSessionUsers(); } catch {}
+  const jobs = [
+    seniorApi('problems').then(renderProblems).catch(e => { document.getElementById('problemList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
+    seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(e => { document.getElementById('activityList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
+    seniorApi('history').then(d => { seniorSends = d.sends || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
+    seniorApi('settings').then(renderSettings).catch(e => showToast(e.message, true))
+  ];
+  await Promise.all(jobs);
+}
+document.getElementById('seniorRefresh').addEventListener('click', loadSeniorTools);
+document.getElementById('historySearch').addEventListener('input', renderHistory);
+document.getElementById('problemList').addEventListener('click', async e => {
+  const btn = e.target.closest('.problem-btn'); if (!btn) return;
+  const { action } = btn.dataset;
+  if (action === 'retry_effect' && !confirm("Send this run to Make again? If it actually went through the first time, people may get a duplicate message. Check Make's history if unsure.")) return;
+  if (action === 'resolve_effect' && !confirm('Clear this from the list without sending anything?')) return;
+  btn.disabled = true;
+  try {
+    const data = await seniorApi('', action === 'retry_crm' ? { action, jobId: btn.dataset.jobId } : { action, effectId: btn.dataset.id });
+    renderProblems(data);
+    showToast(action === 'resolve_effect' ? 'Marked resolved.' : 'Sent. Make/GHL confirmed it.');
+  } catch (err) { if (err.data?.effects) renderProblems(err.data); showToast(err.message, true); btn.disabled = false; }
+  seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {});
+});
+document.getElementById('saveSettings').addEventListener('click', async () => {
+  const btn = document.getElementById('saveSettings');
+  const body = { action: 'save_settings', defaultAssignedUserId: document.getElementById('setDefaultUser').value, defaultMarkupPercent: document.getElementById('setMarkup').value };
+  const pin = document.getElementById('setPin').value;
+  if (document.getElementById('clearPin').checked) body.clearAdminPin = true; else if (pin) body.adminPin = pin;
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const data = await seniorApi('', body);
+    renderSettings(data.settings);
+    boardDefaults = { ...boardDefaults, defaultAssignedUserId: data.settings.defaultAssignedUserId, defaultMarkupPercent: data.settings.defaultMarkupPercent };
+    delete document.getElementById('assignedUser').dataset.touched; prefillAssignedUser();
+    showToast('Settings saved for everyone.');
+    seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {});
+  } catch (err) { showToast(err.message, true); }
+  finally { btn.disabled = false; btn.textContent = 'Save settings'; }
 });
 
 /* Workers added from GHL (admins). Merged into the crew and driver pickers. */
@@ -5894,6 +6049,7 @@ document.getElementById('manualWorkerList').addEventListener('click', async e =>
 
 /* ---------- Init ---------- */
 initSession();
+loadBoardDefaults();
 fmtDateHeader();
 loadDashboard();
 loadLaborRoster();

@@ -4,6 +4,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
+import { logActivity } from '../../lib/activity.mjs';
 import { requireSession, requireSenior, adminRows, ghlUsers, isBootstrapAdmin, bootstrapAdmins } from '../../lib/session.mjs';
 
 export default async function handler(request) {
@@ -24,10 +25,12 @@ export default async function handler(request) {
       if (!user) throw new StateError('That GHL user was not found.', 404);
       await sql`insert into dispatch_admins (user_id, name, email, added_by) values (${user.id}, ${user.name}, ${user.email || ''}, ${session.name})
         on conflict (user_id) do update set name = excluded.name, email = excluded.email`;
+      await logActivity(sql, session, 'Enrolled admin', user.name, { userId: user.id });
     } else if (action === 'remove') {
       const [row] = await sql`select user_id as id, name, email from dispatch_admins where user_id = ${id}`;
       if (row && isBootstrapAdmin(row)) throw new StateError(`${row.name} is a senior admin and can't be revoked.`, 409);
       await sql`delete from dispatch_admins where user_id = ${id}`;
+      if (row) await logActivity(sql, session, 'Revoked admin', row.name, { userId: id });
     } else throw new StateError('Unknown admin action');
     return json({ ok: true, admins: await adminRows(sql) });
   } catch (error) { return errorResponse(error); }
