@@ -5710,7 +5710,7 @@ function renderAdminUsers() {
     const admin = byId.get(p.userId), you = p.userId === currentSession.user?.id;
     const isSeniorRow = admin?.addedBy === 'bootstrap';
     const tags = `${admin ? `<span class="admin-pill">${isSeniorRow ? 'SENIOR ADMIN' : 'ADMIN'}</span>` : ''}${you ? '<span class="admin-pill you">YOU</span>' : ''}`;
-    const detail = [p.email, isSeniorRow ? 'senior admin, can\'t be revoked' : admin?.addedBy ? 'enrolled by ' + admin.addedBy : ''].filter(Boolean).join(' · ');
+    const detail = [p.email, isSeniorRow ? '' : admin?.addedBy ? 'enrolled by ' + admin.addedBy : ''].filter(Boolean).join(' · ');
     const action = isSeniorRow || !senior ? ''
       : admin ? `<button type="button" class="job-stage-btn cancel admin-toggle" data-action="remove" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}">Revoke</button>`
       : `<button type="button" class="job-stage-btn edit admin-toggle" data-action="add" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}">Enroll</button>`;
