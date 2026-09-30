@@ -73,3 +73,11 @@ The Book Job sheet has an **Assigned User** selector (live GHL location users vi
 - Opportunity has no assigned user: set to whoever owns the contact.
 
 This never fails the booking. If GHL rejects it, the job is still created and the dashboard shows a warning. `GHL_API_TOKEN` needs `users.readonly`, `contacts.readonly` and `contacts.write` (plus the opportunity scopes it already has). Optional `DEFAULT_ASSIGNED_USER_ID` is used if no user was picked (e.g. the user list couldn't load).
+
+## Admin page layout and charts
+
+The Admin page is a grid of panels with one shared layout (`dispatch_settings` key `adminLayout`, served by `/api/admin-dashboard`). A senior admin clicks **Customize layout** to drag panels into a new order, drag the bottom-right corner to resize (width snaps to a 12-column grid; double-click the corner for auto height), hide/show panels, and set **Who sees it** per panel: all admins or senior admins only. Settings is always senior only. Any admin can collapse a panel on their own browser.
+
+"Who sees it" is enforced on the server, not just hidden: Problems, Activity log and Send history can be shared read-only with admins (Retry/Acknowledge stay senior only), and limiting Laborers or Field App Access to senior admins also blocks those admin actions (`lib/layout.mjs` `requirePanel`).
+
+Charts (`lib/dashboard-stats.mjs`, board time zone `BOARD_TIME_ZONE`, default America/Los_Angeles): jobs on site per day and crew booked per day (next 14 days), job value by week (last 8 + next 4, by start week), and Make run health (last 14 days). Job value and Make health start as senior only.

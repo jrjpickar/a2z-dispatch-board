@@ -8,6 +8,14 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   const errors = []; const posts = [];
   let manual = [], hidden = [], seniorPosts = [], editPosts = [];
   let problemsData = { effects: [{ id: 'req1:eod_sheet', kind: 'eod_sheet', label: 'EOD sheet', status: 'uncertain', error: 'Make did not confirm completion (HTTP 500)', jobId: 'job1', name: 'Test job', action: 'eod_sheet', canRetry: true, at: new Date().toISOString() }], crm: [{ jobId: 'job1', error: 'GHL HTTP 429', at: new Date().toISOString(), name: 'Test job' }] };
+  const PANELS = ['admins','laborers','chartJobs','chartCrew','fieldApp','chartValue','chartHealth','problems','settings','activity','history'];
+  const ALL = new Set(['admins','laborers','chartJobs','chartCrew','fieldApp']);
+  let layout = { panels: PANELS.map(id => ({ id, w: id === 'fieldApp' ? 12 : 6, h: 0, hidden: false, audience: ALL.has(id) ? 'all' : 'senior' })), updated: null };
+  const layoutPosts = [];
+  const labels = Array.from({ length: 14 }, (_, i) => new Date(Date.UTC(2026, 8, 30 + i)).toISOString().slice(0, 10));
+  const stats = { chartJobs: { labels, series: [{ key: 'jobs', name: 'Jobs on site', values: labels.map((_, i) => i % 5) }] }, chartCrew: { labels, series: [{ key: 'crew', name: 'Workers booked', values: labels.map((_, i) => (i * 3) % 11) }] },
+    chartValue: { labels: labels.slice(0, 12), currentIndex: 8, series: [{ key: 'value', name: 'Job value', values: labels.slice(0, 12).map((_, i) => i * 1500) }] },
+    chartHealth: { labels, stacked: true, series: [{ key: 'ok', name: 'Went through', values: labels.map((_, i) => 4 + i % 3) }, { key: 'bad', name: 'Needed attention', values: labels.map((_, i) => i % 4 === 0 ? 1 : 0) }] } };
   let admins = [{ userId: 'uJesse0001', name: 'Jesse Pickar', email: 'jesse@a2zcs.net', addedBy: 'bootstrap' }];
   async function run(mode) {
     const context = await browser.newContext();
@@ -19,12 +27,19 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
       if (u.pathname === '/ghl-parent') return route.fulfill({ contentType: 'text/html', body: `<body style="margin:0"><iframe id="f" src="/" style="width:1280px;height:720px;border:0"></iframe><script>
         addEventListener('message', e => { if (e.data && e.data.message === 'REQUEST_USER_DATA') e.source.postMessage({ message: 'REQUEST_USER_DATA_RESPONSE', payload: 'ENCRYPTED-CTX' }, '*'); });</script></body>` });
       if (req.method() === 'POST') posts.push({ path: u.pathname, body: req.postDataJSON(), header: req.headers()['x-a2z-session'] });
-      const admin = mode === 'admin';
+      const admin = mode === 'admin' || mode === 'admin2';
+      const senior = mode === 'admin';
       if (u.pathname === '/api/session') {
         if (req.method() === 'GET') return reply({ signedIn: false });
         const b = req.postDataJSON(); const user = b.action === 'ghl' ? (b.encryptedData === 'ENCRYPTED-CTX' ? users[0] : null) : users.find(x => x.id === b.userId);
         if (!user) return reply({ error: 'bad' }, 401);
-        return reply({ ok: true, token: 'tok-' + user.id, signedIn: true, user, via: b.action === 'ghl' ? 'ghl_sso' : 'picker', isAdmin: admin && user.id === 'uJesse0001', isSenior: admin && user.id === 'uJesse0001', needsAdminUnlock: false });
+        return reply({ ok: true, token: 'tok-' + user.id, signedIn: true, user, via: b.action === 'ghl' ? 'ghl_sso' : 'picker', isAdmin: admin, isSenior: senior && user.id === 'uJesse0001', needsAdminUnlock: false });
+      }
+      if (u.pathname === '/api/admin-dashboard') {
+        if (req.method() === 'POST') { const b = req.postDataJSON(); layoutPosts.push(b); layout = { panels: b.layout.panels, updated: { by: 'Jesse Pickar', at: new Date().toISOString() } }; return reply({ ok: true, layout, panels: PANELS.map(id => ({ id, title: id, locked: id === 'settings' })), senior: true }); }
+        if (u.searchParams.get('view') === 'stats') return reply(senior ? stats : Object.fromEntries(Object.entries(stats).filter(([k]) => layout.panels.find(p => p.id === k && p.audience === 'all'))));
+        const shown = senior ? layout : { panels: layout.panels.filter(p => p.audience === 'all'), updated: layout.updated };
+        return reply({ layout: shown, panels: PANELS.map(id => ({ id, title: id, locked: id === 'settings' })), senior });
       }
       if (u.pathname === '/api/ghl-users') return reply({ ok: true, users });
       if (u.pathname === '/api/admins') {
@@ -124,7 +139,7 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   await page.waitForFunction(() => !document.getElementById('editWorkerSheet').classList.contains('open'));
   assert.deepEqual(editPosts[0], { action: 'edit', contactId: 'w1', firstName: 'Worker', lastName: 'Smith', phone: '714-555-0100' });
   // Senior admin tools
-  assert.ok(await page.isVisible('#seniorTools'));
+  assert.ok(await page.isVisible('[data-panel="problems"]') && await page.isVisible('[data-panel="settings"]'));
   await page.waitForFunction(() => document.getElementById('problemCount').textContent === '2' && document.getElementById('historyList').textContent.includes('Project Schedule PDF'));
   assert.ok((await page.textContent('#activityList')).includes('Jesse Pickar'));
   await page.click('#problemList .problem-btn[data-action="retry_effect"]');
@@ -135,8 +150,60 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   await page.click('#saveSettings');
   await page.waitForFunction(() => boardDefaults.defaultAssignedUserId === 'uSam000002');
   assert.deepEqual(seniorPosts[1], { action: 'save_settings', defaultAssignedUserId: 'uSam000002', defaultMarkupPercent: '20', adminPin: '9876' });
-  await page.evaluate(() => document.getElementById('seniorTools').scrollIntoView());
+  await page.evaluate(() => document.querySelector('[data-panel="problems"]').scrollIntoView());
   await outer.screenshot({ path: '/tmp/adminsheet.png' });
+  // Charts render with a tooltip and a table view.
+  await page.waitForFunction(() => document.querySelectorAll('#chartHealthBody svg path').length > 0 && document.querySelectorAll('#chartJobsBody .chart-hit').length === 14);
+  await page.hover('#chartCrewBody .chart-hit[data-i="3"]');
+  assert.ok((await page.textContent('#chartCrewBody .chart-tip')).includes('Workers booked: 9'));
+  await page.click('.chart-table-btn[data-chart="chartValue"]');
+  assert.ok((await page.textContent('#chartValueBody table')).includes('$12,000'));
+  // Collapse is per browser, not saved to the layout.
+  await page.click('[data-panel="activity"] .dash-collapse');
+  assert.ok(await page.isHidden('#activityList'));
+  await page.evaluate(() => document.getElementById('adminTools').scrollIntoView());
+  await outer.screenshot({ path: '/tmp/admindash.png', fullPage: false });
+  // Senior admin customizes the shared layout.
+  await page.click('#dashEditBtn');
+  assert.ok(await page.isVisible('#dashEditBar'));
+  await page.click('[data-panel="chartJobs"] .dash-chrome [data-dash="wider"]');
+  await page.click('[data-panel="chartJobs"] .dash-chrome [data-dash="left"]');
+  await page.selectOption('[data-panel="history"] select[data-dash="audience"]', 'all');
+  await page.selectOption('[data-panel="chartCrew"] select[data-dash="audience"]', 'senior');
+  await page.click('[data-panel="admins"] .dash-chrome [data-dash="hide"]');
+  assert.ok(await page.isHidden('[data-panel="admins"]'));
+  assert.ok((await page.textContent('#dashHiddenTray')).includes('admins'));
+  assert.ok(await page.isDisabled('[data-panel="settings"] select[data-dash="audience"]'));
+  // Resize by dragging the corner of the Field App panel: narrower and taller.
+  const box = await page.locator('[data-panel="fieldApp"] .dash-resize').boundingBox();
+  await page.evaluate(() => document.querySelector('[data-panel="fieldApp"]').scrollIntoView());
+  const box2 = await page.locator('[data-panel="fieldApp"] .dash-resize').boundingBox(); Object.assign(box, box2);
+  await outer.mouse.move(box.x + 8, box.y + 8); await outer.mouse.down();
+  await outer.mouse.move(box.x - 400, box.y + 120, { steps: 6 }); await outer.mouse.up();
+  await outer.screenshot({ path: '/tmp/admindash-edit.png', fullPage: false });
+  await page.click('#dashSaveBtn');
+  await page.waitForFunction(() => document.getElementById('dashEditBar').hidden);
+  const saved = layoutPosts[0].layout.panels;
+  assert.deepEqual(saved.slice(0, 3).map(p => p.id), ['admins', 'chartJobs', 'laborers']); assert.equal(saved.find(p => p.id === 'chartJobs').w, 8);
+  assert.equal(saved.find(p => p.id === 'history').audience, 'all'); assert.equal(saved.find(p => p.id === 'chartCrew').audience, 'senior');
+  assert.equal(saved.find(p => p.id === 'admins').hidden, true);
+  const fa = saved.find(p => p.id === 'fieldApp'); assert.ok(fa.w < 12 && fa.h >= 120, JSON.stringify(fa));
+  assert.ok(await page.isVisible('[data-panel="chartCrew"] .dash-pill'));
+  await context.close();
+  // 1b. A regular admin sees only what the senior admin shared, read-only.
+  ({ page, context } = await run('admin2'));
+  await page.goto('https://a2z.test/');
+  await page.waitForFunction(() => !document.getElementById('signinBackdrop').hidden && document.getElementById('signinUser').options.length > 2);
+  await page.selectOption('#signinUser', 'uSam000002'); await page.click('#signinSubmit');
+  await page.waitForFunction(() => document.getElementById('signinBackdrop').hidden);
+  await page.click('#adminViewTab');
+  await page.waitForFunction(() => document.getElementById('historyList').textContent.includes('EOD'));
+  assert.ok(await page.isVisible('[data-panel="history"]'));
+  for (const id of ['problems', 'settings', 'activity', 'chartCrew', 'chartValue', 'chartHealth', 'admins']) assert.ok(await page.isHidden(`[data-panel="${id}"]`), id);
+  assert.ok(await page.isHidden('#dashEditBtn'));
+  await page.waitForFunction(() => document.querySelectorAll('#chartJobsBody .chart-hit').length === 14);
+  await page.screenshot({ path: '/tmp/admindash-admin.png', fullPage: false });
+  await context.close();
   await context.close();
   // 2. Regular user without link: picker, no admin controls.
   ({ page, context } = await run('user'));
@@ -150,7 +217,7 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   assert.ok(await page.isVisible('#switchUserBtn'));
   assert.ok(await page.isHidden('#adminViewTab'));
   assert.equal(await page.locator('#rosterList button').count(), 0);
-  assert.ok(await page.isHidden('#seniorTools'));
+  assert.ok(await page.isHidden('#adminDispatchView'));
   await context.close();
   await browser.close();
   assert.deepEqual(errors, []);

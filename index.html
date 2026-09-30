@@ -1169,8 +1169,6 @@
   @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } #adminDispatchView { padding: 12px 10px 24px; } .whoami-text { max-width: 200px; } }
 
   /* ---------- Senior admin tools ---------- */
-  #seniorTools[hidden] { display: none; }
-  #seniorTools { margin-top: 22px; }
   .senior-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .senior-form { padding: 14px 16px 6px; }
   #adminDispatchView .panel-head + .admin-list { margin-top: 12px; }
@@ -1178,6 +1176,74 @@
   .senior-save { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
   .senior-updated { font-size: 12px; color: var(--ink-soft); }
   .problem-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* ---------- Admin page: customizable panel grid (shared layout, senior admins edit) ---------- */
+  :root { --chart-1: #e8622c; --chart-ok: #2f74c0; --chart-bad: #c0392b; --chart-grid: #e6e6e3; --chart-axis: #6b6d70; }
+  body.dark-mode { --chart-1: #e8622c; --chart-ok: #4a8bd4; --chart-bad: #e0604f; --chart-grid: #33373b; --chart-axis: #9ea3a8; }
+  .dash-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 12px; }
+  .dash-toolbar-note { font-size: 12px; color: var(--ink-soft); }
+  .dash-edit-bar { display: grid; gap: 10px; padding: 12px 14px; margin-bottom: 14px; border: 1px dashed var(--orange); background: var(--orange-tint-soft); border-radius: var(--radius); }
+  .dash-edit-bar[hidden] { display: none; }
+  .dash-edit-help { font-size: 13px; }
+  .dash-hidden-tray { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+  .dash-hidden-tray:empty { display: none; }
+  .dash-hidden-tray button { background: var(--card); border: 1px solid var(--border); color: var(--ink); padding: 4px 8px; font-size: 12px; border-radius: var(--radius); }
+  .dash-edit-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  .dash-grid > .panel { grid-column: span var(--w, 6); min-width: 0; position: relative; padding-bottom: 12px; }
+  .dash-grid > .panel[hidden] { display: none; }
+  .dash-grid > .panel.fixed-h { height: var(--h); display: flex; flex-direction: column; overflow: hidden; }
+  .dash-grid > .panel.fixed-h > .admin-list-scroll, .dash-grid > .panel.fixed-h > .history-groups, .dash-grid > .panel.fixed-h > .jobs-table-wrap, .dash-grid > .panel.fixed-h > .chart-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
+  .dash-grid > .panel.collapsed { height: auto; padding-bottom: 0; }
+  .dash-grid > .panel.collapsed > :not(.panel-head):not(.dash-chrome):not(.dash-resize) { display: none; }
+  .dash-grid > .panel.collapsed > .panel-head { border-bottom: none; }
+  .panel-head .dash-collapse { background: none; border: none; color: var(--ink-soft); padding: 2px 6px; margin-left: 6px; font-size: 13px; line-height: 1; cursor: pointer; }
+  .panel-head .dash-collapse:hover { color: var(--orange-dark); }
+  .panel-head .dash-head-right { display: flex; align-items: center; gap: 6px; }
+  .dash-pill { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 1px 6px; border-radius: var(--radius); border: 1px solid var(--gold); color: var(--ink-soft); white-space: nowrap; }
+  .dash-chrome { display: none; }
+  .dash-editing .dash-chrome { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 10px; background: var(--ink); color: #fff; font-size: 12px; cursor: grab; user-select: none; }
+  .dash-editing .dash-chrome .dash-grip { font-size: 14px; letter-spacing: -2px; opacity: .8; }
+  .dash-editing .dash-chrome .dash-title { font-weight: 600; margin-right: auto; }
+  .dash-chrome button, .dash-chrome select { background: #34363a; color: #fff; border: 1px solid #4a4d52; border-radius: var(--radius); padding: 2px 7px; font-size: 12px; cursor: pointer; }
+  .dash-chrome select:disabled { opacity: .7; cursor: default; }
+  .dash-chrome .dash-size { font-family: 'IBM Plex Mono', monospace; min-width: 44px; text-align: center; }
+  .dash-editing .dash-grid > .panel { outline: 2px dashed var(--grey); outline-offset: 2px; }
+  .dash-editing .dash-grid > .panel > :not(.dash-chrome):not(.dash-resize) { pointer-events: none; user-select: none; opacity: .75; }
+  .dash-editing .dash-grid > .panel.dash-dragging { opacity: .4; }
+  .dash-editing .dash-grid > .panel.dash-drop-before { box-shadow: -4px 0 0 var(--orange); }
+  .dash-editing .dash-grid > .panel.dash-drop-after { box-shadow: 4px 0 0 var(--orange); }
+  .dash-resize { display: none; }
+  .dash-editing .dash-resize { display: block; position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none;
+    background: linear-gradient(135deg, transparent 50%, var(--orange) 50%); z-index: 2; }
+  .dash-resizing, .dash-resizing * { cursor: nwse-resize !important; user-select: none !important; }
+  .chart-body { position: relative; margin: 8px 16px 0; min-height: 200px; }
+  .chart-body svg { display: block; width: 100%; overflow: visible; }
+  .chart-body .chart-axis { font: 11px 'IBM Plex Mono', monospace; fill: var(--chart-axis); }
+  .chart-body .chart-axis.now { fill: var(--ink); font-weight: 700; }
+  .chart-body .chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
+  .chart-body .chart-hit { fill: transparent; cursor: default; }
+  .chart-body .chart-hit:hover, .chart-body .chart-hit.on { fill: var(--ink); fill-opacity: .05; }
+  .chart-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-soft); margin: 0 0 6px; }
+  .chart-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .chart-summary { font-size: 12px; color: var(--ink-soft); margin: 0 0 4px; }
+  .chart-summary b { color: var(--ink); font-size: 18px; margin-right: 4px; }
+  .chart-tip { position: absolute; pointer-events: none; background: var(--ink); color: #fff; font-size: 12px; padding: 6px 8px; border-radius: var(--radius); white-space: nowrap; z-index: 5; transform: translate(-50%, -100%); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+  .chart-tip[hidden] { display: none; }
+  .chart-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+  .chart-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .chart-table th, .chart-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--stripe); }
+  .chart-table td.num, .chart-table th.num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  body.dark-mode .dash-edit-bar { background: #2a2618; }
+  body.dark-mode .dash-hidden-tray button { background: #222427; color: #f1f3f4; border-color: #3b3f43; }
+  body.dark-mode .chart-tip { background: #f1f3f4; color: #1c1d1f; }
+  body.dark-mode .chart-summary b, body.dark-mode .chart-body .chart-axis.now { color: #f1f3f4; fill: #f1f3f4; }
+  body.dark-mode .chart-table th, body.dark-mode .chart-table td { border-color: #33373b; }
+  @media (max-width: 900px) {
+    .dash-grid > .panel { grid-column: 1 / -1; }
+    .dash-grid > .panel.fixed-h { height: auto; display: block; }
+    .dash-grid > .panel.fixed-h > .admin-list-scroll, .dash-grid > .panel.fixed-h > .history-groups { max-height: 360px; }
+  }
   .admin-list .who small.err { color: var(--danger); }
   .activity-row .when { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
   .history-groups { margin: 0 16px; }
@@ -1299,14 +1365,23 @@
     <div class="admin-lock-row"><button type="button" class="btn-primary" id="unlockAdminBtn">Unlock with admin PIN</button></div>
   </div>
   <div id="adminTools">
-  <div class="admin-grid">
-    <div class="panel">
+  <div class="dash-toolbar">
+    <span class="dash-toolbar-note" id="dashLayoutNote"></span>
+    <div class="logistics-toolbar"><button type="button" class="job-stage-btn edit" id="seniorRefresh">Refresh</button><button type="button" class="btn-primary" id="dashEditBtn" hidden>Customize layout</button></div>
+  </div>
+  <div class="dash-edit-bar" id="dashEditBar" hidden>
+    <div class="dash-edit-help"><b>Customizing the Admin page for every admin.</b> Drag a panel by its title bar to move it. Drag the bottom-right corner to resize (double-click the corner to go back to auto height). "Who sees it" controls whether other admins get the panel at all.</div>
+    <div class="dash-hidden-tray" id="dashHiddenTray"></div>
+    <div class="dash-edit-actions"><button type="button" class="job-stage-btn cancel" id="dashResetBtn">Reset to default</button><button type="button" class="job-stage-btn edit" id="dashCancelBtn">Cancel</button><button type="button" class="btn-primary" id="dashSaveBtn">Save layout</button></div>
+  </div>
+  <div class="dash-grid" id="adminDash">
+    <div class="panel" data-panel="admins">
       <div class="panel-head"><h2>Admins</h2><span class="mono" id="adminCount">0 ADMINS</span></div>
       <div class="logistics-note" id="adminUsersNote">Admins can add and remove laborers and manage Field App access. Senior admins can also enroll and revoke admins.</div>
       <div class="admin-search"><input type="search" id="adminUserSearch" placeholder="Search GHL users..." autocomplete="off"></div>
       <ul class="admin-list" id="adminUserList"><li class="load-state">Loading GHL users...</li></ul>
     </div>
-    <div class="panel">
+    <div class="panel" data-panel="laborers">
       <div class="panel-head"><h2>Laborers</h2><button type="button" class="btn-primary" id="addGhlWorkerBtn">+ Add from GHL</button></div>
       <div class="logistics-note">Add anyone from GHL contacts to the crew or driver pickers. Removing a Make roster laborer only hides them on the board; GHL and Make are not touched.</div>
       <div class="admin-search"><input type="search" id="adminLaborSearch" placeholder="Search laborers..." autocomplete="off"></div>
@@ -1317,40 +1392,55 @@
       <h3 class="admin-h">Removed from the board</h3>
       <ul class="admin-list" id="hiddenWorkerList"><li class="load-state">None.</li></ul>
     </div>
-  </div>
-  <div class="panel" id="fieldAppAccessPanel">
-    <div class="panel-head"><h2>Field App Access</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit" id="refreshFieldAppAccess">Refresh</button></div></div>
-    <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number (no code) to see only their own route or job. Drivers can also check off stops.</div>
-    <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
-    <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
-  </div>
-  <div id="seniorTools" hidden>
-    <div class="psv-head senior-head"><div><h2>Senior admin</h2><p>Only senior admins see this section.</p></div><button type="button" class="job-stage-btn edit" id="seniorRefresh">Refresh</button></div>
-    <div class="admin-grid">
-      <div class="panel">
-        <div class="panel-head"><h2>Make / GHL problems</h2><div class="logistics-toolbar"><span class="mono" id="problemCount">0</span><button type="button" class="job-stage-btn cancel" id="resolveAllProblems" hidden>Acknowledge all</button></div></div>
-        <div class="logistics-note">Runs Make didn't confirm within 45 seconds and GHL schedule syncs that failed. Check Make's history first if a notification may already have gone out; Retry sends the same run again, Acknowledge just clears it.</div>
-        <ul class="admin-list admin-list-scroll" id="problemList"><li class="load-state">Loading...</li></ul>
+    <div class="panel" data-panel="chartJobs">
+      <div class="panel-head"><h2>Jobs on site per day</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit chart-table-btn" data-chart="chartJobs" aria-pressed="false">Table</button></div></div>
+      <div class="logistics-note">Open jobs on the board for the next 14 days. A multi-day job counts on every day from its report date to its end date.</div>
+      <div class="chart-body" id="chartJobsBody"><p class="load-state">Loading...</p></div>
+    </div>
+    <div class="panel" data-panel="chartCrew">
+      <div class="panel-head"><h2>Crew booked per day</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit chart-table-btn" data-chart="chartCrew" aria-pressed="false">Table</button></div></div>
+      <div class="logistics-note">Different workers assigned to open jobs each day for the next 14 days.</div>
+      <div class="chart-body" id="chartCrewBody"><p class="load-state">Loading...</p></div>
+    </div>
+    <div class="panel" id="fieldAppAccessPanel" data-panel="fieldApp">
+      <div class="panel-head"><h2>Field App Access</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit" id="refreshFieldAppAccess">Refresh</button></div></div>
+      <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number (no code) to see only their own route or job. Drivers can also check off stops.</div>
+      <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
+      <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
+    </div>
+    <div class="panel" data-panel="chartValue">
+      <div class="panel-head"><h2>Job value by week</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit chart-table-btn" data-chart="chartValue" aria-pressed="false">Table</button></div></div>
+      <div class="logistics-note">Job value by the week each job starts: the last 8 weeks and the next 4. Cancelled jobs are left out.</div>
+      <div class="chart-body" id="chartValueBody"><p class="load-state">Loading...</p></div>
+    </div>
+    <div class="panel" data-panel="chartHealth">
+      <div class="panel-head"><h2>Make run health</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit chart-table-btn" data-chart="chartHealth" aria-pressed="false">Table</button></div></div>
+      <div class="logistics-note">Make runs sent each day for the last 14 days, split into ones that went through and ones that failed, timed out or were acknowledged by hand.</div>
+      <div class="chart-body" id="chartHealthBody"><p class="load-state">Loading...</p></div>
+    </div>
+    <div class="panel" data-panel="problems">
+      <div class="panel-head"><h2>Make / GHL problems</h2><div class="logistics-toolbar"><span class="mono" id="problemCount">0</span><button type="button" class="job-stage-btn cancel" id="resolveAllProblems" hidden>Acknowledge all</button></div></div>
+      <div class="logistics-note">Runs Make didn't confirm within 45 seconds and GHL schedule syncs that failed. Check Make's history first if a notification may already have gone out; Retry sends the same run again, Acknowledge just clears it.</div>
+      <ul class="admin-list admin-list-scroll" id="problemList"><li class="load-state">Loading...</li></ul>
+    </div>
+    <div class="panel" data-panel="settings">
+      <div class="panel-head"><h2>Settings</h2></div>
+      <div class="senior-form">
+        <div class="field"><label for="setDefaultUser">Default Assigned User (Book Job)</label><select id="setDefaultUser"><option value="">Whoever is signed in</option></select></div>
+        <div class="field"><label for="setMarkup">Default markup % (EOD sheet)</label><input type="number" id="setMarkup" min="0" max="1000" step="0.1" inputmode="decimal" placeholder="Blank"></div>
+        <div class="field"><label for="setPin">Admin PIN <span class="label-optional" id="pinStatus"></span></label><input type="password" id="setPin" autocomplete="new-password" maxlength="64" placeholder="Leave blank to keep"></div>
+        <label class="senior-check"><input type="checkbox" id="clearPin"> Remove the admin PIN set here</label>
+        <div class="senior-save"><span class="senior-updated" id="settingsUpdated"></span><button type="button" class="btn-primary" id="saveSettings">Save settings</button></div>
       </div>
-      <div class="panel">
-        <div class="panel-head"><h2>Settings</h2></div>
-        <div class="senior-form">
-          <div class="field"><label for="setDefaultUser">Default Assigned User (Book Job)</label><select id="setDefaultUser"><option value="">Whoever is signed in</option></select></div>
-          <div class="field"><label for="setMarkup">Default markup % (EOD sheet)</label><input type="number" id="setMarkup" min="0" max="1000" step="0.1" inputmode="decimal" placeholder="Blank"></div>
-          <div class="field"><label for="setPin">Admin PIN <span class="label-optional" id="pinStatus"></span></label><input type="password" id="setPin" autocomplete="new-password" maxlength="64" placeholder="Leave blank to keep"></div>
-          <label class="senior-check"><input type="checkbox" id="clearPin"> Remove the admin PIN set here</label>
-          <div class="senior-save"><span class="senior-updated" id="settingsUpdated"></span><button type="button" class="btn-primary" id="saveSettings">Save settings</button></div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-head"><h2>Activity log</h2><span class="mono" id="activityCount">0</span></div>
-        <ul class="admin-list admin-list-scroll" id="activityList"><li class="load-state">Loading...</li></ul>
-      </div>
-      <div class="panel">
-        <div class="panel-head"><h2>Send history</h2><span class="mono" id="historyCount">0</span></div>
-        <div class="admin-search"><input type="search" id="historySearch" placeholder="Search by job..." autocomplete="off"></div>
-        <div class="admin-list-scroll history-groups" id="historyList"><p class="load-state">Loading...</p></div>
-      </div>
+    </div>
+    <div class="panel" data-panel="activity">
+      <div class="panel-head"><h2>Activity log</h2><span class="mono" id="activityCount">0</span></div>
+      <ul class="admin-list admin-list-scroll" id="activityList"><li class="load-state">Loading...</li></ul>
+    </div>
+    <div class="panel" data-panel="history">
+      <div class="panel-head"><h2>Send history</h2><span class="mono" id="historyCount">0</span></div>
+      <div class="admin-search"><input type="search" id="historySearch" placeholder="Search by job..." autocomplete="off"></div>
+      <div class="admin-list-scroll history-groups" id="historyList"><p class="load-state">Loading...</p></div>
     </div>
   </div>
   </div>
@@ -5697,7 +5787,7 @@ function applySession(info) {
   if (adminTab.hidden && adminTab.classList.contains('active')) document.getElementById('laborViewTab').click();
   document.getElementById('adminLockPanel').hidden = !currentSession.needsAdminUnlock || currentSession.isAdmin;
   document.getElementById('adminTools').hidden = !currentSession.isAdmin;
-  document.getElementById('seniorTools').hidden = !currentSession.isSenior;
+  if (typeof applyDashLayout === 'function') applyDashLayout();
   document.querySelectorAll('.admin-only').forEach(el => { el.hidden = !currentSession.isAdmin; });
   prefillAssignedUser();
   if (typeof renderRoster === 'function') renderRoster();
@@ -5848,7 +5938,7 @@ function renderAdminUsers() {
 async function renderAdminView(force) {
   if (!currentSession.isAdmin) return;
   renderAdminUsers(); renderManualWorkerList(); renderAdminLabor();
-  if (currentSession.isSenior) loadSeniorTools();
+  loadDashLayout().then(() => { loadSeniorTools(); loadDashCharts(); });
   try { await fetchSessionUsers(); } catch {}
   try { adminRowsCache = (await adminApi()).admins || []; }
   catch (e) { document.getElementById('adminUserList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; return; }
@@ -5882,6 +5972,325 @@ document.getElementById('adminUserList').addEventListener('click', async e => {
   } catch (err) { showToast(err.message, true); btn.disabled = false; }
 });
 
+/* ---------- Admin page layout + charts ----------
+   One shared layout (GET/POST /api/admin-dashboard). Senior admins customize it:
+   drag to move, drag the corner to resize, hide/show, and choose whether other
+   admins see each panel. Collapsing a panel is per browser. */
+const DASH_DEFAULT_ALL = new Set(['admins', 'laborers', 'chartJobs', 'chartCrew', 'fieldApp']);
+const DASH_DEFAULT_W = { fieldApp: 12 };
+const DASH_WIDTHS = [3, 4, 6, 8, 9, 12];
+const DASH_COLLAPSE_KEY = 'a2z.adminDash.collapsed';
+let dashLayout = null, dashPanelsInfo = [], dashDraft = null, dashStats = null, dashDragId = '';
+const dashTableView = new Set();
+const dashGrid = () => document.getElementById('adminDash');
+const dashPanels = () => [...dashGrid().children].filter(el => el.dataset && el.dataset.panel);
+const dashTitle = id => (dashPanelsInfo.find(p => p.id === id) || {}).title || (dashGrid().querySelector(`[data-panel="${id}"] .panel-head h2`) || {}).textContent || id;
+const dashLocked = id => id === 'settings' || !!(dashPanelsInfo.find(p => p.id === id) || {}).locked;
+function dashCanSee(id) {
+  if (currentSession.isSenior) return true;
+  if (!dashLayout) return DASH_DEFAULT_ALL.has(id);
+  return dashLayout.panels.some(p => p.id === id); // the server only sends admins what they may see
+}
+function dashCollapsed() { try { return new Set(JSON.parse(localStorage.getItem(DASH_COLLAPSE_KEY) || '[]')); } catch { return new Set(); } }
+function dashSaveCollapsed(set) { try { localStorage.setItem(DASH_COLLAPSE_KEY, JSON.stringify([...set])); } catch {} }
+async function dashApi(body, view) {
+  const url = '/api/admin-dashboard' + (view ? '?view=' + view : '');
+  const res = await fetchWithTimeout(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { headers: { Accept: 'application/json' } }, 25000);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+async function loadDashLayout() {
+  try { const data = await dashApi(); dashLayout = data.layout; dashPanelsInfo = data.panels || []; }
+  catch (e) { document.getElementById('dashLayoutNote').textContent = 'Layout could not load: ' + e.message; }
+  applyDashLayout();
+}
+function decorateDash() {
+  for (const el of dashPanels()) {
+    if (el.dataset.dashReady) continue;
+    el.dataset.dashReady = '1';
+    const id = el.dataset.panel, head = el.querySelector(':scope > .panel-head');
+    if (head) {
+      const right = document.createElement('div'); right.className = 'dash-head-right';
+      [...head.children].filter(c => c.tagName !== 'H2').forEach(c => right.appendChild(c));
+      right.insertAdjacentHTML('beforeend', `<span class="dash-pill" hidden>SENIOR ONLY</span><button type="button" class="dash-collapse" aria-expanded="true" title="Collapse">&#9662;</button>`);
+      head.appendChild(right);
+    }
+    const locked = dashLocked(id);
+    el.insertAdjacentHTML('afterbegin', `<div class="dash-chrome"><span class="dash-grip" aria-hidden="true">&#8942;&#8942;</span><span class="dash-title">${sessionEsc(dashTitle(id))}</span>`
+      + `<button type="button" data-dash="left" title="Move earlier">&larr;</button><button type="button" data-dash="right" title="Move later">&rarr;</button>`
+      + `<button type="button" data-dash="narrower" title="Narrower">&minus;</button><span class="dash-size"></span><button type="button" data-dash="wider" title="Wider">+</button>`
+      + `<select data-dash="audience" aria-label="Who sees it" ${locked ? 'disabled' : ''}><option value="all">All admins see it</option><option value="senior">Senior admins only</option></select>`
+      + `<button type="button" data-dash="hide">Hide</button></div>`);
+    el.insertAdjacentHTML('beforeend', '<div class="dash-resize" title="Drag to resize. Double-click for auto height."></div>');
+  }
+}
+function applyDashLayout() {
+  const grid = dashGrid(); if (!grid) return;
+  decorateDash();
+  const editing = !!dashDraft && currentSession.isSenior;
+  const senior = !!currentSession.isSenior;
+  document.getElementById('adminTools').classList.toggle('dash-editing', editing);
+  document.getElementById('dashEditBtn').hidden = !senior || editing || !dashLayout;
+  document.getElementById('dashEditBar').hidden = !editing;
+  const layout = editing ? dashDraft : dashLayout;
+  const items = layout ? layout.panels : dashPanels().map(el => ({ id: el.dataset.panel, w: DASH_DEFAULT_W[el.dataset.panel] || 6, h: 0, hidden: false, audience: DASH_DEFAULT_ALL.has(el.dataset.panel) ? 'all' : 'senior' }));
+  const collapsed = dashCollapsed();
+  const byId = new Map(dashPanels().map(el => [el.dataset.panel, el]));
+  const placed = new Set();
+  for (const item of items) {
+    const el = byId.get(item.id); if (!el) continue;
+    placed.add(item.id); grid.appendChild(el);
+    el.hidden = item.hidden || !dashCanSee(item.id);
+    el.style.setProperty('--w', item.w);
+    el.classList.toggle('fixed-h', item.h > 0);
+    if (item.h > 0) el.style.setProperty('--h', item.h + 'px'); else el.style.removeProperty('--h');
+    const isCollapsed = !editing && collapsed.has(item.id);
+    el.classList.toggle('collapsed', isCollapsed);
+    const btn = el.querySelector('.dash-collapse');
+    if (btn) { btn.innerHTML = isCollapsed ? '&#9656;' : '&#9662;'; btn.setAttribute('aria-expanded', String(!isCollapsed)); btn.title = isCollapsed ? 'Expand' : 'Collapse'; }
+    const pill = el.querySelector('.dash-pill'); if (pill) pill.hidden = !(senior && item.audience === 'senior');
+    el.querySelector('.dash-size').textContent = `${item.w}/12`;
+    el.querySelector('select[data-dash="audience"]').value = item.audience;
+    el.draggable = editing;
+  }
+  for (const [id, el] of byId) if (!placed.has(id)) { el.hidden = true; grid.appendChild(el); }
+  const tray = document.getElementById('dashHiddenTray');
+  const hiddenItems = editing ? items.filter(i => i.hidden) : [];
+  tray.innerHTML = hiddenItems.length ? '<span>Hidden panels:</span>' + hiddenItems.map(i => `<button type="button" data-show="${sessionEsc(i.id)}">+ ${sessionEsc(dashTitle(i.id))}</button>`).join('') : '';
+  const upd = dashLayout && dashLayout.updated;
+  document.getElementById('dashLayoutNote').textContent = !dashLayout ? '' : senior
+    ? (upd ? `Layout last changed by ${upd.by} ${seniorWhen(upd.at)}. Every admin sees this layout.` : 'Default layout. Every admin sees this layout.')
+    : 'A senior admin sets this layout. You can collapse panels on this browser.';
+  dashRenderCharts();
+}
+function dashItem(id) { return dashDraft && dashDraft.panels.find(p => p.id === id); }
+function dashMove(id, dir) {
+  const list = dashDraft.panels, i = list.findIndex(p => p.id === id);
+  let j = i + dir;
+  while (j >= 0 && j < list.length && list[j].hidden) j += dir;
+  if (j < 0 || j >= list.length) return;
+  const [item] = list.splice(i, 1); list.splice(j, 0, item);
+}
+document.getElementById('dashEditBtn').addEventListener('click', () => {
+  if (!dashLayout || !currentSession.isSenior) return;
+  dashDraft = { panels: dashLayout.panels.map(p => ({ ...p })) };
+  applyDashLayout();
+});
+document.getElementById('dashCancelBtn').addEventListener('click', () => { dashDraft = null; applyDashLayout(); });
+document.getElementById('dashSaveBtn').addEventListener('click', async e => {
+  const btn = e.currentTarget; btn.disabled = true;
+  try {
+    const data = await dashApi({ action: 'save_layout', layout: { panels: dashDraft.panels } });
+    dashLayout = data.layout; dashDraft = null; applyDashLayout(); showToast('Layout saved for every admin.');
+    loadSeniorTools(); loadDashCharts();
+  } catch (err) { showToast(err.message, true); }
+  btn.disabled = false;
+});
+document.getElementById('dashResetBtn').addEventListener('click', async e => {
+  if (!confirm('Put every panel back to its default size, order and visibility for all admins?')) return;
+  const btn = e.currentTarget; btn.disabled = true;
+  try { const data = await dashApi({ action: 'reset_layout' }); dashLayout = data.layout; dashDraft = null; applyDashLayout(); showToast('Layout reset.'); loadSeniorTools(); loadDashCharts(); }
+  catch (err) { showToast(err.message, true); }
+  btn.disabled = false;
+});
+document.getElementById('dashHiddenTray').addEventListener('click', e => {
+  const b = e.target.closest('[data-show]'); if (!b || !dashDraft) return;
+  const item = dashItem(b.dataset.show); if (item) item.hidden = false;
+  applyDashLayout();
+});
+dashGrid().addEventListener('click', e => {
+  const collapse = e.target.closest('.dash-collapse');
+  if (collapse && !dashDraft) {
+    const id = collapse.closest('.panel').dataset.panel, set = dashCollapsed();
+    set.has(id) ? set.delete(id) : set.add(id); dashSaveCollapsed(set); applyDashLayout(); return;
+  }
+  const b = e.target.closest('button[data-dash]'); if (!b || !dashDraft) return;
+  const id = b.closest('.panel').dataset.panel, item = dashItem(id); if (!item) return;
+  const k = b.dataset.dash;
+  if (k === 'left') dashMove(id, -1);
+  else if (k === 'right') dashMove(id, 1);
+  else if (k === 'narrower') item.w = [...DASH_WIDTHS].reverse().find(w => w < item.w) || 3;
+  else if (k === 'wider') item.w = DASH_WIDTHS.find(w => w > item.w) || 12;
+  else if (k === 'hide') item.hidden = true;
+  applyDashLayout();
+});
+dashGrid().addEventListener('change', e => {
+  const sel = e.target.closest('select[data-dash="audience"]'); if (!sel || !dashDraft) return;
+  const item = dashItem(sel.closest('.panel').dataset.panel);
+  if (item) item.audience = sel.value === 'senior' ? 'senior' : 'all';
+  applyDashLayout();
+});
+// Drag a panel to move it (desktop). The arrow buttons do the same on touch screens.
+dashGrid().addEventListener('dragstart', e => {
+  const el = e.target.closest && e.target.closest('.dash-grid > .panel');
+  if (!dashDraft || !el) return;
+  dashDragId = el.dataset.panel; el.classList.add('dash-dragging');
+  try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dashDragId); } catch {}
+});
+const dashClearDrop = () => dashPanels().forEach(el => el.classList.remove('dash-drop-before', 'dash-drop-after', 'dash-dragging'));
+dashGrid().addEventListener('dragover', e => {
+  if (!dashDraft || !dashDragId) return;
+  const el = e.target.closest('.dash-grid > .panel'); if (!el || el.dataset.panel === dashDragId) return;
+  e.preventDefault();
+  const r = el.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+  dashPanels().forEach(p => { if (p !== el) p.classList.remove('dash-drop-before', 'dash-drop-after'); });
+  el.classList.toggle('dash-drop-after', after); el.classList.toggle('dash-drop-before', !after);
+});
+dashGrid().addEventListener('drop', e => {
+  if (!dashDraft || !dashDragId) return;
+  const el = e.target.closest('.dash-grid > .panel'); e.preventDefault();
+  if (el && el.dataset.panel !== dashDragId) {
+    const after = el.classList.contains('dash-drop-after');
+    const list = dashDraft.panels, from = list.findIndex(p => p.id === dashDragId);
+    const [item] = list.splice(from, 1);
+    const to = list.findIndex(p => p.id === el.dataset.panel) + (after ? 1 : 0);
+    list.splice(to, 0, item);
+  }
+  dashDragId = ''; dashClearDrop(); applyDashLayout();
+});
+dashGrid().addEventListener('dragend', () => { dashDragId = ''; dashClearDrop(); });
+// Drag the corner to resize: width snaps to the 12-column grid, height to 10px.
+dashGrid().addEventListener('pointerdown', e => {
+  const handle = e.target.closest('.dash-resize'); if (!handle || !dashDraft) return;
+  e.preventDefault(); e.stopPropagation();
+  const el = handle.closest('.panel'), item = dashItem(el.dataset.panel); if (!item) return;
+  const grid = dashGrid(), gap = parseFloat(getComputedStyle(grid).columnGap) || 16;
+  const colW = (grid.getBoundingClientRect().width - gap * 11) / 12;
+  const start = { x: e.clientX, y: e.clientY, w: el.getBoundingClientRect().width, h: el.getBoundingClientRect().height };
+  let w = item.w, h = item.h, moved = false;
+  el.draggable = false; document.body.classList.add('dash-resizing');
+  try { handle.setPointerCapture(e.pointerId); } catch {}
+  const move = ev => {
+    const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+    w = Math.min(12, Math.max(3, Math.round((start.w + dx + gap) / (colW + gap))));
+    if (Math.abs(dy) > 4 || moved) { moved = true; h = Math.max(120, Math.round((start.h + dy) / 10) * 10); el.classList.add('fixed-h'); el.style.setProperty('--h', h + 'px'); }
+    el.style.setProperty('--w', w); el.querySelector('.dash-size').textContent = `${w}/12`;
+  };
+  const up = () => {
+    handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); handle.removeEventListener('pointercancel', up);
+    document.body.classList.remove('dash-resizing');
+    item.w = w; if (moved) item.h = h;
+    applyDashLayout();
+  };
+  handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', up); handle.addEventListener('pointercancel', up);
+});
+dashGrid().addEventListener('dblclick', e => {
+  const handle = e.target.closest('.dash-resize'); if (!handle || !dashDraft) return;
+  const item = dashItem(handle.closest('.panel').dataset.panel); if (item) { item.h = 0; applyDashLayout(); }
+});
+
+/* Charts: plain SVG bar charts with a hover tooltip and a Table view. */
+const DASH_CHARTS = ['chartJobs', 'chartCrew', 'chartValue', 'chartHealth'];
+const dashDay = (d, opts) => new Date(d + 'T00:00:00Z').toLocaleDateString([], { timeZone: 'UTC', ...opts });
+const dashMoney = n => n >= 1e6 ? '$' + (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1e4 ? '$' + Math.round(n / 1e3) + 'k' : n >= 1e3 ? '$' + (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k' : '$' + Math.round(n);
+const dashMoneyFull = n => '$' + Math.round(n).toLocaleString();
+const DASH_CHART_CFG = {
+  chartJobs: { axis: d => dashDay(d, { weekday: 'short' }) + ' ' + Number(d.slice(8)), tip: d => dashDay(d, { weekday: 'short', month: 'short', day: 'numeric' }), col: 'Day', fmt: String, colors: ['var(--chart-1)'],
+    summary: c => { const v = c.series[0].values, i = v.indexOf(Math.max(...v)); return v[i] ? `<b>${v[i]}</b> jobs on the busiest day, ${dashDay(c.labels[i], { weekday: 'short', month: 'short', day: 'numeric' })}` : 'No jobs scheduled in the next 14 days.'; } },
+  chartCrew: { axis: d => dashDay(d, { weekday: 'short' }) + ' ' + Number(d.slice(8)), tip: d => dashDay(d, { weekday: 'short', month: 'short', day: 'numeric' }), col: 'Day', fmt: String, colors: ['var(--chart-1)'],
+    summary: c => { const v = c.series[0].values, i = v.indexOf(Math.max(...v)); return v[i] ? `<b>${v[i]}</b> workers on the busiest day, ${dashDay(c.labels[i], { weekday: 'short', month: 'short', day: 'numeric' })}` : 'No crew booked in the next 14 days.'; } },
+  chartValue: { axis: d => dashDay(d, { month: 'short', day: 'numeric' }), tip: d => 'Week of ' + dashDay(d, { month: 'short', day: 'numeric' }), col: 'Week of', fmt: dashMoney, fullFmt: dashMoneyFull, colors: ['var(--chart-1)'],
+    summary: c => `<b>${dashMoneyFull(c.series[0].values[c.currentIndex] || 0)}</b> this week · ${dashMoneyFull(c.series[0].values.slice(0, c.currentIndex).reduce((a, b) => a + b, 0))} over the last 8 weeks` },
+  chartHealth: { axis: d => dashDay(d, { month: 'numeric', day: 'numeric' }), tip: d => dashDay(d, { weekday: 'short', month: 'short', day: 'numeric' }), col: 'Day', fmt: String, colors: ['var(--chart-ok)', 'var(--chart-bad)'],
+    summary: c => { const ok = c.series[0].values.reduce((a, b) => a + b, 0), bad = c.series[1].values.reduce((a, b) => a + b, 0), all = ok + bad; return all ? `<b>${Math.round(ok / all * 100)}%</b> of ${all} runs went through · ${bad} needed attention` : 'No Make runs in the last 14 days.'; } }
+};
+async function loadDashCharts() {
+  const want = DASH_CHARTS.filter(id => { const el = dashGrid().querySelector(`[data-panel="${id}"]`); return el && !el.hidden; });
+  if (!want.length) return;
+  try { dashStats = await dashApi(null, 'stats'); }
+  catch (e) { want.forEach(id => { document.getElementById(id + 'Body').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }); return; }
+  dashRenderCharts();
+}
+function dashNiceMax(v) {
+  if (v <= 4) return 4;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p;
+  const step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 4 ? 4 : n <= 5 ? 5 : n <= 8 ? 8 : 10;
+  return step * p;
+}
+function dashRenderCharts() {
+  if (!dashStats) return;
+  for (const id of DASH_CHARTS) {
+    const el = dashGrid().querySelector(`[data-panel="${id}"]`), body = document.getElementById(id + 'Body');
+    if (!el || el.hidden || el.classList.contains('collapsed') || !body) continue;
+    const data = dashStats[id];
+    if (!data) { body.innerHTML = '<p class="load-state">Not available.</p>'; continue; }
+    const cfg = DASH_CHART_CFG[id];
+    const btn = el.querySelector('.chart-table-btn'); if (btn) { btn.setAttribute('aria-pressed', String(dashTableView.has(id))); btn.textContent = dashTableView.has(id) ? 'Chart' : 'Table'; }
+    if (dashTableView.has(id)) { body.innerHTML = dashChartTable(data, cfg); continue; }
+    dashBarChart(body, data, cfg);
+  }
+}
+function dashChartTable(c, cfg) {
+  const f = cfg.fullFmt || cfg.fmt;
+  return `<table class="chart-table"><thead><tr><th>${cfg.col}</th>${c.series.map(s => `<th class="num">${sessionEsc(s.name)}</th>`).join('')}</tr></thead><tbody>`
+    + c.labels.map((d, i) => `<tr><td>${sessionEsc(cfg.tip(d))}</td>${c.series.map(s => `<td class="num">${sessionEsc(f(s.values[i]))}</td>`).join('')}</tr>`).join('') + '</tbody></table>';
+}
+function dashBarChart(body, c, cfg) {
+  const legend = c.series.length > 1 ? `<div class="chart-legend">${c.series.map((s, k) => `<span><i style="background:${cfg.colors[k]}"></i>${sessionEsc(s.name)}</span>`).join('')}</div>` : '';
+  body.innerHTML = `<p class="chart-summary">${cfg.summary(c)}</p>${legend}<div class="chart-svg"></div><div class="chart-tip" hidden></div>`;
+  const holder = body.querySelector('.chart-svg'), tip = body.querySelector('.chart-tip');
+  const width = Math.max(240, holder.clientWidth || body.clientWidth);
+  const fixed = body.closest('.panel').classList.contains('fixed-h');
+  const used = body.querySelector('.chart-summary').offsetHeight + (legend ? body.querySelector('.chart-legend').offsetHeight : 0);
+  const height = fixed ? Math.max(140, body.clientHeight - used - 10) : 200;
+  const m = { t: 8, r: 6, b: 24, l: 46 }, iw = width - m.l - m.r, ih = height - m.t - m.b;
+  const n = c.labels.length;
+  const totals = c.labels.map((_, i) => c.series.reduce((a, s) => a + (s.values[i] || 0), 0));
+  const max = dashNiceMax(Math.max(1, ...totals));
+  const band = iw / n, barW = Math.max(4, Math.min(34, band * 0.62));
+  const y = v => m.t + ih - (v / max) * ih;
+  const every = band < 30 ? Math.ceil(30 / band) : 1;
+  let svg = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${sessionEsc(c.series.map(s => s.name).join(' and '))} chart">`;
+  for (let t = 0; t <= 4; t++) {
+    const v = max * t / 4, yy = Math.round(y(v)) + .5;
+    svg += `<line class="chart-grid" x1="${m.l}" x2="${width - m.r}" y1="${yy}" y2="${yy}"/><text class="chart-axis" x="${m.l - 6}" y="${yy + 4}" text-anchor="end">${sessionEsc(cfg.fmt(Math.round(v * 100) / 100))}</text>`;
+  }
+  const rounded = (x, top, w, h, r) => { r = Math.min(r, w / 2, h); return `M${x},${top + h}V${top + r}Q${x},${top} ${x + r},${top}H${x + w - r}Q${x + w},${top} ${x + w},${top + r}V${top + h}Z`; };
+  c.labels.forEach((d, i) => {
+    const x = m.l + band * i + (band - barW) / 2;
+    let base = m.t + ih;
+    const segs = c.series.map((s, k) => ({ v: s.values[i] || 0, k })).filter(s => s.v > 0);
+    segs.forEach((s, j) => {
+      const h = (s.v / max) * ih, last = j === segs.length - 1;
+      const gap = j > 0 ? 2 : 0, top = base - h;
+      const hh = Math.max(0, h - gap);
+      svg += last ? `<path d="${rounded(x, top, barW, hh, 4)}" style="fill:${cfg.colors[s.k]}"/>` : `<rect x="${x}" y="${top}" width="${barW}" height="${hh}" style="fill:${cfg.colors[s.k]}"/>`;
+      base = top;
+    });
+    if (i % every === 0) svg += `<text class="chart-axis${c.currentIndex === i ? ' now' : ''}" x="${m.l + band * i + band / 2}" y="${height - 6}" text-anchor="middle">${sessionEsc(cfg.axis(d))}</text>`;
+    svg += `<rect class="chart-hit" data-i="${i}" x="${m.l + band * i}" y="${m.t}" width="${band}" height="${ih}"/>`;
+  });
+  svg += `<line class="chart-grid" x1="${m.l}" x2="${width - m.r}" y1="${m.t + ih + .5}" y2="${m.t + ih + .5}" style="stroke:var(--chart-axis);stroke-opacity:.5"/></svg>`;
+  holder.innerHTML = svg;
+  const f = cfg.fullFmt || cfg.fmt;
+  const show = i => {
+    holder.querySelectorAll('.chart-hit.on').forEach(r => r.classList.remove('on'));
+    const hit = holder.querySelector(`.chart-hit[data-i="${i}"]`); if (hit) hit.classList.add('on');
+    const rows = c.series.map((s, k) => `<div>${c.series.length > 1 ? `<i style="background:${cfg.colors[k]}"></i>` : ''}${sessionEsc(s.name)}: <b>${sessionEsc(f(s.values[i] || 0))}</b></div>`).join('');
+    tip.innerHTML = `<div>${sessionEsc(cfg.tip(c.labels[i]))}</div>${rows}`;
+    const off = holder.offsetTop, cx = m.l + band * i + band / 2;
+    tip.hidden = false;
+    const half = tip.offsetWidth / 2;
+    tip.style.left = Math.min(Math.max(cx, half), body.clientWidth - half) + 'px';
+    tip.style.top = (off + y(totals[i]) - 6) + 'px';
+  };
+  holder.addEventListener('pointermove', e => { const r = e.target.closest && e.target.closest('.chart-hit'); if (r) show(+r.dataset.i); });
+  holder.addEventListener('pointerleave', () => { tip.hidden = true; holder.querySelectorAll('.chart-hit.on').forEach(r => r.classList.remove('on')); });
+}
+dashGrid().addEventListener('click', e => {
+  const b = e.target.closest('.chart-table-btn'); if (!b || dashDraft) return;
+  const id = b.dataset.chart; dashTableView.has(id) ? dashTableView.delete(id) : dashTableView.add(id);
+  dashRenderCharts();
+});
+if (typeof ResizeObserver === 'function') {
+  let dashResizeTimer = 0, lastW = 0;
+  new ResizeObserver(entries => {
+    const w = Math.round(entries[0].contentRect.width); if (!w || w === lastW) return; lastW = w;
+    clearTimeout(dashResizeTimer); dashResizeTimer = setTimeout(dashRenderCharts, 120);
+  }).observe(dashGrid());
+}
+
 /* Senior admin tools: problems + retry, settings, activity log, send history. */
 async function seniorApi(view, body) {
   const res = await fetchWithTimeout(view ? '/api/senior?view=' + view : '/api/senior', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { headers: { Accept: 'application/json' } }, 30000);
@@ -5893,13 +6302,14 @@ const seniorWhen = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLoca
 function renderProblems(data) {
   const effects = data.effects || [], crm = data.crm || [];
   document.getElementById('problemCount').textContent = String(effects.length + crm.length);
-  document.getElementById('resolveAllProblems').hidden = effects.length < 2;
+  const canAct = !!currentSession.isSenior;
+  document.getElementById('resolveAllProblems').hidden = !canAct || effects.length < 2;
   const list = document.getElementById('problemList');
   const rows = [
     ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
-      + `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Acknowledge</button></div></li>`),
+      + (!canAct ? '' : `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Acknowledge</button></div>`) + '</li>'),
     ...crm.map(c => `<li><div class="who">GHL schedule sync${c.name ? ' · ' + sessionEsc(c.name) : ''}<small>${sessionEsc([c.jobId, seniorWhen(c.at)].filter(Boolean).join(' · '))}</small>${c.error ? `<small class="err">${sessionEsc(c.error)}</small>` : ''}</div>`
-      + `<div class="problem-actions"><button type="button" class="job-stage-btn edit problem-btn" data-action="retry_crm" data-job-id="${sessionEsc(c.jobId)}">Retry</button></div></li>`)
+      + (!canAct ? '' : `<div class="problem-actions"><button type="button" class="job-stage-btn edit problem-btn" data-action="retry_crm" data-job-id="${sessionEsc(c.jobId)}">Retry</button><button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_crm" data-job-id="${sessionEsc(c.jobId)}">Acknowledge</button></div>`) + '</li>')
   ];
   list.innerHTML = rows.length ? rows.join('') : '<li class="load-state">Nothing stuck. Every Make run and GHL sync went through.</li>';
 }
@@ -5931,28 +6341,29 @@ function renderSettings(st) {
   document.getElementById('settingsUpdated').textContent = last ? `Last changed by ${last.by} ${seniorWhen(last.at)}` : '';
 }
 async function loadSeniorTools() {
-  if (!currentSession.isSenior) return;
+  if (!currentSession.isAdmin) return;
   try { await fetchSessionUsers(); } catch {}
+  const see = id => dashCanSee(id);
   const jobs = [
-    seniorApi('problems').then(renderProblems).catch(e => { document.getElementById('problemList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
-    seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(e => { document.getElementById('activityList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
-    seniorApi('history').then(d => { seniorSends = d.sends || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
-    seniorApi('settings').then(renderSettings).catch(e => showToast(e.message, true))
-  ];
+    see('problems') && seniorApi('problems').then(renderProblems).catch(e => { document.getElementById('problemList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
+    see('activity') && seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(e => { document.getElementById('activityList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
+    see('history') && seniorApi('history').then(d => { seniorSends = d.sends || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
+    currentSession.isSenior && seniorApi('settings').then(renderSettings).catch(e => showToast(e.message, true))
+  ].filter(Boolean);
   await Promise.all(jobs);
 }
-document.getElementById('seniorRefresh').addEventListener('click', loadSeniorTools);
+document.getElementById('seniorRefresh').addEventListener('click', () => renderAdminView(true));
 document.getElementById('historySearch').addEventListener('input', renderHistory);
 document.getElementById('problemList').addEventListener('click', async e => {
   const btn = e.target.closest('.problem-btn'); if (!btn) return;
   const { action } = btn.dataset;
   if (action === 'retry_effect' && !confirm("Send this run to Make again? If it actually went through the first time, people may get a duplicate message. Check Make's history if unsure.")) return;
-  if (action === 'resolve_effect' && !confirm('Clear this from the list without sending anything?')) return;
+  if ((action === 'resolve_effect' || action === 'resolve_crm') && !confirm(action === 'resolve_crm' ? "Clear this without updating GHL? The board keeps its times; GHL keeps whatever it has now." : 'Clear this from the list without sending anything?')) return;
   btn.disabled = true;
   try {
-    const data = await seniorApi('', action === 'retry_crm' ? { action, jobId: btn.dataset.jobId } : { action, effectId: btn.dataset.id });
+    const data = await seniorApi('', (action === 'retry_crm' || action === 'resolve_crm') ? { action, jobId: btn.dataset.jobId } : { action, effectId: btn.dataset.id });
     renderProblems(data);
-    showToast(action === 'resolve_effect' ? 'Acknowledged.' : 'Sent. Make/GHL confirmed it.');
+    showToast(action === 'resolve_effect' || action === 'resolve_crm' ? 'Acknowledged.' : 'Sent. Make/GHL confirmed it.');
   } catch (err) { if (err.data?.effects) renderProblems(err.data); showToast(err.message, true); btn.disabled = false; }
   seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {});
 });

@@ -1,15 +1,17 @@
-// Senior admin tools (Admin page > Senior admin). Senior admins only.
+// Senior admin tools (Admin page). Senior admins only, except that problems,
+// activity and history can be shared read-only with all admins (lib/layout.mjs).
 //   GET  /api/senior?view=activity   -> { activity: [...] }       who did what, newest first
 //   GET  /api/senior?view=problems   -> { effects: [...], crm: [...] } Make runs and GHL syncs that didn't go through
 //   GET  /api/senior?view=history    -> { sends: [...] }          EOD sheets + Project Schedule PDFs sent
 //   GET  /api/senior?view=settings   -> senior settings
 //   POST /api/senior { action: "retry_effect" | "resolve_effect", effectId }
-//   POST /api/senior { action: "retry_crm", jobId }
+//   POST /api/senior { action: "retry_crm" | "resolve_crm", jobId }
 //   POST /api/senior { action: "save_settings", defaultAssignedUserId?, defaultMarkupPercent?, adminPin?, clearAdminPin? }
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { requireSenior } from '../../lib/session.mjs';
+import { requirePanel } from '../../lib/layout.mjs';
 import { logActivity, recentActivity, logSend, sendHistory } from '../../lib/activity.mjs';
 import { seniorSettings, saveSettings } from '../../lib/settings.mjs';
 import { sendWorkflow, workflows } from '../../lib/effects.mjs';
@@ -50,16 +52,20 @@ export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
     const sql = db(); await ensureSchema(sql);
-    if (request.method === 'POST') authorizeWrite(request);
-    const session = await requireSenior(request, sql);
     if (request.method === 'GET') {
       const view = new URL(request.url).searchParams.get('view');
+      // Problems, activity and send history can be shared with every admin (read-only)
+      // from the Admin page layout. Settings stay senior only.
+      const panel = { problems: 'problems', activity: 'activity', history: 'history' }[view];
+      if (panel) await requirePanel(request, sql, panel); else await requireSenior(request, sql);
       if (view === 'activity') return json({ activity: await recentActivity(sql) });
       if (view === 'problems') return json(await problems(sql));
       if (view === 'history') return json({ sends: await history(sql) });
       if (view === 'settings') return json(await seniorSettings(sql));
       throw new StateError('Unknown view');
     }
+    authorizeWrite(request);
+    const session = await requireSenior(request, sql);
     const body = await readPayload(request);
     if (body.action === 'retry_effect' || body.action === 'resolve_effect') {
       const effectId = String(body.effectId || '');
@@ -98,6 +104,18 @@ export default async function handler(request) {
       const result = await syncJobSchedule(sql, jobId);
       await logActivity(sql, session, 'Retried GHL schedule sync', jobId, { result: result.ok ? 'sent' : 'failed' });
       return json({ ...(result.ok ? { ok: true } : { error: 'GHL still refused the schedule update.' }), ...(await problems(sql)) }, result.ok ? 200 : 502);
+    }
+    if (body.action === 'resolve_crm') {
+      // Clears the stuck sync without calling GHL or Make. The board keeps its saved times.
+      const jobId = String(body.jobId || '');
+      if (!jobId) throw new StateError('jobId required');
+      const cleared = await sql.begin(async tx => {
+        await tx`select pg_advisory_xact_lock(hashtextextended(${`job:${jobId}`}, 0))`;
+        return tx`update dispatch_crm_sync set pending = false, last_error = 'Acknowledged by ' || ${session.name}, updated_at = now()
+          where job_id = ${jobId} and pending = true returning job_id`;
+      });
+      if (cleared.length) await logActivity(sql, session, 'Acknowledged GHL schedule sync', jobId);
+      return json({ ok: true, ...(await problems(sql)) });
     }
     if (body.action === 'save_settings') {
       const changed = await saveSettings(sql, body, session.name);

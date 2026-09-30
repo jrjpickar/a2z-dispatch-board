@@ -15,7 +15,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
-import { requireAdmin } from '../../lib/session.mjs';
+import { requirePanel } from '../../lib/layout.mjs';
 import { getContact, updateContactNamePhone } from '../../lib/ghl.mjs';
 import { driverKeyFor } from '../../lib/driver-token.mjs';
 import { logActivity } from '../../lib/activity.mjs';
@@ -36,14 +36,14 @@ export default async function handler(request) {
     if (request.method === 'GET') {
       const contact = new URL(request.url).searchParams.get('contact');
       if (contact) {
-        await requireAdmin(request, sql);
+        await requirePanel(request, sql, 'laborers');
         try { return json({ ok: true, contact: await getContact(contact) }); }
         catch { throw new StateError('Could not load that contact from GHL.', 502); }
       }
       return json({ workers: await rows(sql), hidden: await hiddenRows(sql) });
     }
     authorizeWrite(request);
-    const session = await requireAdmin(request, sql);
+    const session = await requirePanel(request, sql, 'laborers');
     const body = await readPayload(request);
     if (body.action === 'hide' || body.action === 'unhide') {
       const name = String(body.name || '').trim().slice(0, 120), phone = String(body.phone || '').trim().slice(0, 30);

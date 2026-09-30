@@ -8,7 +8,7 @@ import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { driverKeyFor } from '../../lib/driver-token.mjs';
 import { StateError } from '../../lib/state.mjs';
-import { requireAdmin } from '../../lib/session.mjs';
+import { requirePanel } from '../../lib/layout.mjs';
 import { logActivity } from '../../lib/activity.mjs';
 
 export default async function handler(request) {
@@ -20,7 +20,7 @@ export default async function handler(request) {
       const enabled = await sql`select driver_key as "driverKey", name, phone, updated_at as "updatedAt" from dispatch_driver_codes order by name`;
       return json({ enabled });
     }
-    const session = await requireAdmin(request, sql);
+    const session = await requirePanel(request, sql, 'fieldApp');
     const body = await readPayload(request);
     const name = String(body.name || '').trim();
     const phone = String(body.phone || '').trim();

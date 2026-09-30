@@ -123,3 +123,8 @@
   from = "/api/settings"
   to = "/.netlify/functions/settings"
   status = 200
+
+[[redirects]]
+  from = "/api/admin-dashboard"
+  to = "/.netlify/functions/admin-dashboard"
+  status = 200
