@@ -10,6 +10,9 @@ test('layout: fills missing panels, clamps sizes, drops unknown ids, keeps setti
   assert.deepEqual(l.panels[1], { id: 'settings', w: 6, h: 0, hidden: true, audience: 'senior' });
   assert.equal(normalizeLayout({ panels: [{ id: 'admins', w: 1, h: 400 }] }).panels[0].w, 3);
   assert.equal(normalizeLayout({ panels: [{ id: 'admins', w: 6, h: 400 }] }).panels[0].h, 400);
+  // Free placement: x keeps the panel inside 12 columns; no position means auto placed.
+  assert.deepEqual(normalizeLayout({ panels: [{ id: 'admins', w: 8, x: 9, y: 30 }] }).panels[0], { id: 'admins', w: 8, x: 4, y: 30, h: 0, hidden: false, audience: 'all' });
+  assert.equal('x' in normalizeLayout({ panels: [{ id: 'admins', w: 8 }] }).panels[0], false);
 });
 test('layout: audience decides what a regular admin can use', () => {
   const l = defaultLayout();
