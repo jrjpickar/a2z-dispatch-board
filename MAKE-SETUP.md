@@ -4,7 +4,7 @@ Keep your existing notification and driver-log action modules. No new everyday s
 
 ## 1. Confirm finished actions
 
-**Worker assign sends one run per worker.** When a dispatcher confirms an assignment, the worker scenario gets a separate webhook call for each assignee. Each payload has the job fields plus `workerName`, `workerPhone`, `contactId` at the top level, `assignedWorkers` containing just that one worker (so old mappings still work — no iterator needed), and `workerIndex` / `workerCount` (e.g. 2 of 3). Every run must still end with the `{"ok":true}` response below.
+**Worker assign sends one run per worker.** When a dispatcher confirms an assignment, the worker scenario gets a separate webhook call for each assignee. Each payload has the job fields plus `workerName`, `workerPhone`, `contactId` at the top level, `assignedWorkers` containing just that one worker (so old mappings still work; no iterator needed), and `workerIndex` / `workerCount` (e.g. 2 of 3). Every run must still end with the `{"ok":true}` response below.
 
 At the END of each successful worker assign/remove, driver assign/remove, job edit/stage, container edit/stage and driver-log route, use **Webhooks → Webhook response**:
 
@@ -65,7 +65,7 @@ After deploying and confirming your records are in Netlify:
 
 Shared-state saves and automatic shared-state refreshes use **zero Make credits**. Notifications, remaining CRM actions, logs and roster cache fills still consume Make credits; Netlify/GHL usage is separate.
 
-## Optional imports — skip if Netlify already has your records
+## Optional imports: skip if Netlify already has your records
 
 `03-optional-import-job.json` and `04-optional-import-logistics.json` each contain webhook → HTTP → response. These are one-time migration helpers, not recurring scenarios.
 

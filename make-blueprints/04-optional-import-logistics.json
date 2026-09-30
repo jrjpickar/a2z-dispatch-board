@@ -1,5 +1,5 @@
 {
-  "name": "A2Z \u2014 OPTIONAL one-time logistics import; leave OFF after migration",
+  "name": "A2Z: OPTIONAL one-time logistics import; leave OFF after migration",
   "flow": [
     {
       "id": 1,

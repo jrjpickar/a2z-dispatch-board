@@ -828,7 +828,7 @@
   body.dark-mode #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):hover td{background:#33251f}
   /* .logistics-note is scoped under #logisticsDispatchView in its light-mode
      rule (border/background gradient with a hardcoded #fffdf7 tail), which
-     outranks this class-only selector on specificity — !important is what
+     outranks this class-only selector on specificity, !important is what
      actually makes this override win instead of leaving that light gradient
      showing through. */
   body.dark-mode .logistics-note,body.dark-mode .addon-section{background:#302b1c!important;color:#eadb9c;border-color:#665a2c}
@@ -852,7 +852,7 @@
 
   /* A handful of "always-dark chrome" bars (job table header, job-group
      divider, the active segment toggle) reuse var(--ink) as one end of a
-     gradient specifically because --ink is a dark near-black in light mode —
+     gradient specifically because --ink is a dark near-black in light mode,
      but --ink flips to a near-white text color in dark mode, so those same
      rules would otherwise render half-light/half-dark instead of solid dark.
      Flat colors + !important here, not another gradient: a gradient is what
@@ -864,7 +864,7 @@
   body.dark-mode .segmented-option{background:#222427;color:#b3b8bd;border-color:#3b3f43}
   body.dark-mode .segmented-option.active{background:linear-gradient(135deg,#101113 0%,#2c2d30 100%);color:#fff}
 
-  /* Driver/asset/status pills in the Logistics roster — light pastel chips
+  /* Driver/asset/status pills in the Logistics roster: light pastel chips
      by design in light mode, with no dark counterpart at all before this. */
   body.dark-mode .logistics-pill.available{background:#1d3327;color:#5fd39a}
   body.dark-mode .logistics-pill.assigned{background:#3d2418;color:#f0a878}
@@ -1370,7 +1370,7 @@
     <div class="logistics-toolbar"><button type="button" class="job-stage-btn edit" id="seniorRefresh">Refresh</button><button type="button" class="btn-primary" id="dashEditBtn" hidden>Customize layout</button></div>
   </div>
   <div class="dash-edit-bar" id="dashEditBar" hidden>
-    <div class="dash-edit-help"><b>Customizing the Admin page for every admin.</b> Drag a panel by its title bar to move it. Drag the bottom-right corner to resize (double-click the corner to go back to auto height). "Who sees it" controls whether other admins get the panel at all.</div>
+    <div class="dash-edit-help"><b>Customizing the Admin page for every admin.</b> Drag a panel by its title bar to move it. Drag the bottom right corner to resize (double click the corner to go back to auto height). "Who sees it" controls whether other admins get the panel at all.</div>
     <div class="dash-hidden-tray" id="dashHiddenTray"></div>
     <div class="dash-edit-actions"><button type="button" class="job-stage-btn cancel" id="dashResetBtn">Reset to default</button><button type="button" class="job-stage-btn edit" id="dashCancelBtn">Cancel</button><button type="button" class="btn-primary" id="dashSaveBtn">Save layout</button></div>
   </div>
@@ -1394,7 +1394,7 @@
     </div>
     <div class="panel" data-panel="chartJobs">
       <div class="panel-head"><h2>Jobs on site per day</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit chart-table-btn" data-chart="chartJobs" aria-pressed="false">Table</button></div></div>
-      <div class="logistics-note">Open jobs on the board for the next 14 days. A multi-day job counts on every day from its report date to its end date.</div>
+      <div class="logistics-note">Open jobs on the board for the next 14 days. A job that runs several days counts on every day from its report date to its end date.</div>
       <div class="chart-body" id="chartJobsBody"><p class="load-state">Loading...</p></div>
     </div>
     <div class="panel" data-panel="chartCrew">
@@ -1461,7 +1461,7 @@
   </div>
 </div>
 
-<!-- Standalone Container booking — creates via LOGISTICS_CREATE_URL, then syncs shared state. -->
+<!-- Standalone Container booking: creates via LOGISTICS_CREATE_URL, then syncs shared state. -->
 <div class="overlay" id="containerOverlay"></div>
 <div class="sheet" id="containerSheet">
   <div class="sheet-head"><h2>Book Standalone Container</h2><button id="closeContainerSheet">&times;</button></div>
@@ -1470,7 +1470,7 @@
     <div class="field"><label for="containerPhone">Client Phone</label><input type="tel" id="containerPhone" placeholder="+15555555555" inputmode="tel" maxlength="12" value="+1"></div>
     <div class="field"><label for="containerAddress">Delivery Address</label><input type="text" id="containerAddress" placeholder="Street, City"></div>
     <div class="field">
-      <label>Additional Stops <span class="label-optional">(optional — for multi-stop routes)</span></label>
+      <label>Additional Stops <span class="label-optional">(optional, for routes with several stops)</span></label>
       <div class="stops-editor" id="containerStopsList"></div>
       <button type="button" class="link-btn-inline" id="containerAddStopBtn">+ Add Stop</button>
     </div>
@@ -1491,7 +1491,7 @@
     <div class="field"><label for="editContainerPhone">Client Phone</label><input type="tel" id="editContainerPhone" placeholder="+15555555555" inputmode="tel" maxlength="12"></div>
     <div class="field"><label for="editContainerAddress">Delivery Address</label><input type="text" id="editContainerAddress" placeholder="Street, City"></div>
     <div class="field">
-      <label>Additional Stops <span class="label-optional">(optional — for multi-stop routes)</span></label>
+      <label>Additional Stops <span class="label-optional">(optional, for routes with several stops)</span></label>
       <div class="stops-editor" id="editContainerStopsList"></div>
       <button type="button" class="link-btn-inline" id="editContainerAddStopBtn">+ Add Stop</button>
     </div>
@@ -1542,7 +1542,7 @@
       </div>
     </div>
     <div class="field">
-      <label for="jobValue">Job Value <span class="label-optional">(optional — estimated $ value)</span></label>
+      <label for="jobValue">Job Value <span class="label-optional">(optional, estimated $ value)</span></label>
       <input type="number" id="jobValue" placeholder="e.g. 2500" min="0" step="1">
     </div>
     <div class="field">
@@ -1567,7 +1567,7 @@
     </div>
     <div class="field-row">
       <div class="field">
-        <label for="jobEndDate">Report End Date <span class="label-optional">(optional — defaults to Report Date)</span></label>
+        <label for="jobEndDate">Report End Date <span class="label-optional">(optional, defaults to Report Date)</span></label>
         <input type="date" id="jobEndDate">
       </div>
       <div class="field">
@@ -1609,7 +1609,7 @@
       </div>
     </div>
     <div class="addon-section" id="logisticsAddonSection">
-      <label>Logistics Add-Ons <span class="label-optional">(optional — intended for Demo/Contract opportunities)</span></label>
+      <label>Logistics Add-Ons <span class="label-optional">(optional, intended for Demo/Contract opportunities)</span></label>
       <div class="addon-block"><label class="addon-toggle"><input type="checkbox" id="addContainerToggle"> Add Container Loads</label><div class="addon-fields" id="containerAddonFields" hidden><div class="field-row"><div class="field"><label for="addonContainerQty">Quantity / Loads</label><input type="number" id="addonContainerQty" min="1" max="20" value="1"></div><div class="field"><label for="addonContainerSize">Container Size</label><select id="addonContainerSize"><option>10 Yard</option><option>20 Yard</option><option selected>30 Yard</option><option>40 Yard</option><option>Materials</option></select></div></div><div class="field-row"><div class="field"><label for="addonContainerDate">Requested Date</label><input type="date" id="addonContainerDate"></div><div class="field"><label for="addonContainerTime">Requested Time</label><input type="time" id="addonContainerTime"></div></div><div class="field"><label for="addonContainerMovement">Movement</label><select id="addonContainerMovement"><option value="container_drop">Drop</option><option value="container_pickup">Pickup</option><option value="container_swap">Swap</option><option value="dump_and_return">Dump &amp; Return</option></select></div></div></div>
       <div class="addon-block"><label class="addon-toggle"><input type="checkbox" id="addLowboyToggle"> Add Driver / Lowboy Loads</label><div class="addon-fields" id="lowboyAddonFields" hidden><div class="field-row"><div class="field"><label for="addonLowboyQty">Quantity / Loads</label><input type="number" id="addonLowboyQty" min="1" max="20" value="1"></div><div class="field"><label for="addonEquipment">Equipment Being Moved</label><input type="text" id="addonEquipment" placeholder="e.g. CAT 308 Excavator"></div></div><div class="field-row"><div class="field"><label for="addonLowboyDate">Requested Date</label><input type="date" id="addonLowboyDate"></div><div class="field"><label for="addonLowboyTime">Requested Time</label><input type="time" id="addonLowboyTime"></div></div><div class="field-row"><div class="field"><label for="addonPickup">Pickup</label><input type="text" id="addonPickup" value="A2Z Yard"></div><div class="field"><label for="addonDestination">Destination</label><input type="text" id="addonDestination" placeholder="Defaults to job address"></div></div></div></div>
     </div>
@@ -1628,7 +1628,7 @@
   </div>
 </div>
 
-<!-- Edit Job Details slide-over — separate sheet/overlay from Book Job so the
+<!-- Edit Job Details slide-over: separate sheet/overlay from Book Job so the
      two forms never share state or IDs. Only for details that don't have a
      dedicated flow already (report/end times use the Save/Edit-times flow in
      the table row; crew uses + Assign Crew / the chip's remove button). -->
@@ -1700,7 +1700,7 @@
       <div class="addon-block"><label class="addon-toggle"><input type="checkbox" id="editAddLowboyToggle"> Add Driver / Lowboy Loads</label><div class="addon-fields" id="editLowboyAddonFields" hidden><div class="field-row"><div class="field"><label for="editAddonLowboyQty">Quantity / Loads</label><input type="number" id="editAddonLowboyQty" min="1" max="20" value="1"></div><div class="field"><label for="editAddonEquipment">Equipment Being Moved</label><input type="text" id="editAddonEquipment" placeholder="e.g. CAT 308 Excavator"></div></div><div class="field-row"><div class="field"><label for="editAddonLowboyDate">Requested Date</label><input type="date" id="editAddonLowboyDate"></div><div class="field"><label for="editAddonLowboyTime">Requested Time</label><input type="time" id="editAddonLowboyTime"></div></div><div class="field-row"><div class="field"><label for="editAddonPickup">Pickup</label><input type="text" id="editAddonPickup" value="A2Z Yard"></div><div class="field"><label for="editAddonDestination">Destination</label><input type="text" id="editAddonDestination" placeholder="Defaults to job address"></div></div></div></div>
     </div>
     <div class="field">
-      <label>Crew Size <span class="label-optional">(informational — not enforced when assigning crew)</span></label>
+      <label>Crew Size <span class="label-optional">(informational, not enforced when assigning crew)</span></label>
       <div class="stepper">
         <button type="button" id="editCrewMinus">–</button>
         <span id="editCrewCount">4</span>
@@ -1884,7 +1884,7 @@ function setSessionToken(token) {
   };
 })();
 /* ============================================================
-   CONFIG — replace with your live Make.com webhook URLs
+   CONFIG: replace with your live Make.com webhook URLs
    ============================================================ */
 const CONFIG = {
   GET_DASHBOARD_DATA_URL: "/api/dashboard-data",
@@ -1904,7 +1904,7 @@ const CONFIG = {
   // Netlify is the sole dispatch-state authority.
   SHARED_STATE_SYNC_URL: "/api/shared-state",
   // Edit Job Details sheet (crew size / job value / scope / tools / address /
-  // client phone, post-booking) — a dedicated webhook so this never has to
+  // client phone, post-booking), a dedicated webhook so this never has to
   // share routing logic with create/complete/cancel or assign/remove.
   // Expects POST body: { jobId, action: "update_details", jobAddress,
   // clientPhone, scopeOfWork, toolsRequired, monetaryValue, crewSize }
@@ -1979,7 +1979,7 @@ function buildStopsPayload(editor, firstStop) {
 
 // Guards against a webhook call that never resolves (e.g. a Make scenario
 // with no Webhook Respond module on the branch that gets hit, or a
-// scheduled/interval trigger instead of "run immediately") — without this,
+// scheduled/interval trigger instead of "run immediately"), without this,
 // a hung fetch leaves buttons stuck on "Saving..." forever with no error.
 function fetchWithTimeout(url, options, timeoutMs = 15000) {
   const controller = new AbortController();
@@ -1993,23 +1993,23 @@ let currentTab = "available";
 let dashboardData = { jobs: [], labor: [], sharedStateByJobId: new Map() };
 
 const REPORT_TIME_FIELD_ID = "WtpFGtiB7hgmTGTsHJAW";
-const START_DATE_FIELD_ID = "rY3IebKlcBhAjWlaSSQm"; // "Report Date" — Single line
-const REPORT_END_TIME_FIELD_ID = "XHoqx1ZNRcNRtwDCb4He"; // "REPORT END TIME" — Single line
-const REPORT_END_DATE_FIELD_ID = "gPo421cmQiTMJP2EpkD4"; // "REPORT END DATE" — Date picker (stores fieldValueDate, a Unix ms timestamp)
+const START_DATE_FIELD_ID = "rY3IebKlcBhAjWlaSSQm"; // "Report Date": Single line
+const REPORT_END_TIME_FIELD_ID = "XHoqx1ZNRcNRtwDCb4He"; // "REPORT END TIME": Single line
+const REPORT_END_DATE_FIELD_ID = "gPo421cmQiTMJP2EpkD4"; // "REPORT END DATE": Date picker (stores fieldValueDate, a Unix ms timestamp)
 
 function getCustomFieldValue(customFields, fieldId) {
   if (!Array.isArray(customFields)) return '';
   const match = customFields.find(field => field && field.id === fieldId);
   if (!match) return '';
   // Date-picker fields (like REPORT END DATE) store their value under
-  // fieldValueDate as a Unix ms timestamp instead of fieldValueString —
+  // fieldValueDate as a Unix ms timestamp instead of fieldValueString,
   // convert straight to YYYY-MM-DD so it drops right into <input type="date">.
   if (match.fieldValueDate) {
     const d = new Date(match.fieldValueDate);
     return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
   }
   // Multi-select / checkbox fields (like Tools Required) tend to come back
-  // as an array under fieldValueArray or fieldValue instead of a string —
+  // as an array under fieldValueArray or fieldValue instead of a string,
   // join them into one comma-separated string either way.
   if (Array.isArray(match.fieldValueArray)) return match.fieldValueArray.join(', ');
   if (Array.isArray(match.fieldValue)) return match.fieldValue.join(', ');
@@ -2134,7 +2134,7 @@ function getClientPhone(job) {
 // --- Opportunity value + GHL deep link ---------------------------------
 // monetaryValue is a standard GHL Opportunity field (not a custom field),
 // so it should already be sitting on the raw job object from
-// GET_DASHBOARD_DATA_URL — check your network tab if this comes through
+// GET_DASHBOARD_DATA_URL: check your network tab if this comes through
 // blank and the key turns out to be named something else on your account.
 function getOpportunityValue(job) {
   const shared = getSharedState(job);
@@ -2153,7 +2153,7 @@ function getOpportunityValue(job) {
 }
 
 function formatCurrency(num) {
-  if (num === null || num === undefined || isNaN(num)) return '—';
+  if (num === null || num === undefined || isNaN(num)) return 'N/A';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
 }
 
@@ -2168,11 +2168,11 @@ function getGhlOpportunityLink(job) {
 }
 
 // GHL's "Report Date"/"Report End Time" custom fields are plain single-line
-// text, not real date/time pickers — so whatever a human typed into them in
+// text, not real date/time pickers, so whatever a human typed into them in
 // GHL's UI could be MM-DD-YYYY, MM/DD/YYYY, or 12-hour "hh:mm AM/PM" instead
 // of the strict YYYY-MM-DD / 24-hour HH:mm that <input type="date"> and
 // <input type="time"> require. The browser silently rejects anything else
-// (logs a console warning, leaves the field blank) — these normalize the
+// (logs a console warning, leaves the field blank), these normalize the
 // common alternate formats before they ever reach an input's value.
 function normalizeDateForInput(raw) {
   if (!raw) return '';
@@ -2183,7 +2183,7 @@ function normalizeDateForInput(raw) {
     const [, mo, day, yr] = mdY;
     return `${yr}-${mo.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
-  return s; // unrecognized format — leave as-is, browser will just ignore it
+  return s; // unrecognized format; leave as-is, browser will just ignore it
 }
 
 function normalizeTimeForInput(raw) {
@@ -2213,7 +2213,7 @@ function getReportDate(job) {
   const override = window.jobTimeOverride && window.jobTimeOverride[job.id];
   if (override && override.date) return override.date;
   // Was previously reading job.reportDate/dateAdded/startTime, none of which
-  // exist on the raw GHL object — this field's real value lives in customFields.
+  // exist on the raw GHL object, this field's real value lives in customFields.
   return normalizeDateForInput(getCustomFieldValue(job.customFields, START_DATE_FIELD_ID) || '');
 }
 
@@ -2270,14 +2270,14 @@ function getReportEndDate(job) {
 }
 
 // A job's report/end time is "locked" (crew can be assigned) once all four
-// report/end date+time fields are filled in — whether that's because it was
+// report/end date+time fields are filled in, whether that's because it was
 // explicitly saved here, arrived that way from the shared database, or already
 // had real report/end times set and was never touched on this dashboard. No
 // separate "locked" flag is tracked in the shared record; presence of all
 // four fields is the only signal, since nothing ever writes them without
 // also having all four. The one exception: an explicit LOCAL unlock (stored
 // === false, the dispatcher just hit Edit) always wins, even if the shared
-// record's times are still filled in — unlocking-to-edit is deliberately
+// record's times are still filled in, unlocking-to-edit is deliberately
 // never pushed to the shared record, since it's a per-dispatcher, ephemeral
 // "I'm working on this right now" signal, not a durable fact worth syncing.
 function isJobTimeLocked(job) {
@@ -2350,7 +2350,7 @@ function normalizeLabor(data) {
 // separated by "|||", fields within a record separated by "|", in this
 // fixed order:
 //   jobId|reportDate|reportTime|reportEndTime|reportEndDate|crew|scopeOfWork|toolsRequired|monetaryValue|active
-// No separate "locked" field — every write path (Save Times, Assign Crew)
+// No separate "locked" field; every write path (Save Times, Assign Crew)
 // only ever fires once all four report/end date+time fields are filled in,
 // so isJobTimeLocked() below just checks whether all four are present.
 function parseSharedStateString(raw) {
@@ -2535,7 +2535,7 @@ function renderRoster() {
 
   if (laborList.length === 0) {
     el.innerHTML = `<li style="border:none; display:block; text-align:center; padding:32px 20px; color:var(--ink-soft);">
-      Labor roster isn't connected yet — the Contacts search hasn't been wired into this webhook.
+      Labor roster isn't connected yet. The Contacts search hasn't been wired into this webhook.
     </li>`;
     return;
   }
@@ -2599,7 +2599,7 @@ function getCrew(job) {
 // ---------- Live Available/Booked status ----------
 // A worker's Available/Booked state is computed fresh on every render from
 // whether they're assigned to a job whose report start/end window covers
-// right now, instead of trusting a static status field — so it flips
+// right now, instead of trusting a static status field, so it flips
 // automatically the moment a job starts or ends, no manual action needed.
 
 function normalizePhoneForMatch(raw) {
@@ -2674,8 +2674,8 @@ function isJobOpen(job) {
   return !/complete|cancel/.test(label);
 }
 
-// Scans every open job (not Completed/Cancelled) — regardless of whether its
-// report window has started yet — and collects who's on it, so a worker
+// Scans every open job (not Completed/Cancelled), regardless of whether its
+// report window has started yet, and collects who's on it, so a worker
 // moves to "Booked" the moment they're assigned rather than only while the
 // job happens to be actively running right now. Matched by phone via the
 // crew-assignment override (the reliable source right now) and by name via
@@ -2717,18 +2717,18 @@ function toLocalYMD(d) {
   return `${y}-${m}-${day}`;
 }
 
-// Purely client-side grouping — no GHL field, no backend change.
+// Purely client-side grouping; no GHL field, no backend change.
 //
 // "Never confirmed" (truly Unscheduled) means: this job has never been
 // locked on this dashboard (no explicit true/false in jobTimesLocked) AND
 // it didn't arrive with a complete report/end date+time already filled in
 // either. That's what actually filters out stray/partial/leftover custom
-// field values that were never confirmed via Save — without that check, an
+// field values that were never confirmed via Save, without that check, an
 // unconfirmed value that happens to sort <= today (a malformed or non-ISO
 // leftover string) lands in Today by accident.
 //
 // Explicitly UNLOCKED (stored === false, i.e. the dispatcher clicked Edit on
-// a previously-locked job) is deliberately NOT treated as unconfirmed here —
+// a previously-locked job) is deliberately NOT treated as unconfirmed here,
 // unlocking to tweak a time shouldn't yank the job out of its date section
 // into Unscheduled mid-edit. It keeps bucketing by its last-known date until
 // Save is hit again (or the date is actually cleared out).
@@ -2759,7 +2759,7 @@ function renderJobs(jobs) {
   emptyState.style.display = 'none';
 
   // Within each date group, jobs with a locked (saved & confirmed) report
-  // time float to the top, soonest first — unlocked jobs (no confirmed time
+  // time float to the top, soonest first, unlocked jobs (no confirmed time
   // yet) stay below them in whatever order they arrived in.
   function sortGroup(list) {
     return list.slice().sort((a, b) => {
@@ -2800,15 +2800,15 @@ function renderJobs(jobs) {
   }
 
   function buildJobRow(j) {
-    const client = (j.contact && j.contact.name) ? j.contact.name : '—';
-    const address = j.name || '—';
+    const client = (j.contact && j.contact.name) ? j.contact.name : 'N/A';
+    const address = j.name || 'N/A';
     const stageInfo = STAGE_LABELS[j.pipelineStageId];
     const optimisticStage = getOptimisticJobStage(j);
     const statusLabel = optimisticStage === 'complete'
       ? 'Completed'
       : optimisticStage === 'cancel'
         ? 'Cancelled'
-        : (stageInfo ? stageInfo.label : (j.status || '—'));
+        : (stageInfo ? stageInfo.label : (j.status || 'N/A'));
     const statusClass = optimisticStage ? 'confirmed' : (stageInfo ? stageInfo.cls : 'open');
     const jobId = j.id || '';
     const terminalLocally = optimisticStage === 'complete' || optimisticStage === 'cancel';
@@ -2886,7 +2886,7 @@ function renderJobs(jobs) {
     const reportCell = timesLocked
       ? `
       <div class="time-edit-wrap locked" data-job-id="${jobId}">
-        <span class="time-locked-display mono">${reportDateVal || '—'} ${reportTimeVal || ''}</span>
+        <span class="time-locked-display mono">${reportDateVal || 'N/A'} ${reportTimeVal || ''}</span>
       </div>
     `
       : `
@@ -2899,7 +2899,7 @@ function renderJobs(jobs) {
     const endCell = timesLocked
       ? `
       <div class="time-edit-wrap locked" data-job-id="${jobId}">
-        <span class="time-locked-display mono">${endDateVal || '—'} ${endTimeVal || ''}</span>${nightWork ? '<span class="night-badge" title="Night work: PM start, next-morning finish">Night</span>' : ''}
+        <span class="time-locked-display mono">${endDateVal || 'N/A'} ${endTimeVal || ''}</span>${nightWork ? '<span class="night-badge" title="Night work: PM start, next-morning finish">Night</span>' : ''}
         <button type="button" class="time-unlock" title="Unlock to edit report/end time">Edit</button>
       </div>
     `
@@ -2943,7 +2943,7 @@ function renderJobs(jobs) {
   }
 
   // Today/Tomorrow/Future/Unscheduled, in that order, each as its own labeled
-  // section within the same table — always shown, even empty, so "nothing
+  // section within the same table, always shown, even empty, so "nothing
   // booked today" is a visible fact rather than a section that just vanishes.
   const sectionDefs = [
     { key: 'today', label: 'Today' },
@@ -2967,14 +2967,14 @@ function renderJobs(jobs) {
 }
 
 // True when the backend hasn't started sending associations at all (vs. a job
-// that legitimately has zero crew assigned yet) — keeps the honest placeholder
+// that legitimately has zero crew assigned yet), keeps the honest placeholder
 // showing until your Make.com scenario adds the field.
 function job_associationsMissing(job) {
   return !job.associations && !job.contacts && !job.crew;
 }
 
 // Report/end time edits are saved to localStorage so they survive a page
-// refresh even if GHL/Make hasn't caught up to the write yet — still fully
+// refresh even if GHL/Make hasn't caught up to the write yet, still fully
 // editable afterward, saving again just overwrites the stored values.
 function loadTimeOverridesFromStorage(key) {
   try {
@@ -3042,7 +3042,7 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false } = {}) {
   const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected').map(w => w.workerName);
   if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
   else if (rapid) showToast(assignedWorkers.length === 1 ? 'Crew assigned. Schedule sent now.' : `Crew assigned. Schedule sent now to ${assignedWorkers.length} workers.`);
-  else showToast(assignedWorkers.length === 1 ? 'Crew assignment saved.' : `Crew assignment saved — ${assignedWorkers.length} notifications sent.`);
+  else showToast(assignedWorkers.length === 1 ? 'Crew assignment saved.' : `Crew assignment saved. ${assignedWorkers.length} notifications sent.`);
   render();
 }
 
@@ -3055,7 +3055,7 @@ function updateCrewAssignSelection(panel) {
   if (summary) summary.innerHTML = names.length ? `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> texts the schedule 12 hours before the start time. <b>Send schedule now</b> texts it right away.` : '';
   if (btn && !btn.disabled) btn.textContent = 'Assign selected';
   // The jobs table scrolls horizontally, which also clips this dropdown on the
-  // last rows — bring the Confirm button into view when it appears.
+  // last rows, bring the Confirm button into view when it appears.
   fitCrewPanel();
   const last = panel.querySelector('.crew-assign-rapid') || btn;
   if (last && names.length) last.scrollIntoView({ block: 'nearest' });
@@ -3076,7 +3076,7 @@ async function removeCrewMember(jobId, phone, name, chipEl) {
 
 
 // Moves a job to the Completed or Cancelled pipeline stage in GHL. Reuses
-// CREATE_JOB_URL — the Make scenario behind it routes on the `action` field
+// CREATE_JOB_URL: the Make scenario behind it routes on the `action` field
 // (same pattern as MOVE_WORKER_URL's assign/remove) to tell create/complete/
 // cancel apart.
 async function setJobStage(jobId, action, btn) {
@@ -3340,7 +3340,7 @@ function localIsoDate(d = new Date()) {
 
 function openEodSheet(jobId, btn) {
   const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId);
-  if (!job) { showToast("Couldn't find that job — try refreshing.", true); return; }
+  if (!job) { showToast("Couldn't find that job. Try refreshing.", true); return; }
   eodJobId = jobId; eodTriggerBtn = btn || null;
   renderEodSections();
   fillEodDefaults(job);
@@ -3612,7 +3612,7 @@ document.querySelectorAll('.roster-tab').forEach(tab => {
 document.getElementById('rosterSearch').addEventListener('input', renderRoster);
 
 // The Available/Booked Today stat cards up top act as shortcuts into the
-// same roster tabs below — click one and it switches the roster tab,
+// same roster tabs below, click one and it switches the roster tab,
 // updates the active state, and scrolls the roster panel into view.
 document.querySelectorAll('.status-card.available, .status-card.booked').forEach(card => {
   card.addEventListener('click', () => {
@@ -3638,7 +3638,7 @@ const JOB_PIPELINE_IDS = {
 // pipelineId, so hourly-vs-contract can't be read off JOB_PIPELINE_IDS
 // directly once a job exists. These are the two "won" stage IDs each
 // pipeline's jobs sit at (same constants the Create/Update Jobs-Opportunities
-// scenario uses to place a job into "won" at creation) — good enough to tell
+// scenario uses to place a job into "won" at creation), good enough to tell
 // the two apart for an existing job without needing a new shared database column.
 const WON_STAGE_IDS = {
   hourly: "6cfb3e15-0954-4f94-9f27-29f8f45b185d",
@@ -3647,7 +3647,7 @@ const WON_STAGE_IDS = {
 function isHourlyJob(job) {
   if (job && job.sourceType === 'change_order') return false;
   if (job && job.pipelineStageId === WON_STAGE_IDS.contract) return false;
-  return true; // default true (hourly) — matches WON_STAGE_IDS.hourly and any unrecognized stage
+  return true; // default true (hourly); matches WON_STAGE_IDS.hourly and any unrecognized stage
 }
 
 // Assigned User selector: live GHL location users, last pick remembered on this browser.
@@ -3842,7 +3842,7 @@ document.getElementById('submitBook').addEventListener('click', async () => {
         ownerAssignFailed = !!(data.ownerAssignment && data.ownerAssignment.status === 'error');
         newJobId = (data && (data.id || data.opportunityId || (data.opportunity && data.opportunity.id))) || '';
       } catch (parseErr) {
-        // Not JSON — GHL/Opportunity IDs are alphanumeric, ~20 chars, no
+        // Not JSON: GHL/Opportunity IDs are alphanumeric, ~20 chars, no
         // spaces or punctuation, so a bare ID response passes this check.
         if (/^[A-Za-z0-9_-]{10,40}$/.test(raw)) {
           newJobId = raw;
@@ -3908,13 +3908,13 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     if (ownerAssignFailed) showToast('Job created, but the assigned user could not be set in GHL. Assign it on the contact in GHL.', true);
     else if (addonFailures) showToast(`Job created, but ${addonFailures} logistics add-on(s) need attention.`, true);
     else if (addonRequests.length) showToast(`Job created with ${addonRequests.length} logistics add-on(s).`);
-    else showToast(`Job created — ${payload.crewSize} crew slot(s) ready in GHL.`);
+    else showToast(`Job created. ${payload.crewSize} crew slot(s) ready in GHL.`);
     closeSheetFn();
 
     await refreshAll();
 
     // Button is done the moment the sheet closes and the board has its first
-    // refresh — nothing below should keep "Creating..." on screen. GHL's
+    // refresh, nothing below should keep "Creating..." on screen. GHL's
     // /opportunities/search endpoint (what the dashboard-data scenario reads
     // job lists from) is index-backed and can lag a beat right after a brand
     // new opportunity is created, separate from the shared database write itself
@@ -3944,7 +3944,7 @@ document.getElementById('submitBook').addEventListener('click', async () => {
 });
 
 /* ---------- Edit Job Details sheet ---------- */
-// Separate overlay/sheet from Book Job, its own state — never touches the
+// Separate overlay/sheet from Book Job, its own state, never touches the
 // booking form's fields, and posts to a dedicated webhook so it can't
 // interfere with create/complete/cancel (CREATE_JOB_URL), assign/remove
 // (MOVE_WORKER_URL), or the report/end time Save/Edit flow (UPDATE_JOB_URL).
@@ -3957,7 +3957,7 @@ let currentEditJobVersion = 0;
 function openEditJobSheet(jobId) {
   const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId);
   if (!job) {
-    showToast("Couldn't find that job — try refreshing.", true);
+    showToast("Couldn't find that job. Try refreshing.", true);
     return;
   }
   currentEditJobId = jobId;
@@ -3991,7 +3991,7 @@ function openEditJobSheet(jobId) {
   document.getElementById('editAddonLowboyTime').value = getReportTime(job) || '';
 
   // Crew size isn't tracked/displayed anywhere on the board today (it's only
-  // ever sent once, at booking) — default to the actual current crew count
+  // ever sent once, at booking), default to the actual current crew count
   // as the closest available starting point, since there's no stored value
   // to read back.
   const currentCrewCount = getCrew(job).length;
@@ -4120,7 +4120,7 @@ document.getElementById('submitEditJob').addEventListener('click', async () => {
   } catch (err) {
     console.warn(err);
     const msg = err && err.name === "AbortError"
-      ? "No response from the Edit Details webhook after 15s — check the Make scenario has a Webhook Respond module on every branch."
+      ? "No response from the Edit Details webhook after 15s. Check the Make scenario has a Webhook Respond module on every branch."
       : "Couldn't save job details. Check CONFIG.EDIT_JOB_DETAILS_URL.";
     showToast(err.message || msg, true);
   } finally {
@@ -4318,12 +4318,12 @@ function renderLogistics() {
   const buildLogisticsRow = m => {
     const sourceType = logisticsSourceType(m);
     const oppId = m.sourceOpportunityId || m.opportunityId || m.jobId || m.id || '';
-    const sourceLabel = m.jobAddress || m.deliveryAddress || m.destinationAddress || m.address || m.name || m.sourceDisplayId || m.opportunityName || m.jobName || oppId || '—';
+    const sourceLabel = m.jobAddress || m.deliveryAddress || m.destinationAddress || m.address || m.name || m.sourceDisplayId || m.opportunityName || m.jobName || oppId || 'N/A';
     const link = oppId ? getGhlOpportunityLink({ id: oppId }) : '';
     const movement = m.movementType || m.moveType || m.type || (sourceType === 'container' ? 'Container Dispatch' : 'Logistics Move');
     const equipment = m.equipment || m.container || m.assetDescription || '';
     const notes = m.notes || m.scopeOfWork || m.description || '';
-    const pickup = m.pickupAddress || m.pickup || 'A2Z Yard', destination = m.destinationAddress || m.deliveryAddress || m.jobAddress || m.address || m.destination || m.dropoff || m.name || '—';
+    const pickup = m.pickupAddress || m.pickup || 'A2Z Yard', destination = m.destinationAddress || m.deliveryAddress || m.jobAddress || m.address || m.destination || m.dropoff || m.name || 'N/A';
     const stops = Array.isArray(m.stops) ? m.stops : [];
     const routeDisplay = stops.length > 1
       ? stops.map(s => escapeLogisticsHtml(s.address) + (s.completedAt ? ' &#10003;' : '')).join(' &rarr; ')
@@ -4336,14 +4336,14 @@ function renderLogistics() {
     const backendScheduleLocked = ['scheduled', 'assigned', 'ready', 'en_route', 'en route', 'in_transit', 'in transit'].includes(String(m.status || '').toLowerCase()) && date && time;
     const scheduleLocked = scheduleOverride?.locked === false ? false : Boolean((scheduleOverride && scheduleOverride.locked) || backendScheduleLocked || (m.scheduledDate && m.scheduledTime));
     const scheduleCell = scheduleLocked
-      ? `<div class="time-edit-wrap locked"><span>${escapeLogisticsHtml(date || '—')}<br>${escapeLogisticsHtml(time || '—')}</span><button type="button" class="time-unlock logistics-schedule-edit" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit</button></div>`
+      ? `<div class="time-edit-wrap locked"><span>${escapeLogisticsHtml(date || 'N/A')}<br>${escapeLogisticsHtml(time || 'N/A')}</span><button type="button" class="time-unlock logistics-schedule-edit" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit</button></div>`
       : `<div class="time-edit-wrap"><input type="date" class="report-date-input mono logistics-date-input" value="${escapeLogisticsHtml(date)}"><input type="time" class="report-time-input mono logistics-time-input" value="${escapeLogisticsHtml(time)}"><button type="button" class="end-save logistics-schedule-lock" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Lock</button></div>`;
     const status = m.status || 'Unassigned', statusCls = logisticsStatusClass(status);
     const contact = m.contact || {};
     const contactName = contact.companyName || m.companyName || contact.name || m.clientName || '';
     const contactSecondary = contact.companyName && contact.name ? contact.name : '';
     const standaloneValue = sourceType === 'container' ? getOpportunityValue(m) : null;
-    const standaloneValueDisplay = standaloneValue === null ? '—' : formatCurrency(standaloneValue);
+    const standaloneValueDisplay = standaloneValue === null ? 'N/A' : formatCurrency(standaloneValue);
     const terminal = /complete|cancel|lost|abandon/i.test(String(status));
     const assignable = !terminal && (m.moveId || m.addonType);
     const assignedDriverId = m.driverId || (m.driver && m.driver.id) || '';
@@ -4376,7 +4376,7 @@ function renderLogistics() {
     const targetType = logisticsTargetType(m);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
     const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
-    return `<tr data-source="${sourceType}"><td data-label="Move"><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || '—')}</strong></td><td data-label="Destination"><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td data-label="Value"><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td data-label="Type / equipment"><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td data-label="Notes" class="logistics-route">${escapeLogisticsHtml(notes || '—')}</td><td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td><td data-label="Schedule" class="mono">${scheduleCell}</td><td data-label="Driver">${escapeLogisticsHtml(assignedDriverName || '—')}</td><td data-label="Vehicle">${escapeLogisticsHtml(assignedAssetDisplay || '—')}</td><td data-label="Status"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
+    return `<tr data-source="${sourceType}"><td data-label="Move"><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || 'N/A')}</strong></td><td data-label="Destination"><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td data-label="Value"><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td data-label="Type / equipment"><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td data-label="Notes" class="logistics-route">${escapeLogisticsHtml(notes || 'N/A')}</td><td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td><td data-label="Schedule" class="mono">${scheduleCell}</td><td data-label="Driver">${escapeLogisticsHtml(assignedDriverName || 'N/A')}</td><td data-label="Vehicle">${escapeLogisticsHtml(assignedAssetDisplay || 'N/A')}</td><td data-label="Status"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
   };
   const sectionDefs = [
     { key: 'today', label: 'Today' },
@@ -4473,8 +4473,8 @@ function renderFieldAppAccess() {
     const key = fieldAppKeyFor(p);
     const isEnabled = fieldAppEnabled.some(e => e.driverKey === key);
     const statusCell = isEnabled ? '<span class="logistics-status assigned">Enabled</span>' : '<span class="logistics-route">Not enabled</span>';
-    if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td><td></td></tr>`;
-    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || '—')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
+    if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td><td></td></tr>`;
+    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
       + `<td class="field-app-actions">${p.id ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${escapeLogisticsHtml(p.id)}" data-name="${escapeLogisticsHtml(p.name)}">Edit</button> ` : ''}${isEnabled
         ? `<button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>`
         : `<button type="button" class="job-stage-btn edit field-app-enable" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}" ${p.phone ? '' : 'disabled title="Needs a phone number on file"'}>Enable</button>`}</td></tr>`;
@@ -4664,7 +4664,7 @@ async function resetLogisticsDay(jobId, button) {
       await runSideEffect(CONFIG.DRIVER_LOG_URL, payload, 'Driver log');
       await runSideEffect(CONFIG.DRIVER_ASSIGNMENT_URL, { ...payload, action: 'remove_driver', bookingMode: 'driver_assignment' }, 'Driver release notifications');
     }
-    showToast('Logistics day reset — Opportunity and move details preserved.');
+    showToast('Logistics day reset. Opportunity and move details preserved.');
     await loadLogistics();
   } catch (err) {
     console.error('Logistics daily reset failed:', err);
@@ -5390,7 +5390,7 @@ function psRenderPreview() {
   });
   document.getElementById('psBasis').textContent = `${sch.rows.length} phase${sch.rows.length === 1 ? '' : 's'} · ${sch.workdays} workdays`;
   const rows = sch.rows.map((r, i) => {
-    const range = r.days ? (r.from === r.to ? `Day ${r.from}` : `Day ${r.from}–${r.to}`) : '—';
+    const range = r.days ? (r.from === r.to ? `Day ${r.from}` : `Day ${r.from}–${r.to}`) : 'N/A';
     const dates = start && r.days ? `<span class="dates">${psShort(psWorkday(start, r.from))}${r.from !== r.to ? ' – ' + psShort(psWorkday(start, r.to)) : ''}</span>` : '';
     return `<tr><td class="num">${i + 1}</td><td><div class="pname">${psEsc(r.p.name || 'Untitled phase')}</div>${r.p.scope ? `<div class="scope">${psEsc(r.p.scope)}</div>` : ''}</td>
       <td class="n">${r.crew}</td><td class="n">${r.days}</td><td class="n">${range}${dates}</td><td class="n">${r.loads}</td></tr>`;
@@ -5699,7 +5699,7 @@ function renderScheduleView() {
           <p class="psv-hint">Drag a bar to move it. Drag either end to change its days; crew stays as set. Drag ⠿ to reorder. Pick In order or All at once to line everything back up.</p>
           ${psGantt(job.id, input, sch)}
           <div class="psv-table-wrap"><table class="psv-table"><thead><tr><th>#</th><th>Phase</th><th class="n">Crew</th><th class="n">Days</th><th class="n">Schedule</th><th class="n">Loads</th></tr></thead><tbody>
-            ${sch.rows.map((r, i) => `<tr><td><span class="psv-dot" style="background:${psColor(r.p.name)}"></span>${i + 1}</td><td>${psEsc(r.p.name)}</td><td class="n">${r.crew}</td><td class="n">${r.days}</td><td class="n">${r.days ? `Day ${r.from}–${r.to}` : '—'}${start && r.days ? `<small>${psShort(psWorkday(start, r.from))} – ${psShort(psWorkday(start, r.to))}</small>` : ''}</td><td class="n">${r.loads}</td></tr>`).join('')}
+            ${sch.rows.map((r, i) => `<tr><td><span class="psv-dot" style="background:${psColor(r.p.name)}"></span>${i + 1}</td><td>${psEsc(r.p.name)}</td><td class="n">${r.crew}</td><td class="n">${r.days}</td><td class="n">${r.days ? `Day ${r.from}–${r.to}` : 'N/A'}${start && r.days ? `<small>${psShort(psWorkday(start, r.from))} – ${psShort(psWorkday(start, r.to))}</small>` : ''}</td><td class="n">${r.loads}</td></tr>`).join('')}
           </tbody></table></div>
           <p class="psv-meta">${psModeLabel(input.mode)} · ${record.sentAt ? `PDF last sent ${new Date(record.sentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'PDF not sent yet'}</p>
           <div class="psv-actions">${actions}</div>
@@ -6022,7 +6022,7 @@ function decorateDash() {
       + `<button type="button" data-dash="narrower" title="Narrower">&minus;</button><span class="dash-size"></span><button type="button" data-dash="wider" title="Wider">+</button>`
       + `<select data-dash="audience" aria-label="Who sees it" ${locked ? 'disabled' : ''}><option value="all">All admins see it</option><option value="senior">Senior admins only</option></select>`
       + `<button type="button" data-dash="hide">Hide</button></div>`);
-    el.insertAdjacentHTML('beforeend', '<div class="dash-resize" title="Drag to resize. Double-click for auto height."></div>');
+    el.insertAdjacentHTML('beforeend', '<div class="dash-resize" title="Drag to resize. Double click for auto height."></div>');
   }
 }
 function applyDashLayout() {

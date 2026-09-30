@@ -1,5 +1,5 @@
 {
-  "name": "A2Z \u2014 COPY final response AFTER existing successful actions",
+  "name": "A2Z: COPY final response AFTER existing successful actions",
   "flow": [
     {
       "id": 900,

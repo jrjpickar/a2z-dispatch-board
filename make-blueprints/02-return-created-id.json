@@ -1,5 +1,5 @@
 {
-  "name": "A2Z \u2014 COPY final creation response; map the actual opportunity ID",
+  "name": "A2Z: COPY final creation response; map the actual opportunity ID",
   "flow": [
     {
       "id": 900,
