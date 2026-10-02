@@ -1900,6 +1900,10 @@ const CONFIG = {
   // the same webhook Reset Day already used, routed on action: "eod_sheet".
   // Sent through /api/workflow-effect with kind "eod_sheet".
   EOD_SHEET_URL: "https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l",
+  // Job log: also fired on Complete EOD Sheet, with the job's schedule and the
+  // crew as they were before the reset. Sent through /api/workflow-effect with
+  // kind "job_log" (server posts to JOB_LOG_WEBHOOK or the vqurtuiu... hook).
+  JOB_LOG_URL: "https://hook.us2.make.com/vqurtuiuxdbg9k1j7v03prsffquvh1xa",
   // Also handles Report End Time + Report End Date updates for existing jobs.
   // Expects POST body: { jobId, reportEndTime, reportEndDate }
   // Netlify is the sole dispatch-state authority.
@@ -3101,24 +3105,32 @@ async function setJobStage(jobId, action, btn) {
 // Sends the complete current dispatch snapshot so Make can map every field,
 // then clears only the daily schedule in the browser. The Opportunity and its
 // permanent details remain untouched.
-// When eodSheet is given (the Complete EOD Sheet flow), the only webhook call
-// is the sheet itself (action "eod_sheet"), sent right after the reset is saved.
+// When eodSheet is given (the Complete EOD Sheet flow), the webhook calls are
+// is the sheet itself (action "eod_sheet") plus the job log (kind "job_log"),
+// both sent right after the reset is saved.
 async function resetJobDay(jobId, btn, eodSheet) {
   const job = dashboardData.jobs.find(j => j.id === jobId);
   if (!job) return false;
   if (!eodSheet && !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return false;
   const crewBeforeReset = getCrew(job);
   const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
+  // Job log snapshot, taken BEFORE the reset clears the schedule and crew.
+  const jobLogPayload = eodSheet ? { jobId, action: 'eod_sheet', jobAddress: job.name || '', clientName: getClientName(job), clientPhone: getClientPhone(job),
+    scopeOfWork: getScopeOfWork(job), toolsRequired: getToolsRequired(job), monetaryValue: getOpportunityValue(job),
+    reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
+    assignedWorkers: removedWorkers } : null;
   btn.disabled = true;
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reset_dispatch', jobId });
     const problems = [];
     if (eodSheet) {
-      // EOD flow sends ONLY the eod_sheet event -- no separate "remove" call.
-      // The crew being released rides along in removedWorkers so Make can
-      // handle any release notifications inside the eod_sheet route.
+      // EOD flow sends the eod_sheet event plus the job log -- no separate
+      // "remove" call. The crew being released rides along in removedWorkers so
+      // Make can handle any release notifications inside the eod_sheet route.
       const sheetPayload = { ...eodSheet, action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day', crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
       try { await runSideEffect(CONFIG.EOD_SHEET_URL, sanitizeEodPayload(sheetPayload), 'EOD sheet', 'eod_sheet'); }
+      catch (error) { problems.push(error.message); }
+      try { await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log'); }
       catch (error) { problems.push(error.message); }
     } else if (removedWorkers.length) {
       try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers }, 'Worker release notifications'); }
@@ -6405,7 +6417,7 @@ function renderHistory() {
   document.getElementById('historyCount').textContent = String(seniorSends.length);
   const groups = new Map();
   for (const item of shown) { const k = item.jobId || item.jobName; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(item); }
-  const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
+  const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'job_log' ? 'Job log' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
   document.getElementById('historyList').innerHTML = groups.size ? [...groups.values()].map(items => `<div class="history-job"><h4>${sessionEsc(items[0].jobName || 'Job')}<small>${sessionEsc(items[0].jobId || '')} · ${items.length} sent</small></h4>`
     + items.map(i => `<div class="history-row"><div><span class="kind">${kindLabel(i.kind)}</span> <span class="file">${sessionEsc(i.fileName || i.detail || '')}</span></div><div>${i.status === 'failed' ? '<span class="st-failed">FAILED</span> ' : ''}${seniorWhen(i.at)}</div></div>`).join('') + '</div>').join('')
     : `<p class="load-state">${seniorSends.length ? 'No jobs match.' : 'Nothing sent yet. EOD sheets and Project Schedule PDFs show here once sent.'}</p>`;

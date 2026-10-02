@@ -24,7 +24,9 @@ Add a router path filtered on `action` = `rapid_assign` that sends the schedule 
 
 ## Complete EOD Sheet route (worker webhook)
 
-The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing Worksheet to the same worker webhook Reset Day already used: `https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l` (or `EOD_SHEET_WEBHOOK` / `WORKER_EFFECT_WEBHOOK` if set in Netlify). Add a router path filtered on `action` = `eod_sheet` and end it with the `{"ok":true}` Webhook response above. This is the only call the button makes; no separate `remove` event is sent. The released crew is included in `removedWorkers` if you want to notify them from this route.
+The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing Worksheet to the same worker webhook Reset Day already used: `https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l` (or `EOD_SHEET_WEBHOOK` / `WORKER_EFFECT_WEBHOOK` if set in Netlify). Add a router path filtered on `action` = `eod_sheet` and end it with the `{"ok":true}` Webhook response above. No separate `remove` event is sent. The released crew is included in `removedWorkers` if you want to notify them from this route.
+
+**Job log (second call on Complete EOD Sheet).** The button also posts plain JSON to the job log webhook `https://hook.us2.make.com/vqurtuiuxdbg9k1j7v03prsffquvh1xa` (override with `JOB_LOG_WEBHOOK` in Netlify). Fields: `jobId`, `action` (`"eod_sheet"`), `jobAddress`, `clientName`, `clientPhone`, `scopeOfWork`, `toolsRequired`, `monetaryValue`, `reportDate`, `reportTime`, `reportEndDate`, `reportEndTime`, `assignedWorkers` (array of `contactId`, `workerName`, `workerPhone`: the crew before the reset), plus `eventId`. The schedule fields are taken before the board clears the day. End that scenario with the same `{"ok":true}` Webhook response, or every EOD will show a Job log problem under Admin > Make / GHL problems.
 
 **1.8 change: the EOD sheet now arrives as `multipart/form-data`** (like the Project Schedule PDF), not JSON. The old JSON body carried the ~200 KB workbook as base64 text and Make was logging those runs with no data. After deploying:
 

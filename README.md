@@ -10,6 +10,7 @@ Includes the backend, edited dashboard, the read-only Field App for drivers/crew
 
 ## What's new in 1.8
 
+- **Complete EOD Sheet also fires the job log webhook** (`vqurtuiu…`, kind `job_log`, override with `JOB_LOG_WEBHOOK`): job details, the day's report/end date and time, and the crew as `assignedWorkers`, captured before the reset. JSON, independent of the EOD sheet call; each is confirmed and retryable on its own. See MAKE-SETUP.md.
 - **Fix: empty Complete EOD runs in Make.** The EOD sheet used to post one big JSON body with the ~200 KB workbook inside it as base64 text, and Make logged those runs with no data. It now posts like the Project Schedule does: `multipart/form-data`, the .xlsx as a real binary `file`, every other field as a plain form field. The dashboard and server also refuse to post a blank EOD (no job id or no filled line). **Make change needed, see MAKE-SETUP.md.** `EOD_SHEET_FORMAT=json` in Netlify brings the old JSON body back if you need it temporarily.
 - **Signed-in user.** Top left under the logo, like the dialer: name, email and ADMIN / USER. Inside GHL it signs in automatically the same way the Triple Line dialer does (GHL Custom Page encrypted user context, checked with `GHL_APP_SHARED_SECRET`). Outside GHL it asks once ("Who's using the board?") and the browser remembers; Switch user shows only then.
 - **Admin page** (new tab to the right of Schedule, admins only). This is the only place laborers are added or removed; the board itself has no add/remove buttons.

@@ -55,3 +55,16 @@ test('sendWorkflow posts EOD as multipart and others as JSON, and needs ok:true'
     await assert.rejects(sendWorkflow('workers', { action: 'assign', jobId: 'j1' }, 'r:w'), /did not answer/);
   } finally { globalThis.fetch = original; }
 });
+test('job log posts JSON to its own webhook, with the crew in assignedWorkers', async () => {
+  const calls = []; const original = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { calls.push({ url, init }); return new Response('{"ok":true}', { status: 200 }); };
+  try {
+    const crew = [{ contactId: 'c1', workerName: 'Ana', workerPhone: '555' }];
+    await sendWorkflow('job_log', { jobId: 'j1', action: 'eod_sheet', jobAddress: '1 Main', reportDate: '2026-10-01', assignedWorkers: crew }, 'r:job_log');
+    assert.equal(calls[0].url, 'https://hook.us2.make.com/vqurtuiuxdbg9k1j7v03prsffquvh1xa');
+    assert.equal(calls[0].init.headers['content-type'], 'application/json');
+    const body = JSON.parse(calls[0].init.body);
+    assert.deepEqual([body.jobId, body.eventId, body.assignedWorkers], ['j1', 'r:job_log', crew]);
+    assert.equal(body.file, undefined);
+  } finally { globalThis.fetch = original; }
+});
