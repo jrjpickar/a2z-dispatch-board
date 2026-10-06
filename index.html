@@ -272,6 +272,28 @@
   }
   .job-type-badge{display:inline-block;margin-top:5px;padding:3px 7px;border-radius:999px;font:700 9px 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase}
   .job-type-badge.change-order{background:#dceaf7;color:#275c8e;border:1px solid #aac9e4}
+  /* Change orders linked to a parent job: a note on the parent row, a "for ..." line on the change order. */
+  .co-note{min-width:170px;margin-top:6px;padding:5px 8px;border:1px solid #aac9e4;border-left:3px solid #275c8e;border-radius:var(--radius);background:#eef5fb;font-size:12px;line-height:1.45;color:#23415e}
+  .co-note-label{display:block;font:700 9px 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;color:#275c8e}
+  .co-note-item{display:block}
+  .co-note-item .co-note-meta{color:var(--ink-soft)}
+  .co-note-link{background:none;border:0;padding:0;font:inherit;color:#275c8e;text-decoration:underline;cursor:pointer;text-align:left}
+  .co-parent-note{display:block;margin-top:3px;font-size:11px;color:#275c8e;max-width:160px}
+  tr.co-flash td{animation:coFlash 1.6s ease-out}
+  @keyframes coFlash{0%{background:#dceaf7}100%{background:transparent}}
+  .co-link-current{padding:8px 10px;border:1px solid #aac9e4;border-radius:var(--radius);background:#eef5fb;font-size:13px;margin-bottom:8px}
+  .co-link-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .co-link-actions .btn-ghost,.co-picker-foot .btn-ghost{color:var(--ink-soft);border-color:var(--border)}
+  .co-picker{margin-top:10px;border:1px solid var(--border);border-radius:var(--radius);padding:10px;background:var(--stripe)}
+  .co-picker input[type=search]{width:100%}
+  .co-picker-list{max-height:240px;overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:4px}
+  .co-picker-option{display:block;width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--border);border-radius:var(--radius);padding:7px 9px;font-size:13px;cursor:pointer}
+  .co-picker-option.selected{border-color:#275c8e;background:#dceaf7}
+  .co-picker-option small{display:block;color:var(--ink-soft);font-size:11px;margin-top:2px}
+  .co-picker-group{font:700 9px 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin:6px 2px 2px}
+  .co-picker-empty{font-size:12px;color:var(--ink-soft);padding:6px 2px}
+  .co-picker-hint{margin:8px 2px 0;font-size:12px;color:var(--ink-soft)}
+  .co-picker-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
 
   .job-group-header {
     background: linear-gradient(90deg, var(--ink) 0%, #2c2d30 100%) !important;
@@ -844,6 +866,10 @@
   body.dark-mode .job-stage-btn.reset{background:#303438!important;color:#d6dade}
   body.dark-mode .crew-chip.empty-slot{color:#bdc2c7;border-color:#737980}
   body.dark-mode .job-type-badge.change-order{background:#263c50;color:#a9d5fa;border-color:#416989}
+  body.dark-mode .co-note{background:#1d2a36;border-color:#416989;color:#c9def0}
+  body.dark-mode .co-note-label,body.dark-mode .co-parent-note,body.dark-mode .co-note-link{color:#a9d5fa}
+  body.dark-mode .co-link-current{background:#1d2a36;border-color:#416989}
+  body.dark-mode .co-picker-option.selected{background:#263c50;border-color:#a9d5fa}
   body.dark-mode .empty-state,body.dark-mode .load-state,body.dark-mode .logistics-route{color:#adb2b7}
   body.dark-mode .sheet-foot{background:#202326;border-color:#3b3f43}
   body.dark-mode .btn-ghost{color:#d4d8dc;border-color:#666c72}
@@ -1640,6 +1666,23 @@
     <button id="closeEditSheet">&times;</button>
   </div>
   <div class="sheet-body">
+    <div class="field" id="editChangeOrderField">
+      <label>Change Order <span class="label-optional">(links this job to its parent opportunity)</span></label>
+      <div class="co-link-current" id="editChangeOrderCurrent" hidden></div>
+      <div class="co-link-actions">
+        <button type="button" class="btn-ghost" id="editLinkChangeOrderBtn">Link job as change order</button>
+        <button type="button" class="btn-ghost" id="editUnlinkChangeOrderBtn" hidden>Unlink</button>
+      </div>
+      <div class="co-picker" id="editChangeOrderPicker" hidden>
+        <input type="search" id="editChangeOrderSearch" placeholder="Search parent job by address, client or ID" autocomplete="off">
+        <div class="co-picker-list" id="editChangeOrderList"></div>
+        <p class="co-picker-hint" id="editChangeOrderHint"></p>
+        <div class="co-picker-foot">
+          <button type="button" class="btn-ghost" id="editChangeOrderCancel">Cancel</button>
+          <button type="button" class="btn-primary" id="editChangeOrderConfirm" disabled>Link as change order</button>
+        </div>
+      </div>
+    </div>
     <div class="field">
       <label for="editJobAddress">Job Address</label>
       <input type="text" id="editJobAddress" placeholder="Street, City">
@@ -2918,18 +2961,22 @@ function renderJobs(jobs) {
     `;
 
     const ghlLink = getGhlOpportunityLink(j);
-    const changeOrderBadge = j.sourceType === 'change_order' ? '<br><span class="job-type-badge change-order">Change Order</span>' : '';
+    const coParent = getChangeOrderParent(j);
+    const changeOrderBadge = (j.sourceType === 'change_order' || coParent)
+      ? '<br><span class="job-type-badge change-order">Change Order</span>' + (coParent ? `<span class="co-parent-note">for ${coParent.onBoard ? `<button type="button" class="co-note-link" data-goto-job="${escapeAttr(coParent.id)}">${escapeAttr(coParent.name)}</button>` : escapeAttr(coParent.name)}</span>` : '')
+      : '';
+    const coNote = buildChangeOrderNote(j);
     const jobIdCell = ghlLink
       ? `<a class="job-id" href="${ghlLink}" target="_blank" rel="noopener" title="Open in GHL">${(j.id || '').slice(-8)}</a>${changeOrderBadge}`
       : `<span class="job-id">${(j.id || '').slice(-8)}</span>${changeOrderBadge}`;
     const valueCell = `<span class="opp-value">${formatCurrency(getOpportunityValue(j))}</span>`;
 
     return `
-      <tr>
+      <tr data-job-row="${escapeAttr(jobId)}">
         <td data-label="Job ID">${jobIdCell}</td>
         <td data-label="Client">${client}</td>
         <td data-label="Value">${valueCell}</td>
-        <td data-label="Address">${address}</td>
+        <td data-label="Address">${address}${coNote}</td>
         <td data-label="Report time">${reportCell}</td>
         <td data-label="End date/time">${endCell}</td>
         <td data-label="Crew"><div class="crew-chip-row">${backendCrewChips}${overrideChips}${assignChecklist}${(!crew.length && !overrideCrew.length && job_associationsMissing(j)) ? '<span class="crew-chip empty-slot">crew not linked yet</span>' : ''}</div></td>
@@ -3530,6 +3577,12 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
     return;
   }
 
+  const coLink = e.target.closest('[data-goto-job]');
+  if (coLink) {
+    scrollToJobRow(coLink.dataset.gotoJob);
+    return;
+  }
+
   const editDetailsBtn = e.target.closest('.job-stage-btn.edit');
   if (editDetailsBtn) {
     openEditJobSheet(editDetailsBtn.dataset.jobId);
@@ -3967,6 +4020,156 @@ let editCrewSize = 4;
 let currentEditJobId = '';
 let currentEditJobVersion = 0;
 
+/* ---------- Change orders ---------- */
+// A change order is linked to its parent opportunity on the change order's own
+// shared record (parentJobId). The parent row shows a note listing its change
+// orders; the change order row shows "for <parent>". Linking also moves the
+// job into the Change Order pipeline in GHL (done on the server).
+function coBoardJob(id) { return (dashboardData.jobs || []).find(j => j.id === id) || null; }
+function coIsChangeOrder(job) {
+  if (!job) return false;
+  return job.sourceType === 'change_order' || !!dashboardData.sharedStateByJobId.get(job.id)?.parentJobId;
+}
+function getChangeOrderParent(job) {
+  const rec = job && dashboardData.sharedStateByJobId.get(job.id);
+  const id = rec && rec.parentJobId;
+  if (!id) return null;
+  const parent = coBoardJob(id);
+  return { id, name: (parent && parent.name) || rec.parentJobName || ('Job ' + id.slice(-8)), onBoard: !!parent };
+}
+function getLinkedChangeOrders(parentId) {
+  const out = [];
+  for (const rec of dashboardData.sharedStateByJobId.values()) {
+    if (!rec || !parentId || rec.parentJobId !== parentId) continue;
+    const job = coBoardJob(rec.jobId);
+    const closed = rec.active === false ? String(rec.status || 'closed') : '';
+    let value = job ? getOpportunityValue(job) : parseFloat(rec.monetaryValue);
+    if (value === undefined || value === null || isNaN(value)) value = null;
+    out.push({
+      id: rec.jobId,
+      name: (job && job.name) || rec.changeOrderName || rec.jobAddress || ('Job ' + String(rec.jobId).slice(-8)),
+      value, closed, onBoard: !!job && !closed, linkedAt: rec.changeOrderLinkedAt || ''
+    });
+  }
+  return out.sort((a, b) => String(a.linkedAt).localeCompare(String(b.linkedAt)));
+}
+function buildChangeOrderNote(job) {
+  const items = getLinkedChangeOrders(job.id);
+  if (!items.length) return '';
+  const counted = items.filter(i => !/cancel/i.test(i.closed) && i.value !== null);
+  const total = counted.reduce((sum, i) => sum + i.value, 0);
+  const label = items.length === 1 ? '1 change order' : `${items.length} change orders`;
+  const status = s => s ? ' · ' + s.charAt(0).toUpperCase() + s.slice(1) : '';
+  return `<div class="co-note"><span class="co-note-label">${label}${items.length > 1 && counted.length ? ' · ' + formatCurrency(total) : ''}</span>${items.map(i => `<span class="co-note-item">${i.onBoard
+    ? `<button type="button" class="co-note-link" data-goto-job="${escapeAttr(i.id)}" title="Show this change order on the board">${escapeAttr(i.name)}</button>`
+    : escapeAttr(i.name)}<span class="co-note-meta">${i.value !== null ? ' · ' + formatCurrency(i.value) : ''}${status(i.closed)}</span></span>`).join('')}</div>`;
+}
+function scrollToJobRow(jobId) {
+  const row = Array.from(document.querySelectorAll('#jobsBody tr[data-job-row]')).find(r => r.dataset.jobRow === jobId);
+  if (!row) { showToast("That job isn't on the board right now.", true); return; }
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.classList.remove('co-flash'); void row.offsetWidth; row.classList.add('co-flash');
+}
+
+let coSelectedParentId = '';
+function renderEditChangeOrder(job) {
+  const current = document.getElementById('editChangeOrderCurrent');
+  const linkBtn = document.getElementById('editLinkChangeOrderBtn');
+  const unlinkBtn = document.getElementById('editUnlinkChangeOrderBtn');
+  closeChangeOrderPicker();
+  const parent = getChangeOrderParent(job);
+  const children = getLinkedChangeOrders(job.id);
+  linkBtn.disabled = false; linkBtn.textContent = 'Link job as change order'; unlinkBtn.hidden = true; current.hidden = true;
+  if (parent) {
+    current.hidden = false;
+    current.innerHTML = `Change order for <b>${escapeAttr(parent.name)}</b>`;
+    linkBtn.textContent = 'Change parent job';
+    unlinkBtn.hidden = false;
+  } else if (children.length) {
+    current.hidden = false;
+    current.innerHTML = `Parent job for ${children.map(c => `<b>${escapeAttr(c.name)}</b>`).join(', ')}. A parent job can't also be a change order.`;
+    linkBtn.disabled = true;
+  } else if (job.sourceType === 'change_order') {
+    current.hidden = false;
+    current.textContent = 'In the Change Order pipeline but not linked to a parent job yet.';
+  }
+}
+function closeChangeOrderPicker() {
+  coSelectedParentId = '';
+  document.getElementById('editChangeOrderPicker').hidden = true;
+  document.getElementById('editChangeOrderConfirm').disabled = true;
+}
+function changeOrderCandidates(job, query) {
+  const q = String(query || '').trim().toLowerCase();
+  const contactKey = j => String((j.contact && (j.contact.id || j.contact.name)) || '').toLowerCase();
+  const mine = contactKey(job);
+  const list = (dashboardData.jobs || []).filter(j => j.id && j.id !== job.id && !coIsChangeOrder(j))
+    .filter(j => !q || [j.name, getClientName(j), j.id].some(v => String(v || '').toLowerCase().includes(q)));
+  const same = mine ? list.filter(j => contactKey(j) === mine) : [];
+  const other = list.filter(j => !same.includes(j));
+  const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
+  return { same: same.sort(byName), other: other.sort(byName).slice(0, 60) };
+}
+function renderChangeOrderPicker() {
+  const job = coBoardJob(currentEditJobId); if (!job) return;
+  const { same, other } = changeOrderCandidates(job, document.getElementById('editChangeOrderSearch').value);
+  const option = j => `<button type="button" class="co-picker-option${j.id === coSelectedParentId ? ' selected' : ''}" data-parent-id="${escapeAttr(j.id)}">${escapeAttr(j.name || 'Job')}<small>${escapeAttr(getClientName(j) || 'No client')} · ${escapeAttr(String(j.id).slice(-8))} · ${isHourlyJob(j) ? 'Hourly' : 'Contract'}</small></button>`;
+  const list = document.getElementById('editChangeOrderList');
+  list.innerHTML = (same.length ? `<div class="co-picker-group">Same client</div>${same.map(option).join('')}` : '')
+    + (other.length ? `<div class="co-picker-group">${same.length ? 'Other jobs' : 'Jobs on the board'}</div>${other.map(option).join('')}` : '')
+    || '<div class="co-picker-empty">No matching jobs on the board.</div>';
+  const parent = coBoardJob(coSelectedParentId);
+  document.getElementById('editChangeOrderHint').textContent = (parent ? `Parent: ${parent.name}. ` : 'Pick the parent job. ')
+    + (job.sourceType === 'change_order' ? 'This job is already in the Change Order pipeline.' : 'Linking also moves this job to the Change Order pipeline in GHL.');
+  document.getElementById('editChangeOrderConfirm').disabled = !parent;
+}
+document.getElementById('editLinkChangeOrderBtn').addEventListener('click', () => {
+  const picker = document.getElementById('editChangeOrderPicker');
+  if (!picker.hidden) { closeChangeOrderPicker(); return; }
+  coSelectedParentId = '';
+  document.getElementById('editChangeOrderSearch').value = '';
+  picker.hidden = false;
+  renderChangeOrderPicker();
+  document.getElementById('editChangeOrderSearch').focus();
+});
+document.getElementById('editChangeOrderSearch').addEventListener('input', renderChangeOrderPicker);
+document.getElementById('editChangeOrderCancel').addEventListener('click', closeChangeOrderPicker);
+document.getElementById('editChangeOrderList').addEventListener('click', e => {
+  const opt = e.target.closest('[data-parent-id]'); if (!opt) return;
+  coSelectedParentId = opt.dataset.parentId;
+  renderChangeOrderPicker();
+});
+async function saveChangeOrderLink(action) {
+  const jobId = currentEditJobId;
+  const job = coBoardJob(jobId); if (!job) return;
+  const parent = action === 'link_change_order' ? coBoardJob(coSelectedParentId) : null;
+  if (action === 'link_change_order' && !parent) return;
+  const btn = document.getElementById(action === 'link_change_order' ? 'editChangeOrderConfirm' : 'editUnlinkChangeOrderBtn');
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = action === 'link_change_order' ? 'Linking...' : 'Unlinking...';
+  try {
+    const rec = dashboardData.sharedStateByJobId.get(jobId);
+    const data = await commitState(CONFIG.SHARED_STATE_SYNC_URL, action === 'link_change_order'
+      ? { action, jobId, parentJobId: parent.id, parentJobName: parent.name || '', changeOrderName: job.name || '' }
+      : { action, jobId, parentJobId: rec?.parentJobId || '', changeOrderName: job.name || '' });
+    if (data.record) currentEditJobVersion = data.record.version;
+    showToast(action === 'unlink_change_order'
+      ? 'Unlinked. The job stays in the Change Order pipeline in GHL.'
+      : data.ghlMove?.status === 'moved' ? `Linked to ${parent.name} and moved to the Change Order pipeline in GHL.` : `Linked as a change order of ${parent.name}.`);
+    await refreshAll();
+    const fresh = coBoardJob(jobId);
+    if (fresh && currentEditJobId === jobId) renderEditChangeOrder(fresh);
+  } catch (err) {
+    console.warn(err);
+    showToast(err.message || 'Could not save the change order link.', true);
+  } finally {
+    btn.textContent = label; btn.disabled = action === 'link_change_order' ? !coBoardJob(coSelectedParentId) : false;
+  }
+}
+document.getElementById('editChangeOrderConfirm').addEventListener('click', () => saveChangeOrderLink('link_change_order'));
+document.getElementById('editUnlinkChangeOrderBtn').addEventListener('click', () => saveChangeOrderLink('unlink_change_order'));
+
+
 function openEditJobSheet(jobId) {
   const job = (dashboardData.jobs || []).find(j => (j.id || "") === jobId);
   if (!job) {
@@ -3975,6 +4178,7 @@ function openEditJobSheet(jobId) {
   }
   currentEditJobId = jobId;
   currentEditJobVersion = dashboardData.sharedStateByJobId.get(jobId)?.version || 0;
+  renderEditChangeOrder(job);
 
   document.getElementById('editJobAddress').value = job.name || '';
   document.getElementById('editClientPhone').value = getClientPhone(job) || '';

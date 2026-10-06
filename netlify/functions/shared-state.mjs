@@ -2,6 +2,8 @@ import { db, ensureSchema } from './db.mjs';
 import { authorizeWrite, readPayload, json, errorResponse } from '../../lib/http.mjs';
 import { jobRecord, saveState } from '../../lib/store.mjs';
 import { syncJobSchedule } from '../../lib/ghl.mjs';
+import { linkChangeOrder, unlinkChangeOrder } from '../../lib/change-order.mjs';
+import { sessionFromRequest } from '../../lib/session.mjs';
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405, { Allow: 'GET, POST' });
@@ -15,6 +17,9 @@ export default async function handler(request) {
       return json({ sharedState: rows.map(jobRecord), pendingSync });
     }
     const payload = await readPayload(request);
+    // Change order link/unlink: link also moves the opportunity to the Change Order pipeline in GHL.
+    if (payload.action === 'link_change_order') return json(await linkChangeOrder(sql, payload, sessionFromRequest(request)));
+    if (payload.action === 'unlink_change_order') return json(await unlinkChangeOrder(sql, payload, sessionFromRequest(request)));
     const result = await saveState(sql, 'job', payload);
     if (['save_times', 'reset_dispatch'].includes(payload.action)) {
       try { result.crmSync = await syncJobSchedule(sql, result.record.jobId); }

@@ -8,6 +8,16 @@ Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response ch
 
 Includes the backend, edited dashboard, the read-only Field App for drivers/crew, tests, dependency lockfile, and minimal Make JSON templates. Credentials and production site linkage are not included.
 
+## Change orders linked to the parent job
+
+- **Link job as change order** in Edit Job Details. Pick the parent job from the board (jobs for the same client are listed first, then everything else, with search). The job is moved into the Change Order pipeline in GHL (status stays won) and then linked. If GHL refuses the move, nothing is linked and GHL's reason is shown. A job already in the Change Order pipeline just gets linked.
+- **Change parent job** and **Unlink** show once a job is linked. Unlinking leaves the job in the Change Order pipeline in GHL.
+- **On the board**, the parent job shows a note under its address listing each change order with its value (and Completed or Cancelled once closed); click one to jump to its row. The change order shows its Change Order badge with "for <parent job>".
+- No nesting: a change order can't be a parent, and a job with change orders can't become one.
+- Stored on the change order's shared record (`parentJobId`, `parentJobName`, `changeOrderName`, `changeOrderLinkedBy`, `changeOrderLinkedAt`) through `/api/shared-state` actions `link_change_order` / `unlink_change_order`. Links and unlinks show in the Activity log.
+- GHL: the stage is the Change Order pipeline's first stage, or `CHANGE_ORDER_STAGE_ID` if set. `CHANGE_ORDER_PIPELINE_ID` still overrides the pipeline. The token's existing opportunity scopes cover it.
+- Tests: `test/change-order.test.mjs` (in `npm test`) and the optional browser check `test/change-order-smoke.cjs`.
+
 ## What's new in 1.8
 
 - **Complete EOD Sheet also fires the job log webhook** (`vqurtuiu…`, kind `job_log`, override with `JOB_LOG_WEBHOOK`): job details, the day's report/end date and time, and the crew as `assignedWorkers`, captured before the reset. JSON, independent of the EOD sheet call; each is confirmed and retryable on its own. See MAKE-SETUP.md.

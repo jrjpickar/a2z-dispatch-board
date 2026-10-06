@@ -1,4 +1,4 @@
-import { searchOpportunities } from '../../lib/ghl.mjs';
+import { searchOpportunities, changeOrderPipelineId as configuredChangeOrderPipelineId } from '../../lib/ghl.mjs';
 import { jobRecord } from '../../lib/store.mjs';
 import { db, ensureSchema } from "./db.mjs";
 
@@ -6,7 +6,6 @@ const DEFAULTS = {
   locationId: "QUcu2PEAxPV1sQm1GQCq",
   laborPipelineId: "RAP4Cqc1jKRTHaakYTL4",
   demoPipelineId: "d5Ix1SlN3YpZ5gQewZUo",
-  changeOrderPipelineId: "Nvk3EKhRzg5omo4BLCOK",
   laborStages: [
     "b3ba7011-5b50-48b1-986d-fed4281289f6",
     "6cfb3e15-0954-4f94-9f27-29f8f45b185d"
@@ -61,7 +60,7 @@ export default async function handler(request) {
     const locationId = process.env.GHL_LOCATION_ID || DEFAULTS.locationId;
     const laborPipelineId = process.env.LABOR_PIPELINE_ID || DEFAULTS.laborPipelineId;
     const demoPipelineId = process.env.DEMO_PIPELINE_ID || DEFAULTS.demoPipelineId;
-    const changeOrderPipelineId = process.env.CHANGE_ORDER_PIPELINE_ID || DEFAULTS.changeOrderPipelineId;
+    const changeOrderPipelineId = configuredChangeOrderPipelineId();
 
     const [labor, demo, changeOrders, sharedRows] = await Promise.all([
       searchOpportunities(token, locationId, laborPipelineId),
