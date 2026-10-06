@@ -702,6 +702,10 @@
   .job-stage-btn.cancel { border: 1px solid var(--danger); color: var(--danger); }
   .job-stage-btn.cancel:hover { background: var(--danger); color: #fff; }
   .job-stage-btn.edit { border: 1px solid var(--grey-dark); color: var(--ink-soft); }
+  .job-stage-btn.reopen { border: 1px solid #287a54; color: #287a54; }
+  .job-stage-btn.reopen:hover { background: #287a54; color: #fff; }
+  .status-tag.closed { background: var(--grey-light); color: var(--ink-soft); border: 1px solid var(--grey); }
+  .job-closed-note { margin-top: 6px; max-width: 190px; font-size: 11px; line-height: 1.4; color: var(--ink-soft); }
   .job-stage-btn.edit:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
   .job-stage-btn.reset { border: 1px solid var(--orange); color: var(--orange-dark); }
   .job-stage-btn.reset:hover { background: var(--orange); color: #fff; }
@@ -862,6 +866,8 @@
   body.dark-mode .job-stage-btn.complete{background:#3a321f!important;color:#f4d36b}
   body.dark-mode .job-stage-btn.cancel{background:#3b2322!important;color:#f1a09a}
   body.dark-mode .job-stage-btn.edit{background:#293642!important;color:#a9d5fa}
+  body.dark-mode .job-stage-btn.reopen{background:#1f3a2c!important;color:#8fd9b0;border-color:#3f8a62}
+  body.dark-mode .status-tag.closed{background:#2c2f33;color:#b3b8bd;border-color:#4a4f55}
   body.dark-mode .job-stage-btn.edit:hover{background:#31445a!important;color:#c3e2fb;border-color:#416989}
   body.dark-mode .job-stage-btn.reset{background:#303438!important;color:#d6dade}
   body.dark-mode .crew-chip.empty-slot{color:#bdc2c7;border-color:#737980}
@@ -2860,6 +2866,10 @@ function renderJobs(jobs) {
     const statusClass = optimisticStage ? 'confirmed' : (stageInfo ? stageInfo.cls : 'open');
     const jobId = j.id || '';
     const terminalLocally = optimisticStage === 'complete' || optimisticStage === 'cancel';
+    // Closed on the board (Completed/Cancelled) but GHL still lists it as active.
+    // Every save is refused until it's reopened, so say so on the row.
+    const closedRec = dashboardData.sharedStateByJobId.get(jobId);
+    const closedOnBoard = closedRec?.active === false;
 
     const crew = getCrew(j);
 
@@ -2890,9 +2900,11 @@ function renderJobs(jobs) {
     );
     const hasAvailableWorkers = assignableWorkers.some(w => w.effectiveStatus === 'available');
 
-    const timesLocked = isJobTimeLocked(j);
+    const timesLocked = isJobTimeLocked(j) || closedOnBoard;
 
-    const assignChecklist = !timesLocked
+    const assignChecklist = closedOnBoard
+      ? `<span class="crew-chip empty-slot" title="Reopen this job to assign crew">job closed, reopen to assign</span>`
+      : !timesLocked
       ? `<span class="crew-chip empty-slot" title="Save and lock report/end time before assigning crew">save &amp; lock times first</span>`
       : (assignableWorkers.length
         ? `<div class="crew-assign-wrap" data-job-id="${jobId}">
@@ -2948,7 +2960,7 @@ function renderJobs(jobs) {
       ? `
       <div class="time-edit-wrap locked" data-job-id="${jobId}">
         <span class="time-locked-display mono">${endDateVal || 'N/A'} ${endTimeVal || ''}</span>${nightWork ? '<span class="night-badge" title="Night work: PM start, next-morning finish">Night</span>' : ''}
-        <button type="button" class="time-unlock" title="Unlock to edit report/end time">Edit</button>
+        ${closedOnBoard ? '' : '<button type="button" class="time-unlock" title="Unlock to edit report/end time">Edit</button>'}
       </div>
     `
       : `
@@ -2981,8 +2993,11 @@ function renderJobs(jobs) {
         <td data-label="End date/time">${endCell}</td>
         <td data-label="Crew"><div class="crew-chip-row">${backendCrewChips}${overrideChips}${assignChecklist}${(!crew.length && !overrideCrew.length && job_associationsMissing(j)) ? '<span class="crew-chip empty-slot">crew not linked yet</span>' : ''}</div></td>
         <td data-label="Status">
-          <span class="status-tag ${statusClass}">${statusLabel}</span>
-          ${terminalLocally ? '' : `<div class="job-stage-actions">
+          ${closedOnBoard ? `<span class="status-tag closed">${/cancel/.test(closedRec.status || '') ? 'Cancelled' : 'Completed'}</span>
+          <div class="job-closed-note">Closed on the board${closedRec.closedBy ? ' by ' + escapeAttr(closedRec.closedBy) : ''}${closedRec.closedAt ? ' ' + escapeAttr(new Date(closedRec.closedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : ''}, but GHL still shows it as an active job.</div>
+          <div class="job-stage-actions"><button type="button" class="job-stage-btn reopen" data-job-id="${jobId}" title="Undo Completed/Cancelled so crew and times can be edited again">Reopen job</button></div>`
+          : `<span class="status-tag ${statusClass}">${statusLabel}</span>`}
+          ${terminalLocally || closedOnBoard ? '' : `<div class="job-stage-actions">
             <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">Edit Details</button>
             ${isHourlyJob(j) ? '' : `<button type="button" class="job-stage-btn schedule${(psSchedules[jobId] || {}).sentAt ? ' sent' : ''}" data-job-id="${jobId}" title="Project Schedule for this contract job">Project Schedule</button>`}
             <button type="button" class="job-stage-btn reset" data-job-id="${jobId}">Complete EOD Sheet</button>
@@ -3131,6 +3146,21 @@ async function removeCrewMember(jobId, phone, name, chipEl) {
 // CREATE_JOB_URL: the Make scenario behind it routes on the `action` field
 // (same pattern as MOVE_WORKER_URL's assign/remove) to tell create/complete/
 // cancel apart.
+// Undo Completed/Cancelled on the board for a job GHL still lists as active.
+// Board only: GHL's stage is not touched (it already shows the job as active).
+async function reopenJob(jobId, btn) {
+  const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId) || {};
+  btn.disabled = true; btn.textContent = 'Reopening...';
+  try {
+    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reopen', jobId, jobAddress: job.name || '' });
+    showToast('Job reopened. Crew and times can be edited again.');
+    render();
+  } catch (error) {
+    showToast(error.message, true);
+    btn.disabled = false; btn.textContent = 'Reopen job';
+  }
+}
+
 async function setJobStage(jobId, action, btn) {
   if (!jobId || !['complete', 'cancel'].includes(action)) return;
   if (!confirm(`Mark this job ${action === 'complete' ? 'completed' : 'cancelled'}?`)) return;
@@ -3141,7 +3171,7 @@ async function setJobStage(jobId, action, btn) {
   const stagePayload = { action, jobId, opportunityId: jobId, nightWork: night, shiftType: night ? 'night' : 'day',
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job) };
   try {
-    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action, jobId });
+    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action, jobId, jobAddress: job.name || '' });
     await runSideEffect(CONFIG.CREATE_JOB_URL, stagePayload, 'GHL job stage update');
     render(); showToast('Job closed.');
   } catch (error) { showToast(error.message, true); }
@@ -3574,6 +3604,12 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
       return;
     }
     assignCrew(jobId, workers, confirmBtn, { rapid: confirmBtn.classList.contains('crew-assign-rapid') });
+    return;
+  }
+
+  const reopenBtn = e.target.closest('.job-stage-btn.reopen');
+  if (reopenBtn) {
+    reopenJob(reopenBtn.dataset.jobId, reopenBtn);
     return;
   }
 

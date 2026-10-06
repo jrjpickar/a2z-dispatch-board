@@ -57,7 +57,7 @@ const { pathToFileURL } = require('node:url');
   await page.waitForFunction(() => document.getElementById('toast').innerText.includes('moved to the Change Order pipeline'));
   const link = posts.find(p => p.action === 'link_change_order');
   assert.equal(link.parentJobId, 'parent0001'); assert.equal(link.parentJobName, '100 Main St');
-  assert.match(await page.locator('#editChangeOrderCurrent').innerText(), /Change order for 100 Main St/);
+  await page.waitForFunction(() => /Change order for 100 Main St/.test(document.getElementById('editChangeOrderCurrent').innerText));
   // Editing other details after linking must not hit a version conflict.
   await page.locator('#editScopeWork').fill('Extra wall');
   await page.locator('#submitEditJob').click();

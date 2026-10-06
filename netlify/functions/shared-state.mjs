@@ -4,6 +4,7 @@ import { jobRecord, saveState } from '../../lib/store.mjs';
 import { syncJobSchedule } from '../../lib/ghl.mjs';
 import { linkChangeOrder, unlinkChangeOrder } from '../../lib/change-order.mjs';
 import { sessionFromRequest } from '../../lib/session.mjs';
+import { logActivity } from '../../lib/activity.mjs';
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405, { Allow: 'GET, POST' });
@@ -20,7 +21,15 @@ export default async function handler(request) {
     // Change order link/unlink: link also moves the opportunity to the Change Order pipeline in GHL.
     if (payload.action === 'link_change_order') return json(await linkChangeOrder(sql, payload, sessionFromRequest(request)));
     if (payload.action === 'unlink_change_order') return json(await unlinkChangeOrder(sql, payload, sessionFromRequest(request)));
+    // Record who closed or reopened a job, so a closed job still showing on the board can be traced.
+    const session = sessionFromRequest(request);
+    if (['complete', 'cancel'].includes(payload.action) && session && !payload.closedBy) payload.closedBy = session.name;
+    if (payload.action === 'reopen' && session && !payload.reopenedBy) payload.reopenedBy = session.name;
     const result = await saveState(sql, 'job', payload);
+    if (['complete', 'cancel', 'reopen'].includes(payload.action) && !result.replayed) {
+      const label = { complete: 'Marked job completed', cancel: 'Marked job cancelled', reopen: 'Reopened job' }[payload.action];
+      await logActivity(sql, session, label, payload.jobAddress || payload.jobId, { jobId: payload.jobId });
+    }
     if (['save_times', 'reset_dispatch'].includes(payload.action)) {
       try { result.crmSync = await syncJobSchedule(sql, result.record.jobId); }
       catch { result.crmSync = { ok: false, error: 'Dispatch saved. GHL schedule sync needs a retry.' }; }

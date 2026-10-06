@@ -8,6 +8,14 @@ Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response ch
 
 Includes the backend, edited dashboard, the read-only Field App for drivers/crew, tests, dependency lockfile, and minimal Make JSON templates. Credentials and production site linkage are not included.
 
+## Fix: jobs stuck as "closed" (can't add crew or schedule)
+
+- **Cause.** Completed / Cancelled closes the job on the board right away, then asks Make to move the GHL stage. If GHL still lists the job as active afterwards (the Make stage update didn't go through, someone moved it back in GHL, Completed was clicked on the wrong row, or it's a change order, since the Change Order pipeline isn't filtered by stage), the row looked completely normal but every save was refused with "This job is closed. Reopen it explicitly", and there was no way to reopen it.
+- **Now** that row shows a grey Completed / Cancelled tag, "Closed on the board by <name> <date>, but GHL still shows it as an active job", and a **Reopen job** button. Crew assign and time editing are hidden until it's reopened, and the error message points to Reopen job.
+- **Reopen job** makes it editable again on the board only (GHL already shows it as active). Times and details are kept; the crew stays cleared since it was released when the job closed.
+- Completed, Cancelled and Reopened are now recorded on the job (`closedBy`, `closedAt`, `reopenedBy`, `reopenedAt`) and in the Activity log, so the next one can be traced.
+- Tests: `test/reopen.test.mjs` (in `npm test`) and the optional browser check `test/closed-job-smoke.cjs`.
+
 ## Change orders linked to the parent job
 
 - **Link job as change order** in Edit Job Details. Pick the parent job from the board (jobs for the same client are listed first, then everything else, with search). The job is moved into the Change Order pipeline in GHL (status stays won) and then linked. If GHL refuses the move, nothing is linked and GHL's reason is shown. A job already in the Change Order pipeline just gets linked.
