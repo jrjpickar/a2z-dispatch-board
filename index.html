@@ -703,6 +703,37 @@
   .job-stage-btn.cancel:hover { background: var(--danger); color: #fff; }
   .job-stage-btn.edit { border: 1px solid var(--grey-dark); color: var(--ink-soft); }
   .job-stage-btn.reopen { border: 1px solid #287a54; color: #287a54; }
+  .sent-home-worker input[type=radio] { width: auto; min-height: 0; flex: 0 0 auto; margin: 0; }
+  .sent-home-worker > span { flex: 1; text-align: left; }
+  .sent-home-worker small { display: block; color: var(--ink-soft); font-size: 11px; }
+  .sent-home-group { font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); margin: 8px 2px 2px; }
+  .sent-home-empty { font-size: 13px; color: var(--ink-soft); padding: 6px 2px; }
+  .jobs-panel-head { gap: 12px; flex-wrap: wrap; }
+  .jobs-search-wrap { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; min-width: 220px; }
+  .jobs-search { width: 100%; max-width: 320px; padding: 7px 10px; font-size: 13px; }
+  .jobs-search-count { font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+  #completedDispatchView { padding: 18px 24px; }
+  .completed-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .completed-tools select { width: auto; padding: 7px 8px; font-size: 13px; }
+  .completed-tools .jobs-search { width: 260px; }
+  .completed-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+  .ghl-active-badge { display: inline-block; margin-top: 5px; padding: 2px 7px; border-radius: 999px; font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .05em; text-transform: uppercase; background: #fff1dd; color: #8a4b00; border: 1px solid #e8c48e; }
+  body.dark-mode .ghl-active-badge { background: #3a2c17; color: #f4c27a; border-color: #7a5a2a; }
+  .completed-empty { padding: 18px; color: var(--ink-soft); font-size: 13px; }
+  .sent-home-backdrop { position: fixed; inset: 0; z-index: 900; background: rgba(20,21,23,.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .sent-home-backdrop[hidden] { display: none; }
+  .sent-home-card { width: 100%; max-width: 420px; max-height: calc(100vh - 32px); overflow: auto; background: var(--card); color: var(--ink); border-radius: 8px; border-top: 4px solid #5a4aa3; box-shadow: 0 12px 40px rgba(0,0,0,.3); padding: 18px 20px; }
+  .sent-home-card h2 { margin: 0 0 2px; font-family: 'Oswald', sans-serif; font-size: 17px; text-transform: uppercase; letter-spacing: .04em; }
+  .sent-home-job { font-size: 12px; color: var(--ink-soft); margin-bottom: 14px; }
+  .sent-home-card .field > label { display: block; margin-bottom: 6px; }
+  .sent-home-workers { display: flex; flex-direction: column; gap: 4px; }
+  .field label.sent-home-worker, .sent-home-worker { text-transform: none; letter-spacing: normal; font-weight: 500; font-family: inherit; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font-size: 13px; }
+  .sent-home-worker:has(input:checked) { border-color: #5a4aa3; background: #efecfa; }
+  .sent-home-card select { width: 100%; }
+  .sent-home-hint { font-size: 12px; color: var(--ink-soft); margin: 6px 2px 0; }
+  .sent-home-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .sent-home-foot .btn-ghost { color: var(--ink-soft); border-color: var(--border); }
+  .sent-home-foot .btn-primary { background: #5a4aa3; }
   .job-stage-btn.reopen:hover { background: #287a54; color: #fff; }
   .status-tag.closed { background: var(--grey-light); color: var(--ink-soft); border: 1px solid var(--grey); }
   .job-closed-note { margin-top: 6px; max-width: 190px; font-size: 11px; line-height: 1.4; color: var(--ink-soft); }
@@ -866,6 +897,7 @@
   body.dark-mode .job-stage-btn.complete{background:#3a321f!important;color:#f4d36b}
   body.dark-mode .job-stage-btn.cancel{background:#3b2322!important;color:#f1a09a}
   body.dark-mode .job-stage-btn.edit{background:#293642!important;color:#a9d5fa}
+  body.dark-mode .sent-home-worker:has(input:checked){background:#2a2540;border-color:#8f80d8}
   body.dark-mode .job-stage-btn.reopen{background:#1f3a2c!important;color:#8fd9b0;border-color:#3f8a62}
   body.dark-mode .status-tag.closed{background:#2c2f33;color:#b3b8bd;border-color:#4a4f55}
   body.dark-mode .job-stage-btn.edit:hover{background:#31445a!important;color:#c3e2fb;border-color:#416989}
@@ -1305,6 +1337,7 @@
   </div>
   <div class="date mono" id="todayDate"></div>
   <div class="actions">
+    <button class="btn-ghost sent-home-top" id="sentHomeBtn" type="button" title="Pick the worker and hours worked, then release them from their job">Worker sent home</button>
     <button class="btn-ghost" id="themeToggle" type="button" aria-pressed="false">Dark Mode</button>
     <button class="btn-ghost" id="refreshBtn">Refresh</button>
     <button class="btn-primary" id="newJobBtn">+ Book Job</button>
@@ -1315,6 +1348,7 @@
   <button class="dispatch-view-tab active" id="laborViewTab" data-view="labor" role="tab" aria-selected="true">Labor Dispatch</button>
   <button class="dispatch-view-tab" id="logisticsViewTab" data-view="logistics" role="tab" aria-selected="false">Logistics</button>
   <button class="dispatch-view-tab" id="scheduleViewTab" data-view="schedule" role="tab" aria-selected="false">Schedule</button>
+  <button class="dispatch-view-tab" id="completedViewTab" data-view="completed" role="tab" aria-selected="false">Completed</button>
   <button class="dispatch-view-tab" id="adminViewTab" data-view="admin" role="tab" aria-selected="false" hidden>Admin</button>
 </div>
 
@@ -1353,8 +1387,12 @@
 
   <!-- Jobs scheduled -->
   <div class="panel">
-    <div class="panel-head">
+    <div class="panel-head jobs-panel-head">
       <h2>Jobs Scheduled</h2>
+      <div class="jobs-search-wrap">
+        <input type="search" id="jobSearch" class="jobs-search" placeholder="Search address, client, crew or job ID" autocomplete="off" aria-label="Search jobs">
+        <span class="jobs-search-count mono" id="jobSearchCount"></span>
+      </div>
     </div>
     <div class="jobs-table-wrap">
       <table class="jobs" id="jobsTable">
@@ -1388,6 +1426,28 @@
     <div class="psv-head-actions"><span id="psViewCount"></span><a href="/api/project-schedule?blank=1" target="_blank" rel="noopener">Blank PDF</a></div>
   </div>
   <div id="psList"></div>
+</div>
+
+<div class="dispatch-view" id="completedDispatchView" hidden>
+  <div class="psv-head">
+    <div><h2>Completed Jobs</h2><p>Jobs marked Completed or Cancelled on the board, newest first. They no longer show on Labor Dispatch.</p></div>
+    <div class="completed-tools">
+      <select id="completedFilter" aria-label="Show">
+        <option value="all">All closed</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="ghl">Still active in GHL</option>
+      </select>
+      <input type="search" id="completedSearch" class="jobs-search" placeholder="Search address, client or job ID" autocomplete="off" aria-label="Search completed jobs">
+      <span class="jobs-search-count mono" id="completedCount"></span>
+    </div>
+  </div>
+  <div class="jobs-table-wrap completed-wrap">
+    <table class="jobs" id="completedTable">
+      <thead><tr><th>Job ID</th><th>Client</th><th>Value</th><th>Address</th><th>Last report date</th><th>Closed</th><th>Status</th></tr></thead>
+      <tbody id="completedBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <div class="dispatch-view" id="adminDispatchView" hidden>
@@ -1764,6 +1824,29 @@
   </div>
 </div>
 
+<!-- Worker sent home: pick the worker and the hours worked. Posts workerName +
+     hoursWorked to the worker_sent_home webhook and releases them from the job. -->
+<div class="sent-home-backdrop" id="sentHomeBackdrop" hidden>
+  <div class="sent-home-card" role="dialog" aria-modal="true" aria-labelledby="sentHomeTitle">
+    <h2 id="sentHomeTitle">Worker sent home</h2>
+    <div class="sent-home-job" id="sentHomeJob">Pick the worker and the hours they worked. They are released from their job.</div>
+    <div class="field">
+      <label for="sentHomeSearch">Worker</label>
+      <input type="search" id="sentHomeSearch" placeholder="Search worker or job" autocomplete="off" style="width:100%;margin-bottom:6px">
+      <div class="sent-home-workers" id="sentHomeWorkers"></div>
+    </div>
+    <div class="field">
+      <label for="sentHomeHours">Hours worked</label>
+      <select id="sentHomeHours"></select>
+      <p class="sent-home-hint" id="sentHomeHint"></p>
+    </div>
+    <div class="sent-home-foot">
+      <button type="button" class="btn-ghost" id="sentHomeCancel">Cancel</button>
+      <button type="button" class="btn-primary" id="sentHomeConfirm" disabled>Send home</button>
+    </div>
+  </div>
+</div>
+
 <!-- Complete EOD Sheet: the Job Costing Worksheet (Job_Costing_Worksheet_V2,
      "Job Costing" tab) filled out per job at end of day. Submitting it sends
      the sheet to the same Make webhook the old Reset Day used
@@ -1953,6 +2036,9 @@ const CONFIG = {
   // crew as they were before the reset. Sent through /api/workflow-effect with
   // kind "job_log" (server posts to JOB_LOG_WEBHOOK or the vqurtuiu... hook).
   JOB_LOG_URL: "https://hook.us2.make.com/vqurtuiuxdbg9k1j7v03prsffquvh1xa",
+  // Worker sent home: workerName + hoursWorked, sent through /api/workflow-effect
+  // with kind "worker_sent_home" (server posts to WORKER_SENT_HOME_WEBHOOK or this hook).
+  WORKER_SENT_HOME_URL: "https://hook.us2.make.com/mo2wtttzdfhpl4liym6c8uw3pbq6mmth",
   // Also handles Report End Time + Report End Date updates for existing jobs.
   // Expects POST body: { jobId, reportEndTime, reportEndDate }
   // Netlify is the sole dispatch-state authority.
@@ -2572,10 +2658,11 @@ function render() {
 
   document.getElementById('statAvailable').textContent = available.length;
   document.getElementById('statBooked').textContent = booked.length;
-  document.getElementById('statScheduled').textContent = jobs.length;
+  document.getElementById('statScheduled').textContent = jobs.filter(j => !isClosedOnBoard(j)).length;
 
   renderRoster();
   renderJobs(jobs);
+  if (typeof renderCompletedView === 'function') renderCompletedView();
   if (typeof renderScheduleView === 'function') renderScheduleView();
 }
 
@@ -2799,12 +2886,29 @@ function getJobDateBucket(job, todayStr, tomorrowStr) {
   return 'future';
 }
 
-function renderJobs(jobs) {
+// Closed on the board (Completed/Cancelled): listed on the Completed tab instead.
+function isClosedOnBoard(job) {
+  return dashboardData.sharedStateByJobId.get(job?.id)?.active === false;
+}
+function jobMatchesSearch(job, q) {
+  if (!q) return true;
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hay = [job.name, getClientName(job), job.id, getScopeOfWork(job), ...getCrew(job).map(w => w.name), getChangeOrderParent(job)?.name]
+    .filter(Boolean).join(' ').toLowerCase();
+  return words.every(w => hay.includes(w));
+}
+
+function renderJobs(allJobs) {
   const body = document.getElementById('jobsBody');
   const emptyState = document.getElementById('jobsEmpty');
   const table = document.getElementById('jobsTable');
+  const openJobs = (allJobs || []).filter(j => !isClosedOnBoard(j));
+  const query = (document.getElementById('jobSearch')?.value || '').trim();
+  const jobs = openJobs.filter(j => jobMatchesSearch(j, query));
+  const countEl = document.getElementById('jobSearchCount');
+  if (countEl) countEl.textContent = query ? `${jobs.length} of ${openJobs.length}` : '';
 
-  if (!jobs || jobs.length === 0) {
+  if (!openJobs.length) {
     table.style.display = 'none';
     emptyState.style.display = 'block';
     return;
@@ -3153,7 +3257,7 @@ async function reopenJob(jobId, btn) {
   btn.disabled = true; btn.textContent = 'Reopening...';
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reopen', jobId, jobAddress: job.name || '' });
-    showToast('Job reopened. Crew and times can be edited again.');
+    showToast('Job reopened. It is back on Labor Dispatch.');
     render();
   } catch (error) {
     showToast(error.message, true);
@@ -3171,7 +3275,7 @@ async function setJobStage(jobId, action, btn) {
   const stagePayload = { action, jobId, opportunityId: jobId, nightWork: night, shiftType: night ? 'night' : 'day',
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job) };
   try {
-    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action, jobId, jobAddress: job.name || '' });
+    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action, jobId, jobAddress: job.name || '', clientName: getClientName(job), monetaryValue: getOpportunityValue(job) ?? null });
     await runSideEffect(CONFIG.CREATE_JOB_URL, stagePayload, 'GHL job stage update');
     render(); showToast('Job closed.');
   } catch (error) { showToast(error.message, true); }
@@ -4043,6 +4147,174 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     submitBtn.textContent = "Create Job";
     submitBtn.disabled = false;
   }
+});
+
+
+
+/* ---------- Completed tab ---------- */
+// Every job closed on the board (shared record active = false), newest first.
+// A job GHL still lists as active is flagged and can be reopened from here.
+function closedJobRows() {
+  const feed = new Map((dashboardData.jobs || []).map(j => [j.id, j]));
+  return [...dashboardData.sharedStateByJobId.values()].filter(r => r && r.active === false).map(r => {
+    const job = feed.get(r.jobId);
+    const name = (job && job.name) || r.closedJobName || r.jobAddress || r.changeOrderName || '';
+    const client = (job && getClientName(job)) || r.closedClientName || r.clientName || '';
+    let value = r.monetaryValue ?? (job ? job.monetaryValue : null);
+    value = value === '' || value === null || value === undefined || isNaN(parseFloat(value)) ? null : parseFloat(value);
+    return {
+      id: r.jobId, job, name, client, value,
+      status: /cancel/.test(r.status || '') ? 'Cancelled' : 'Completed',
+      closedAt: r.closedAt || r.updatedAt || '', closedBy: r.closedBy || '',
+      reportDate: r.reportDate || '', parent: r.parentJobName || '', stillInGhl: !!job
+    };
+  }).sort((a, b) => String(b.closedAt).localeCompare(String(a.closedAt)));
+}
+function renderCompletedView() {
+  const view = document.getElementById('completedDispatchView');
+  if (!view || view.hidden) return;
+  const all = closedJobRows();
+  const filter = document.getElementById('completedFilter').value;
+  const q = document.getElementById('completedSearch').value.trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  const rows = all.filter(r => filter === 'all' || (filter === 'ghl' ? r.stillInGhl : r.status.toLowerCase() === filter))
+    .filter(r => { const hay = [r.name, r.client, r.id, r.closedBy, r.parent].join(' ').toLowerCase(); return words.every(w => hay.includes(w)); });
+  document.getElementById('completedCount').textContent = rows.length === all.length ? `${all.length} closed` : `${rows.length} of ${all.length}`;
+  const shown = rows.slice(0, 300);
+  const fmtDate = v => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+  document.getElementById('completedBody').innerHTML = shown.length ? shown.map(r => {
+    const link = getGhlOpportunityLink({ id: r.id });
+    return `<tr data-completed-row="${escapeAttr(r.id)}">
+      <td data-label="Job ID"><a class="job-id" href="${link}" target="_blank" rel="noopener" title="Open in GHL">${escapeAttr(String(r.id).slice(-8))}</a>${r.parent ? `<br><span class="job-type-badge change-order">Change Order</span><span class="co-parent-note">for ${escapeAttr(r.parent)}</span>` : ''}</td>
+      <td data-label="Client">${escapeAttr(r.client || 'N/A')}</td>
+      <td data-label="Value"><span class="opp-value">${formatCurrency(r.value)}</span></td>
+      <td data-label="Address">${escapeAttr(r.name || 'N/A')}</td>
+      <td data-label="Last report date" class="mono">${escapeAttr(r.reportDate || 'N/A')}</td>
+      <td data-label="Closed">${escapeAttr(fmtDate(r.closedAt) || 'N/A')}${r.closedBy ? `<div class="job-closed-note">by ${escapeAttr(r.closedBy)}</div>` : ''}</td>
+      <td data-label="Status"><span class="status-tag closed">${r.status}</span>${r.stillInGhl ? `<br><span class="ghl-active-badge" title="GHL still lists this opportunity as an active job">Still active in GHL</span>
+        <div class="job-stage-actions"><button type="button" class="job-stage-btn reopen" data-job-id="${escapeAttr(r.id)}" title="Put it back on Labor Dispatch so crew and times can be edited">Reopen job</button></div>` : ''}</td>
+    </tr>`;
+  }).join('') : `<tr class="job-group-empty-row"><td colspan="7" class="completed-empty">${all.length ? 'No closed jobs match.' : 'No jobs have been closed on the board yet.'}</td></tr>`;
+  if (rows.length > shown.length) document.getElementById('completedBody').insertAdjacentHTML('beforeend', `<tr class="job-group-empty-row"><td colspan="7" class="completed-empty">Showing the newest 300. Search to find older jobs.</td></tr>`);
+}
+document.getElementById('completedSearch').addEventListener('input', renderCompletedView);
+document.getElementById('completedFilter').addEventListener('change', renderCompletedView);
+document.getElementById('completedBody').addEventListener('click', e => {
+  const btn = e.target.closest('.job-stage-btn.reopen');
+  if (btn) reopenJob(btn.dataset.jobId, btn);
+});
+document.getElementById('jobSearch').addEventListener('input', () => renderJobs(dashboardData.jobs || []));
+document.getElementById('jobSearch').addEventListener('keydown', e => { if (e.key === 'Escape') { e.target.value = ''; renderJobs(dashboardData.jobs || []); } });
+
+/* ---------- Worker sent home ---------- */
+// Top bar button. Dispatch picks a worker on any open job and the hours they
+// worked. The board releases them from that job (action "send_home", kept in the
+// job's sentHome list), then posts { jobId, workerName, hoursWorked, ... } to the
+// worker_sent_home webhook. No removal text is sent to the worker.
+let sentHomeChoices = [];
+function sentHomeElapsedHours(job) {
+  const date = getReportDate(job), time = getReportTime(job);
+  if (!date || !time || date !== toLocalYMD(new Date())) return null;
+  const start = new Date(`${date}T${time}:00`);
+  const hours = Math.floor((Date.now() - start.getTime()) / 1800000) / 2;
+  return hours >= 0.5 ? Math.min(16, hours) : null;
+}
+function sentHomeSelected() {
+  const picked = document.querySelector('#sentHomeWorkers input:checked');
+  return picked ? sentHomeChoices[Number(picked.value)] : null;
+}
+function renderSentHomeWorkers() {
+  const q = document.getElementById('sentHomeSearch').value.trim().toLowerCase();
+  const selected = sentHomeSelected();
+  const host = document.getElementById('sentHomeWorkers');
+  const shown = sentHomeChoices.map((c, i) => ({ c, i })).filter(({ c }) => !q || [c.worker.name, c.job.name, getClientName(c.job)].some(v => String(v || '').toLowerCase().includes(q)));
+  const today = toLocalYMD(new Date());
+  const groups = [['On today', shown.filter(({ c }) => getReportDate(c.job) === today)], ['Other jobs', shown.filter(({ c }) => getReportDate(c.job) !== today)]].filter(([, list]) => list.length);
+  host.innerHTML = groups.length
+    ? groups.map(([label, list]) => (groups.length > 1 ? `<div class="sent-home-group">${label}</div>` : '') + list.map(({ c, i }) => `
+      <label class="sent-home-worker"><input type="radio" name="sentHomeWorker" value="${i}"${selected === c || sentHomeChoices.length === 1 ? ' checked' : ''}>
+        <span>${escapeAttr(c.worker.name)}<small>${escapeAttr(c.job.name || 'Job')}${getReportTime(c.job) ? ' · start ' + escapeAttr(getReportTime(c.job)) : ''}</small></span></label>`).join('')).join('')
+    : `<div class="sent-home-empty">${sentHomeChoices.length ? 'No match.' : 'No workers are on an open job right now.'}</div>`;
+}
+function openSentHome() {
+  sentHomeChoices = [];
+  for (const job of dashboardData.jobs || []) {
+    if (!job.id || !isJobOpen(job)) continue;
+    for (const worker of getCrew(job)) sentHomeChoices.push({ job, worker });
+  }
+  sentHomeChoices.sort((a, b) => String(a.worker.name).localeCompare(String(b.worker.name)));
+  document.getElementById('sentHomeSearch').value = '';
+  renderSentHomeWorkers();
+  fillSentHomeHours();
+  document.getElementById('sentHomeBackdrop').hidden = false;
+  updateSentHomeConfirm();
+  if (sentHomeChoices.length > 1) document.getElementById('sentHomeSearch').focus();
+}
+function fillSentHomeHours() {
+  const choice = sentHomeSelected();
+  const elapsed = choice ? sentHomeElapsedHours(choice.job) : null;
+  const select = document.getElementById('sentHomeHours');
+  const keep = select.dataset.touched === '1' ? select.value : '';
+  const options = ['<option value="">Pick hours</option>'];
+  for (let h = 0.5; h <= 16; h += 0.5) options.push(`<option value="${h}">${h} ${h === 1 ? 'hour' : 'hours'}</option>`);
+  select.innerHTML = options.join('');
+  select.value = keep || (elapsed ? String(elapsed) : '');
+  document.getElementById('sentHomeHint').textContent = !keep && elapsed
+    ? `Filled in from the ${getReportTime(choice.job)} start time. Change it if needed.`
+    : 'Pick the hours this worker actually worked.';
+}
+function closeSentHome() {
+  document.getElementById('sentHomeBackdrop').hidden = true;
+  document.getElementById('sentHomeHours').dataset.touched = '';
+  sentHomeChoices = [];
+}
+function updateSentHomeConfirm() {
+  const choice = sentHomeSelected();
+  const hours = document.getElementById('sentHomeHours').value;
+  const btn = document.getElementById('sentHomeConfirm');
+  btn.disabled = !choice || !hours;
+  btn.textContent = choice && hours ? `Send ${choice.worker.name.split(' ')[0]} home (${hours} h)` : 'Send home';
+}
+document.getElementById('sentHomeBtn').addEventListener('click', openSentHome);
+document.getElementById('sentHomeSearch').addEventListener('input', () => { renderSentHomeWorkers(); updateSentHomeConfirm(); });
+document.getElementById('sentHomeWorkers').addEventListener('change', () => { fillSentHomeHours(); updateSentHomeConfirm(); });
+document.getElementById('sentHomeHours').addEventListener('change', e => { e.target.dataset.touched = e.target.value ? '1' : ''; updateSentHomeConfirm(); });
+document.getElementById('sentHomeCancel').addEventListener('click', closeSentHome);
+document.getElementById('sentHomeBackdrop').addEventListener('click', e => { if (e.target.id === 'sentHomeBackdrop') closeSentHome(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.getElementById('sentHomeBackdrop').hidden) closeSentHome(); });
+document.getElementById('sentHomeConfirm').addEventListener('click', async () => {
+  const choice = sentHomeSelected();
+  const hoursWorked = Number(document.getElementById('sentHomeHours').value);
+  if (!choice || !hoursWorked) return;
+  const { job, worker } = choice;
+  const jobId = job.id;
+  const rosterMatch = (dashboardData.labor || []).find(w => String(w.name || '').trim().toLowerCase() === String(worker.name || '').trim().toLowerCase()) || {};
+  const contactId = worker.id || rosterMatch.id || '';
+  const workerPhone = worker.phone || rosterMatch.phone || '';
+  const btn = document.getElementById('sentHomeConfirm');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    await commitState(CONFIG.SHARED_STATE_SYNC_URL, {
+      action: 'send_home', jobId, jobAddress: job.name || '', workerName: worker.name, hoursWorked,
+      removedWorkers: [{ contactId, workerName: worker.name, workerPhone }]
+    });
+  } catch (error) {
+    showToast(error.message, true); updateSentHomeConfirm(); return;
+  }
+  const night = getNightWork(job);
+  runSideEffect(CONFIG.WORKER_SENT_HOME_URL, {
+    action: 'worker_sent_home', jobId, opportunityId: jobId,
+    workerName: worker.name, hoursWorked,
+    workerPhone, contactId,
+    jobAddress: job.name || '', clientName: getClientName(job),
+    reportDate: getReportDate(job), reportTime: getReportTime(job),
+    reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
+    nightWork: night, shiftType: night ? 'night' : 'day',
+    sentHomeAt: new Date().toISOString()
+  }, `Worker sent home for ${worker.name}`, 'worker_sent_home', 'sent-home-' + (String(workerPhone).replace(/\D/g, '') || contactId || 'worker'));
+  closeSentHome();
+  showToast(`${worker.name} sent home (${hoursWorked} h) and released from ${job.name || 'the job'}.`);
+  render();
 });
 
 /* ---------- Edit Job Details sheet ---------- */
@@ -5287,6 +5559,8 @@ document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListe
   document.getElementById('laborDispatchView').hidden = view !== 'labor';
   document.getElementById('logisticsDispatchView').hidden = !logistics;
   document.getElementById('scheduleDispatchView').hidden = view !== 'schedule';
+  document.getElementById('completedDispatchView').hidden = view !== 'completed';
+  if (view === 'completed') renderCompletedView();
   document.getElementById('adminDispatchView').hidden = view !== 'admin';
   if ((logistics || view === 'admin') && !logisticsLoaded) loadLogistics();
   if (view === 'admin') renderAdminView();
@@ -5419,7 +5693,7 @@ function runSideEffect(url, payload, label, kindOverride, effectKey) {
   return Promise.resolve({ ok: true, optimistic: true });
 }
 function editingDispatch() {
-  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && !document.activeElement.closest('#signinBackdrop')) ||
+  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && document.activeElement.type !== 'search' && !document.activeElement.closest('#signinBackdrop')) ||
     Object.values(window.jobTimesLocked || {}).some(v => v === false) || Object.values(window.logisticsScheduleOverride || {}).some(v => v.locked === false);
 }
 async function pollSharedState() {
@@ -6657,7 +6931,7 @@ function renderHistory() {
   document.getElementById('historyCount').textContent = String(seniorSends.length);
   const groups = new Map();
   for (const item of shown) { const k = item.jobId || item.jobName; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(item); }
-  const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'job_log' ? 'Job log' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
+  const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'job_log' ? 'Job log' : k === 'worker_sent_home' ? 'Worker sent home' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
   document.getElementById('historyList').innerHTML = groups.size ? [...groups.values()].map(items => `<div class="history-job"><h4>${sessionEsc(items[0].jobName || 'Job')}<small>${sessionEsc(items[0].jobId || '')} · ${items.length} sent</small></h4>`
     + items.map(i => `<div class="history-row"><div><span class="kind">${kindLabel(i.kind)}</span> <span class="file">${sessionEsc(i.fileName || i.detail || '')}</span></div><div>${i.status === 'failed' ? '<span class="st-failed">FAILED</span> ' : ''}${seniorWhen(i.at)}</div></div>`).join('') + '</div>').join('')
     : `<p class="load-state">${seniorSends.length ? 'No jobs match.' : 'Nothing sent yet. EOD sheets and Project Schedule PDFs show here once sent.'}</p>`;

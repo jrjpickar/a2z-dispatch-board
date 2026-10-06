@@ -18,3 +18,9 @@ test('reopen makes the job editable again, keeps times and details, and clears t
   const assigned = mutateJob({ version: 5, ...reopened }, { action: 'assign', crewChanges: [{ name: 'Bob' }] });
   assert.deepEqual(assigned.data.crew.map(w => w.name), ['Bob']);
 });
+test('closing keeps the job name, client and value for the Completed tab', () => {
+  const closed = mutateJob(open, { action: 'complete', jobAddress: '55 Elm St', clientName: 'Acme', monetaryValue: 1200 });
+  assert.equal(closed.data.closedJobName, '55 Elm St'); assert.equal(closed.data.closedClientName, 'Acme'); assert.equal(closed.data.monetaryValue, 1200);
+  const kept = mutateJob({ ...open, data: { ...open.data, monetaryValue: 900 } }, { action: 'cancel', monetaryValue: 1200 });
+  assert.equal(kept.data.monetaryValue, 900);
+});

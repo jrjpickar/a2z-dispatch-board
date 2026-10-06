@@ -16,6 +16,7 @@ export default async function handler(request) {
     // Never post a blank run: every workflow needs its action and record id.
     if (!String(payload.action || '').trim() || !String(payload.moveId || payload.jobId || payload.opportunityId || '').trim()) throw new StateError('Workflow payload is missing its action or record id; nothing was sent.');
     if (kind === 'eod_sheet') { try { assertEodPayload(payload); } catch (e) { throw new StateError(e.message); } }
+    if (kind === 'worker_sent_home' && (!String(payload.workerName || '').trim() || !(Number(payload.hoursWorked) > 0))) throw new StateError('Worker sent home needs the worker and the hours worked; nothing was sent.');
     // effectKey lets one saved change fan out to several webhook calls (e.g. one
     // worker-assignment notification per assignee), each deduped on its own.
     const key = String(effectKey || '').replace(/[^\w+.-]/g, '').slice(0, 80);

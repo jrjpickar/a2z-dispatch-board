@@ -34,19 +34,34 @@ const { pathToFileURL } = require('node:url');
     }
     return reply({});
   });
+  jobs.push({ id: 'job00000002', name: '9 Oak Ave', sourceType: 'labor', contact: { id: 'c2', name: 'Oak Builders' }, customFields: [] });
   await page.goto('https://a2z.test/');
-  await page.waitForFunction(() => document.getElementById('jobsBody').innerText.includes('55 Elm St'));
-  const row = page.locator('tr[data-job-row="job00000001"]');
-  assert.match(await row.innerText(), /Closed on the board by Sam/);
-  assert.match(await row.innerText(), /job closed, reopen to assign/);
-  assert.equal(await row.locator('.job-stage-btn.edit').count(), 0);
-  await page.screenshot({ path: process.env.SHOT_DIR ? path.join(process.env.SHOT_DIR, 'closed-row.png') : '/dev/null' }).catch(() => {});
+  await page.waitForFunction(() => document.getElementById('jobsBody').innerText.includes('9 Oak Ave'));
+  // Closed jobs leave Labor Dispatch and the Jobs Scheduled count.
+  assert.equal(await page.locator('tr[data-job-row="job00000001"]').count(), 0);
+  assert.equal(await page.locator('#statScheduled').innerText(), '1');
+  // Search bar filters the board.
+  await page.fill('#jobSearch', 'zzz');
+  assert.equal(await page.locator('#jobsBody tr[data-job-row]').count(), 0);
+  assert.equal(await page.locator('#jobSearchCount').innerText(), '0 of 1');
+  await page.fill('#jobSearch', 'oak');
+  assert.equal(await page.locator('#jobsBody tr[data-job-row]').count(), 1);
+  await page.fill('#jobSearch', '');
+  // Completed tab lists it, flags that GHL still has it active, and can reopen it.
+  await page.locator('#completedViewTab').click();
+  const row = page.locator('tr[data-completed-row="job00000001"]');
+  assert.match(await row.innerText(), /55 Elm St[\s\S]*by Sam[\s\S]*Completed[\s\S]*Still active in GHL/i);
+  await page.fill('#completedSearch', 'nothing');
+  assert.equal(await row.count(), 0);
+  await page.fill('#completedSearch', 'elm');
+  await page.screenshot({ path: process.env.SHOT_DIR ? path.join(process.env.SHOT_DIR, 'completed-tab.png') : '/dev/null' }).catch(() => {});
   await row.locator('.job-stage-btn.reopen').click();
   await page.waitForFunction(() => document.getElementById('toast').innerText.includes('Job reopened'));
   assert.equal(rec.active, true);
-  assert.equal(await row.locator('.job-stage-btn.reopen').count(), 0);
-  assert.equal(await row.locator('.job-stage-btn.edit').count(), 1);
-  assert.doesNotMatch(await row.innerText(), /job closed, reopen to assign/);
+  assert.equal(await row.count(), 0);
+  await page.locator('#laborViewTab').click();
+  await page.waitForFunction(() => !!document.querySelector('tr[data-job-row="job00000001"]'));
+  assert.equal(await page.locator('tr[data-job-row="job00000001"] .job-stage-btn.edit').count(), 1);
   assert.deepEqual(errors, []);
   await browser.close();
   console.log('Closed job smoke passed.');

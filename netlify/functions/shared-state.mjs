@@ -25,11 +25,13 @@ export default async function handler(request) {
     const session = sessionFromRequest(request);
     if (['complete', 'cancel'].includes(payload.action) && session && !payload.closedBy) payload.closedBy = session.name;
     if (payload.action === 'reopen' && session && !payload.reopenedBy) payload.reopenedBy = session.name;
+    if (payload.action === 'send_home' && session && !payload.sentHomeBy) payload.sentHomeBy = session.name;
     const result = await saveState(sql, 'job', payload);
     if (['complete', 'cancel', 'reopen'].includes(payload.action) && !result.replayed) {
       const label = { complete: 'Marked job completed', cancel: 'Marked job cancelled', reopen: 'Reopened job' }[payload.action];
       await logActivity(sql, session, label, payload.jobAddress || payload.jobId, { jobId: payload.jobId });
     }
+    if (payload.action === 'send_home' && !result.replayed) await logActivity(sql, session, 'Sent worker home', `${payload.workerName || ''} (${payload.hoursWorked} h) from ${payload.jobAddress || payload.jobId}`, { jobId: payload.jobId, hoursWorked: payload.hoursWorked });
     if (['save_times', 'reset_dispatch'].includes(payload.action)) {
       try { result.crmSync = await syncJobSchedule(sql, result.record.jobId); }
       catch { result.crmSync = { ok: false, error: 'Dispatch saved. GHL schedule sync needs a retry.' }; }

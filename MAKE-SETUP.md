@@ -22,6 +22,14 @@ The crew picker has two buttons once workers are ticked: **Assign selected** (ac
 
 Add a router path filtered on `action` = `rapid_assign` that sends the schedule right away, and end it with the `{"ok":true}` Webhook response. Until that path exists, rapid runs match no route and will show under Admin > Make / GHL problems after 45 seconds.
 
+## Worker sent home (new webhook)
+
+The **Worker sent home** button posts JSON to `https://hook.us2.make.com/mo2wtttzdfhpl4liym6c8uw3pbq6mmth` (override with `WORKER_SENT_HOME_WEBHOOK` in Netlify), one run per worker:
+
+`jobId`, `workerName`, `hoursWorked` (a number, like `5.5`), plus `action` (`"worker_sent_home"`), `opportunityId` (same as `jobId`), `workerPhone`, `contactId`, `jobAddress`, `clientName`, `reportDate`, `reportTime`, `reportEndDate`, `reportEndTime`, `nightWork`, `shiftType`, `sentHomeAt` and `eventId`.
+
+End the scenario with the `{"ok":true}` Webhook response. Without it every send shows under Admin > Make / GHL problems after 45 seconds (the worker is still released on the board either way).
+
 ## Complete EOD Sheet route (worker webhook)
 
 The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing Worksheet to the same worker webhook Reset Day already used: `https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l` (or `EOD_SHEET_WEBHOOK` / `WORKER_EFFECT_WEBHOOK` if set in Netlify). Add a router path filtered on `action` = `eod_sheet` and end it with the `{"ok":true}` Webhook response above. No separate `remove` event is sent. The released crew is included in `removedWorkers` if you want to notify them from this route.

@@ -8,6 +8,12 @@ Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response ch
 
 Includes the backend, edited dashboard, the read-only Field App for drivers/crew, tests, dependency lockfile, and minimal Make JSON templates. Credentials and production site linkage are not included.
 
+## Worker sent home, job search, Completed tab
+
+- **Worker sent home** (top bar, left of Dark Mode). Lists every worker on an open job (on today first, with search). Dispatch picks the worker and the hours worked (half hour steps up to 16; filled in from the job's start time when it started today). The worker is released from that job right away, and the board posts to `https://hook.us2.make.com/mo2wtttzdfhpl4liym6c8uw3pbq6mmth` (override with `WORKER_SENT_HOME_WEBHOOK`). No removal text goes to the worker. The hours are also kept on the job (`sentHome`) and in the Activity log. See MAKE-SETUP.md.
+- **Search bar** on Jobs Scheduled: matches address, client, crew, scope, job ID and change order parent. Shows "x of y"; Esc clears it.
+- **Completed tab** (after Schedule). Jobs marked Completed or Cancelled on the board now leave Labor Dispatch (and the Jobs Scheduled count) and are listed here, newest first, with search and a filter (All closed, Completed, Cancelled, Still active in GHL). A job GHL still lists as active is flagged and has **Reopen job**, which puts it back on Labor Dispatch. Name, client and value are saved when a job closes so the row still reads right after GHL drops it; jobs closed before this deploy show what the board had.
+
 ## Fix: jobs stuck as "closed" (can't add crew or schedule)
 
 - **Cause.** Completed / Cancelled closes the job on the board right away, then asks Make to move the GHL stage. If GHL still lists the job as active afterwards (the Make stage update didn't go through, someone moved it back in GHL, Completed was clicked on the wrong row, or it's a change order, since the Change Order pipeline isn't filtered by stage), the row looked completely normal but every save was refused with "This job is closed. Reopen it explicitly", and there was no way to reopen it.
