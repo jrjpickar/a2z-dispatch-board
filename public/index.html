@@ -3265,6 +3265,34 @@ async function reopenJob(jobId, btn) {
   }
 }
 
+// Job log payload (kind "job_log"): one flat shape for Make, sent on Complete EOD
+// Sheet (action "eod_sheet") and on Completed (action "complete"). Snapshot it
+// BEFORE the state commit, because both clear the crew on the board.
+function toE164(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  const digits = s.replace(/\D/g, '');
+  if (s.startsWith('+')) return '+' + digits;
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+  return digits ? '+' + digits : '';
+}
+function buildJobLogPayload(job, action) {
+  const value = Number(getOpportunityValue(job));
+  return {
+    jobId: job.id || '', action,
+    jobAddress: job.name || '', clientName: getClientName(job), clientPhone: toE164(getClientPhone(job)),
+    scopeOfWork: getScopeOfWork(job) || '', toolsRequired: getToolsRequired(job) || '',
+    monetaryValue: Number.isFinite(value) ? value : 0,
+    reportDate: getReportDate(job) || '', reportTime: getReportTime(job) || '',
+    reportEndDate: getReportEndDate(job) || '', reportEndTime: getReportEndTime(job) || '',
+    assignedWorkers: getCrew(job).filter(w => w && w.name).map(w => ({
+      workerPhone: toE164(w.phone || (dashboardData.labor || []).find(l => l.name === w.name)?.phone || ''),
+      workerName: w.name
+    }))
+  };
+}
+
 async function setJobStage(jobId, action, btn) {
   if (!jobId || !['complete', 'cancel'].includes(action)) return;
   if (!confirm(`Mark this job ${action === 'complete' ? 'completed' : 'cancelled'}?`)) return;
@@ -3274,9 +3302,12 @@ async function setJobStage(jobId, action, btn) {
   const night = getNightWork(job);
   const stagePayload = { action, jobId, opportunityId: jobId, nightWork: night, shiftType: night ? 'night' : 'day',
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job) };
+  // Job log snapshot taken before the commit clears the crew.
+  const jobLogPayload = action === 'complete' ? buildJobLogPayload(job, 'complete') : null;
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action, jobId, jobAddress: job.name || '', clientName: getClientName(job), monetaryValue: getOpportunityValue(job) ?? null });
     await runSideEffect(CONFIG.CREATE_JOB_URL, stagePayload, 'GHL job stage update');
+    if (jobLogPayload) await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log');
     render(); showToast('Job closed.');
   } catch (error) { showToast(error.message, true); }
   finally { btn.disabled = false; }
@@ -3296,10 +3327,7 @@ async function resetJobDay(jobId, btn, eodSheet) {
   const crewBeforeReset = getCrew(job);
   const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
   // Job log snapshot, taken BEFORE the reset clears the schedule and crew.
-  const jobLogPayload = eodSheet ? { jobId, action: 'eod_sheet', jobAddress: job.name || '', clientName: getClientName(job), clientPhone: getClientPhone(job),
-    scopeOfWork: getScopeOfWork(job), toolsRequired: getToolsRequired(job), monetaryValue: getOpportunityValue(job),
-    reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
-    assignedWorkers: removedWorkers } : null;
+  const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet') : null;
   btn.disabled = true;
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reset_dispatch', jobId });
