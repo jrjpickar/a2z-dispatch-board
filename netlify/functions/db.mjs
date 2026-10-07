@@ -105,6 +105,8 @@ async function createSchema(sql) {
     key text primary key, value jsonb not null, updated_by text not null default '', updated_at timestamptz not null default now()
   )`;
   await sql`alter table dispatch_effects add column if not exists payload jsonb`;
+  // Held sends (undo window on Completed/Cancelled): status 'scheduled' until due_at, or 'cancelled' by Undo.
+  await sql`alter table dispatch_effects add column if not exists due_at timestamptz`;
   // One-time (Jesse, 1.8): acknowledge every Make/GHL problem that existed before
   // this deploy so the senior admin problems list starts clean.
   const [acked] = await sql`select 1 as ok from dispatch_settings where key = 'migration:ack-problems-1.8'`;

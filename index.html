@@ -840,6 +840,162 @@
   .assignment-lock-copy{min-width:0}.assignment-lock-label{display:block;font:700 8px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#6b7075}.assignment-lock-value{display:block;margin-top:2px;font-size:11px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
   .assignment-edit-panel{margin-top:7px;padding:8px;border:1px solid #d5d9dc;border-radius:7px;background:#f7f8f8}.assignment-edit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font:700 9px 'IBM Plex Mono',monospace;text-transform:uppercase;color:var(--ink-soft)}.assignment-edit-items{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}.assignment-edit-item{display:flex;align-items:center;gap:5px;padding:4px 6px;border:1px solid #d9dcdf;border-radius:5px;background:#fff;font-size:10px}
   .addon-section{border:1px solid var(--border);border-left:4px solid var(--gold);background:var(--gold-tint-soft);padding:12px;margin-bottom:16px}.addon-section>label{display:block;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:12px;font-weight:600;margin-bottom:9px}.addon-block{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-top:8px}.addon-toggle{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}.addon-toggle input{width:auto}.addon-fields{padding-top:10px}.addon-fields[hidden]{display:none}
+  /* ---------- Undo window after Completed / Cancelled ---------- */
+  .close-undo-host{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;width:min(560px,calc(100vw - 24px))}
+  .close-undo-bar{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:linear-gradient(135deg,#1c1d1f,#2c2d30);color:#fff;box-shadow:0 12px 32px rgba(0,0,0,.3);border-left:4px solid var(--orange)}
+  .close-undo-text{flex:1;min-width:0;font-size:14px;line-height:1.35}
+  .close-undo-text span{display:block;font-size:12px;color:#c9cdd1}
+  .close-undo-text span b{font-family:'IBM Plex Mono',monospace;color:#ffb48f}
+  .close-undo-btn{background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-weight:700;font-size:14px;padding:9px 18px;border-radius:7px}
+  .close-undo-btn:hover{filter:brightness(1.08)}
+  .close-send-btn{background:transparent;color:#d4d8dc;border:1px solid #666c72;font-size:12px;padding:8px 10px;border-radius:7px}
+  .close-send-btn:hover{color:#fff;border-color:#fff}
+  .close-undo-btn:disabled,.close-send-btn:disabled{opacity:.55;cursor:wait}
+  .close-undo-meter{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--orange);transform-origin:left;animation:closeUndoMeter linear forwards}
+  @keyframes closeUndoMeter{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+  @media (prefers-reduced-motion:reduce){.close-undo-meter{animation:none}}
+  @media(max-width:760px){.close-undo-host{bottom:12px}.close-undo-bar{flex-wrap:wrap}.close-undo-text{flex-basis:100%}.close-undo-btn,.close-send-btn{min-height:42px;flex:1}}
+  /* ---------- Scope of work, editable on the job row ---------- */
+  .scope-input{display:block;width:100%;min-width:170px;max-width:250px;min-height:64px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--stripe);color:var(--ink);font:13px/1.45 'Inter',sans-serif;resize:vertical;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+  .scope-input:hover{border-color:#f0a27e}
+  .scope-input:focus{outline:none;border-color:var(--orange);background:var(--card);box-shadow:0 0 0 3px rgba(232,98,44,.15)}
+  .scope-input[readonly]{background:transparent;border-style:dashed;cursor:default}
+  .scope-input.saving{opacity:.6}
+  .scope-status{display:block;min-height:14px;margin-top:3px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft)}
+  .scope-status:empty{display:none}
+  @media(max-width:760px){.scope-input{max-width:none;min-width:0}}
+  /* ---------- Labor Dispatch polish (cards, softer table, roster avatars) ---------- */
+  .worker-avatar{flex:0 0 auto;width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 12px 'Inter',sans-serif;letter-spacing:.02em;color:#fff;background:linear-gradient(135deg,#8b8f94,#6b6f74)}
+  .worker-avatar.is-booked{background:linear-gradient(135deg,var(--orange),var(--orange-dark))}
+  .worker-main{display:flex;align-items:center;gap:11px;min-width:0}
+  @media (min-width:761px){
+    #laborDispatchView{background:linear-gradient(180deg,#f3f4f5 0%,#eceeef 100%);min-height:calc(100vh - 104px);padding-bottom:18px}
+    #laborDispatchView .status-strip{gap:12px;padding:16px 18px;background:transparent;border:0}
+    #laborDispatchView .status-card{border:1px solid rgba(21,22,24,.10);border-top-width:4px;border-radius:10px;padding:16px 20px;box-shadow:0 5px 18px rgba(21,22,24,.06);transition:transform .15s ease,box-shadow .15s ease}
+    #laborDispatchView .status-card.available,#laborDispatchView .status-card.booked{cursor:pointer}
+    #laborDispatchView .status-card.available:hover,#laborDispatchView .status-card.booked:hover{filter:none;transform:translateY(-2px);box-shadow:0 9px 24px rgba(21,22,24,.10)}
+    #laborDispatchView .status-card .num{font-size:38px;letter-spacing:-.02em}
+    #laborDispatchView .layout{grid-template-columns:300px minmax(0,1fr);gap:12px;padding:0 18px;background:transparent;min-height:calc(100vh - 235px);align-items:start}
+    #laborDispatchView .panel{border:1px solid rgba(21,22,24,.10);border-radius:10px;overflow:hidden;box-shadow:0 7px 22px rgba(21,22,24,.07);background:#fff}
+    #laborDispatchView .panel-head{background:linear-gradient(180deg,#fff,#fafafa);min-height:58px}
+    #laborDispatchView .roster-tabs{padding:8px 12px 0;gap:6px;border-bottom:1px solid var(--border)}
+    #laborDispatchView .roster-tab{border-radius:7px 7px 0 0}
+    #laborDispatchView .roster-search input,#laborDispatchView .jobs-search{border-radius:8px;border-color:#cfd3d7;padding:8px 12px;box-shadow:0 1px 2px rgba(21,22,24,.04)}
+    #laborDispatchView .roster-search input:focus,#laborDispatchView .jobs-search:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,98,44,.15)}
+    #laborDispatchView .roster-list li{padding:10px 16px;gap:10px;transition:background .15s ease,transform .15s ease}
+    #laborDispatchView .roster-list li:nth-child(even){background:transparent}
+    #laborDispatchView .roster-list li:hover{background:var(--orange-tint-soft);transform:translateX(2px)}
+    #laborDispatchView .pill{padding:4px 9px}
+    #laborDispatchView .jobs-table-wrap{margin:0 12px 14px;border:1px solid #dde0e3;border-radius:9px;box-shadow:0 4px 16px rgba(21,22,24,.05);background:#fff}
+    #laborDispatchView table.jobs th{position:sticky;top:0;z-index:2;padding:12px 11px;background:#202124}
+    #laborDispatchView table.jobs td[data-label="Address"]{min-width:130px}
+    #laborDispatchView table.jobs td{padding:13px 11px;line-height:1.45;border-bottom:1px solid #eceeef}
+    #laborDispatchView table.jobs tr:nth-child(even) td{background:transparent}
+    #laborDispatchView table.jobs tr[data-job-row]:hover td{background:#fff6ef}
+    #laborDispatchView table.jobs tr[data-job-row] td:first-child{box-shadow:inset 4px 0 0 transparent;transition:box-shadow .15s ease}
+    #laborDispatchView table.jobs tr[data-job-row]:hover td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
+    #laborDispatchView .job-group-header{border-top:1px solid #3a3c40;border-bottom:1px solid #3a3c40;padding:9px 14px!important}
+    #laborDispatchView .job-id{border-radius:5px;padding:3px 7px;font-weight:600}
+    #laborDispatchView .opp-value{padding:3px 9px}
+    #laborDispatchView .crew-chip{padding:3px 9px}
+    #laborDispatchView .crew-assign-toggle{border-radius:999px;border-style:dashed;border-color:#c7cbcf;background:#fff}
+    #laborDispatchView .crew-assign-toggle:hover{border-style:solid;border-color:var(--orange);color:var(--orange-dark)}
+    #laborDispatchView .time-unlock{border-radius:6px}
+    #laborDispatchView .status-tag.open{border-color:#d9a19a;color:#b5574c;background:#fdf3f1}
+    #laborDispatchView .job-stage-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px;min-width:172px;margin-top:8px}
+    #laborDispatchView .job-stage-actions .job-stage-btn{min-height:28px;padding:5px 8px;border-radius:6px;text-align:center;box-shadow:0 1px 2px rgba(21,22,24,.05)}
+    #laborDispatchView .job-stage-actions .job-stage-btn.edit:has(+ .reset),#laborDispatchView .job-stage-actions .job-stage-btn.reset,#laborDispatchView .job-stage-actions .job-stage-btn.reopen{grid-column:1/-1}
+    #laborDispatchView .job-stage-actions .job-stage-btn.reset{background:var(--orange-tint-soft);font-weight:700}
+    #laborDispatchView .job-stage-actions .job-stage-btn.reset:hover{background:var(--orange);color:#fff}
+    #laborDispatchView .job-stage-actions .job-stage-btn.complete{background:#fffaf0}
+    #laborDispatchView .job-stage-actions .job-stage-btn.cancel{background:#fff8f7}
+    body.dark-mode #laborDispatchView{background:linear-gradient(180deg,#17191b,#202326)}
+    body.dark-mode #laborDispatchView .panel,body.dark-mode #laborDispatchView .status-card,body.dark-mode #laborDispatchView .jobs-table-wrap{background:#222427;border-color:#3b3f43;box-shadow:0 7px 22px rgba(0,0,0,.25)}
+    body.dark-mode #laborDispatchView .panel-head{background:linear-gradient(180deg,#292c2f,#232629)}
+    body.dark-mode #laborDispatchView table.jobs td{border-color:#33373b}
+    body.dark-mode #laborDispatchView table.jobs tr[data-job-row]:hover td,body.dark-mode #laborDispatchView .roster-list li:hover{background:#33251f}
+    body.dark-mode #laborDispatchView .crew-chip:not(.empty-slot){color:#ffb48f}
+    body.dark-mode #laborDispatchView table.jobs th{background:#1a1c1f!important}
+    body.dark-mode #laborDispatchView .crew-assign-toggle{background:#26292c;border-color:#555b61;color:#e3e6e8}
+    body.dark-mode #laborDispatchView .status-tag.open{background:#3b2322;border-color:#7a3f39;color:#f1a09a}
+    body.dark-mode #laborDispatchView .job-stage-actions .job-stage-btn.reset{background:#3d2418!important;color:#f0a878;border-color:#c94f1f}
+    body.dark-mode #laborDispatchView .roster-search input:focus,body.dark-mode #laborDispatchView .jobs-search:focus{border-color:var(--orange)!important}
+  }
+  /* ---------- Labor Dispatch: warmer orange pass + larger type ---------- */
+  @media (min-width:761px){
+    #laborDispatchView{background:radial-gradient(1200px 380px at 12% -80px,rgba(232,98,44,.13),transparent 70%),linear-gradient(180deg,#f6f2ef 0%,#eeeceb 100%)}
+    #laborDispatchView .status-card{padding:18px 22px;border-top-width:5px}
+    #laborDispatchView .status-card .num{font-size:46px}
+    #laborDispatchView .status-card .label-caps{font-size:13px;letter-spacing:.07em}
+    #laborDispatchView .status-card.available{background:linear-gradient(160deg,#fff 0%,#fbf4ef 100%);border-top-color:#f0a27e}
+    #laborDispatchView .status-card.booked{background:linear-gradient(135deg,#ef6d36 0%,var(--orange) 45%,var(--orange-dark) 100%);border-color:var(--orange-dark);box-shadow:0 10px 26px rgba(201,79,31,.28)}
+    #laborDispatchView .status-card.booked .num,#laborDispatchView .status-card.booked .label-caps{color:#fff}
+    #laborDispatchView .status-card.booked:hover{box-shadow:0 14px 30px rgba(201,79,31,.36)}
+    #laborDispatchView .status-card.scheduled{background:linear-gradient(160deg,#fff 0%,#fdf7ea 100%)}
+    #laborDispatchView .panel-head{border-bottom:3px solid var(--orange);min-height:62px}
+    #laborDispatchView .panel-head h2{font-size:18px;letter-spacing:.06em}
+    #laborDispatchView .roster-tab{font-size:13px;padding:11px 8px;border-radius:8px 8px 0 0}
+    #laborDispatchView .roster-tab.active{background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;border-bottom-color:var(--orange-dark)}
+    #laborDispatchView .roster-search input,#laborDispatchView .jobs-search{font-size:14px}
+    #laborDispatchView .worker-name{font-size:15px;font-weight:600}
+    #laborDispatchView .worker-meta{font-size:12px}
+    #laborDispatchView .worker-avatar{width:38px;height:38px;font-size:13px;background:linear-gradient(135deg,#f6b493,#e98a5f)}
+    #laborDispatchView .worker-avatar.is-booked{background:linear-gradient(135deg,var(--orange),var(--orange-dark));box-shadow:0 0 0 3px var(--orange-tint)}
+    #laborDispatchView .pill{font-size:11px}
+    #laborDispatchView .pill.avail{background:#fff;border-color:#f0a27e;color:var(--orange-dark)}
+    #laborDispatchView table.jobs th{font-size:12px;border-bottom:3px solid var(--orange)}
+    #laborDispatchView table.jobs td{font-size:14.5px}
+    #laborDispatchView .job-group-header{font-size:14px;border-left-color:var(--orange)}
+    #laborDispatchView .job-group-today .job-group-header{background:linear-gradient(90deg,#2a1a12 0%,#202124 60%)!important}
+    #laborDispatchView .job-id{font-size:13px;background:var(--orange-tint);color:var(--orange-dark)}
+    #laborDispatchView a.job-id:hover{background:var(--orange);color:#fff}
+    #laborDispatchView .opp-value{font-size:13px}
+    #laborDispatchView .time-locked-display{font-size:13px}
+    #laborDispatchView .time-unlock{font-size:12px;min-height:26px}
+    #laborDispatchView .crew-chip{font-size:12.5px;padding:4px 10px;background:linear-gradient(135deg,#fde3d4,#fbd3bd);color:#a94013}
+    #laborDispatchView .crew-assign-toggle{font-size:12.5px;padding:5px 12px;border-color:#f0a27e;color:var(--orange-dark)}
+    #laborDispatchView .status-tag{font-size:11px}
+    #laborDispatchView .job-stage-actions .job-stage-btn{font-size:12px;min-height:31px}
+    #laborDispatchView .job-stage-actions .job-stage-btn.reset{background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;border-color:var(--orange-dark);box-shadow:0 3px 10px rgba(201,79,31,.25)}
+    #laborDispatchView .job-stage-actions .job-stage-btn.reset:hover{filter:brightness(1.07)}
+    #laborDispatchView table.jobs tr[data-job-row]:hover td{background:#fff3ea}
+    body.dark-mode #laborDispatchView{background:radial-gradient(1200px 380px at 12% -80px,rgba(232,98,44,.16),transparent 70%),linear-gradient(180deg,#17191b,#202326)}
+    body.dark-mode #laborDispatchView .status-card.available,body.dark-mode #laborDispatchView .status-card.scheduled{background:#222427}
+    body.dark-mode #laborDispatchView .status-card.booked{background:linear-gradient(135deg,#ef6d36 0%,var(--orange) 45%,var(--orange-dark) 100%)}
+    body.dark-mode #laborDispatchView .pill.avail{background:transparent;color:#f0a878;border-color:#9a4a28}
+    body.dark-mode #laborDispatchView .job-id{background:#3d2418;color:#ffb48f}
+    body.dark-mode #laborDispatchView .crew-chip:not(.empty-slot){background:#4a2a1b;color:#ffbf9e}
+    body.dark-mode #laborDispatchView .crew-assign-toggle{color:#f0a878;border-color:#9a4a28}
+    body.dark-mode #laborDispatchView .job-stage-actions .job-stage-btn.reset{background:linear-gradient(135deg,var(--orange),var(--orange-dark))!important;color:#fff}
+    body.dark-mode #laborDispatchView .job-group-today .job-group-header{background:linear-gradient(90deg,#3a2216 0%,#1a1c1f 60%)!important}
+  }
+  /* ---------- Labor Dispatch: tighter columns so Scope of Work fits ---------- */
+  @media (min-width:761px){
+    #laborDispatchView table.jobs th{padding:12px 7px;white-space:normal;line-height:1.25;vertical-align:bottom}
+    #laborDispatchView table.jobs th:first-child,#laborDispatchView table.jobs td:first-child{padding-left:12px}
+    #laborDispatchView table.jobs td{padding:13px 6px}
+    #laborDispatchView table.jobs td[data-label="Address"]{min-width:100px;max-width:150px}
+    #laborDispatchView table.jobs td[data-label="Client"]{max-width:110px}
+    #laborDispatchView .time-locked-display{white-space:normal;max-width:86px;line-height:1.35}
+    #laborDispatchView .time-edit-wrap.locked{min-width:0}
+    #laborDispatchView .time-edit-wrap.locked .time-unlock{width:100%;max-width:86px}
+    #laborDispatchView .time-edit-wrap:not(.locked){min-width:118px}
+    #laborDispatchView .crew-chip-row{max-width:168px}
+    #laborDispatchView .crew-chip{white-space:nowrap}
+    #laborDispatchView .scope-input{font-size:13.5px;min-width:126px;max-width:220px}
+    #laborDispatchView .jobs-table-wrap{margin:0 8px 12px}
+    #laborDispatchView .job-id{font-size:12px;padding:2px 5px}
+    #laborDispatchView .opp-value{font-size:12px;padding:2px 6px}
+    #laborDispatchView .layout{gap:10px;padding:0 14px}
+    #laborDispatchView .status-strip{padding:16px 14px}
+  }
+  @media (min-width:1600px){
+    #laborDispatchView .scope-input{max-width:320px}
+    #laborDispatchView .layout{grid-template-columns:296px minmax(0,1fr)}
+    #laborDispatchView .job-stage-actions{min-width:138px}
+    #laborDispatchView .job-stage-actions .job-stage-btn{padding:5px 6px}
+  }
+  @media (min-width:761px) and (max-width:1250px){#laborDispatchView .layout{grid-template-columns:250px minmax(0,1fr)}#laborDispatchView .roster-list li{padding:9px 12px}}
   @media(max-width:1150px){.logistics-layout{grid-template-columns:250px minmax(650px,1fr)}.logistics-assets-panel{display:none}}
   @media(max-width:760px){
     body{font-size:13px}.topbar{padding:11px 12px}.topbar .brand h1,.topbar .brand span.tag{font-size:17px}.topbar .date{font-size:10px}.topbar .actions{gap:6px}.topbar .btn-ghost,.topbar .btn-primary{min-height:40px;padding:8px 11px}
@@ -1405,6 +1561,7 @@
             <th>Report Time</th>
             <th>End Date/Time</th>
             <th>Crew</th>
+            <th>Scope of Work</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -2561,7 +2718,7 @@ async function fetchJsonStrict(url, label, options = {}) {
 
 async function loadDashboard() {
   document.getElementById('jobsBody').innerHTML =
-    `<tr><td colspan="8" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
+    `<tr><td colspan="9" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
   try {
     const data = await fetchJsonStrict(CONFIG.GET_DASHBOARD_DATA_URL, 'Jobs webhook');
     clearBackendError('Jobs webhook');
@@ -2666,6 +2823,17 @@ function render() {
   if (typeof renderScheduleView === 'function') renderScheduleView();
 }
 
+function workerInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0] || '?')[0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+// Display only: +13105551234 shows as (310) 555-1234; anything else shows as stored.
+function formatPhoneDisplay(raw) {
+  const d = String(raw || '').replace(/\D/g, '');
+  const ten = d.length === 11 && d[0] === '1' ? d.slice(1) : d;
+  return ten.length === 10 ? `(${ten.slice(0,3)}) ${ten.slice(3,6)}-${ten.slice(6)}` : String(raw || '');
+}
+
 function renderRoster() {
   if (typeof renderAdminLabor === 'function') renderAdminLabor();
   const search = document.getElementById('rosterSearch').value.toLowerCase();
@@ -2692,9 +2860,12 @@ function renderRoster() {
     const effectiveStatus = getEffectiveLaborStatus(w, liveBookedRoster);
     return `
     <li>
-      <div>
-        <div class="worker-name">${w.name}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}</div>
-        <div class="worker-meta">${w.phone || ''}${w.jobId ? ' · ' + w.jobId : ''}</div>
+      <div class="worker-main">
+        <span class="worker-avatar${effectiveStatus === 'available' ? '' : ' is-booked'}" aria-hidden="true">${escapeAttr(workerInitials(w.name))}</span>
+        <div>
+          <div class="worker-name">${w.name}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}</div>
+          <div class="worker-meta">${formatPhoneDisplay(w.phone)}${w.jobId ? ' · ' + w.jobId : ''}</div>
+        </div>
       </div>
       <span class="pill ${effectiveStatus === 'available' ? 'avail' : 'booked'}">${effectiveStatus}</span>
     </li>
@@ -3096,6 +3267,7 @@ function renderJobs(allJobs) {
         <td data-label="Report time">${reportCell}</td>
         <td data-label="End date/time">${endCell}</td>
         <td data-label="Crew"><div class="crew-chip-row">${backendCrewChips}${overrideChips}${assignChecklist}${(!crew.length && !overrideCrew.length && job_associationsMissing(j)) ? '<span class="crew-chip empty-slot">crew not linked yet</span>' : ''}</div></td>
+        <td data-label="Scope of work" class="scope-cell">${buildScopeCell(j, jobId, terminalLocally || closedOnBoard)}</td>
         <td data-label="Status">
           ${closedOnBoard ? `<span class="status-tag closed">${/cancel/.test(closedRec.status || '') ? 'Cancelled' : 'Completed'}</span>
           <div class="job-closed-note">Closed on the board${closedRec.closedBy ? ' by ' + escapeAttr(closedRec.closedBy) : ''}${closedRec.closedAt ? ' ' + escapeAttr(new Date(closedRec.closedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : ''}, but GHL still shows it as an active job.</div>
@@ -3127,12 +3299,12 @@ function renderJobs(allJobs) {
     const groupJobs = sortGroup(groups[key]);
     const headerRow = `
       <tr class="job-group-header-row job-group-${key}">
-        <td colspan="8" class="job-group-header">${label} <span class="job-group-count">${groupJobs.length}</span></td>
+        <td colspan="9" class="job-group-header">${label} <span class="job-group-count">${groupJobs.length}</span></td>
       </tr>
     `;
     const rows = groupJobs.length
       ? groupJobs.map(buildJobRow).join('')
-      : `<tr class="job-group-empty-row"><td colspan="8" class="job-group-empty">No jobs</td></tr>`;
+      : `<tr class="job-group-empty-row"><td colspan="9" class="job-group-empty">No jobs</td></tr>`;
     return headerRow + rows;
   }).join('');
 }
@@ -3293,6 +3465,43 @@ function buildJobLogPayload(job, action) {
   };
 }
 
+// Scope of work, edited right on the job row. Saves when the box loses focus
+// (or Ctrl/Cmd+Enter): board first, then GHL through the job details webhook.
+function buildScopeCell(job, jobId, readOnly) {
+  const scope = getScopeOfWork(job) || '';
+  const id = 'scope-' + String(jobId).replace(/[^\w-]/g, '');
+  return `<textarea id="${escapeAttr(id)}" class="scope-input" data-job-id="${escapeAttr(jobId)}" rows="3" maxlength="2000" placeholder="Add scope of work" aria-label="Scope of work"${readOnly ? ' readonly' : ''}>${escapeAttr(scope)}</textarea><span class="scope-status" aria-live="polite"></span>`;
+}
+async function saveScopeOfWork(input) {
+  const jobId = input.dataset.jobId;
+  const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId);
+  if (!job || input.readOnly) return;
+  const scopeOfWork = input.value.trim();
+  if (scopeOfWork === (getScopeOfWork(job) || '').trim()) return;
+  const status = input.parentElement.querySelector('.scope-status');
+  input.classList.add('saving'); if (status) status.textContent = 'Saving...';
+  const night = getNightWork(job);
+  const payload = { jobId, action: 'update_details', jobAddress: job.name || '', clientPhone: getClientPhone(job), scopeOfWork,
+    toolsRequired: getToolsRequired(job), monetaryValue: getOpportunityValue(job) ?? null, paymentTerms: getPaymentTerms(job),
+    nightWork: night, shiftType: night ? 'night' : 'day',
+    reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job) };
+  try {
+    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { jobId, action: 'update_details', scopeOfWork });
+    await runSideEffect(CONFIG.EDIT_JOB_DETAILS_URL, payload, 'GHL scope of work update');
+    showToast('Scope of work saved.');
+    render();
+  } catch (error) {
+    showToast(error.message, true);
+    input.classList.remove('saving'); if (status) status.textContent = 'Not saved';
+  }
+}
+document.addEventListener('focusout', e => { if (e.target.matches?.('.scope-input')) saveScopeOfWork(e.target); });
+document.addEventListener('keydown', e => {
+  if (!e.target.matches?.('.scope-input')) return;
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.target.blur(); }
+  if (e.key === 'Escape') { const job = (dashboardData.jobs || []).find(j => (j.id || '') === e.target.dataset.jobId); if (job) e.target.value = getScopeOfWork(job) || ''; e.target.blur(); }
+});
+
 async function setJobStage(jobId, action, btn) {
   if (!jobId || !['complete', 'cancel'].includes(action)) return;
   if (!confirm(`Mark this job ${action === 'complete' ? 'completed' : 'cancelled'}?`)) return;
@@ -3304,15 +3513,113 @@ async function setJobStage(jobId, action, btn) {
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job) };
   // Job log snapshot taken before the commit clears the crew.
   const jobLogPayload = action === 'complete' ? buildJobLogPayload(job, 'complete') : null;
+  const crewBefore = getCrew(job).filter(w => w && w.name).map(w => ({ id: w.id || '', name: w.name, phone: w.phone || '' }));
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action, jobId, jobAddress: job.name || '', clientName: getClientName(job), monetaryValue: getOpportunityValue(job) ?? null });
-    await runSideEffect(CONFIG.CREATE_JOB_URL, stagePayload, 'GHL job stage update');
-    if (jobLogPayload) await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log');
-    render(); showToast('Job closed.');
+    // Nothing goes to GHL or Make yet: the sends wait out the undo window.
+    const effects = [{ kind: 'job_stage', label: 'GHL job stage update', payload: stagePayload },
+      ...(jobLogPayload ? [{ kind: 'job_log', label: 'Job log', payload: jobLogPayload }] : [])];
+    try {
+      await queueClose({ jobId, action, jobName: job.name || jobId, crew: crewBefore, requestId: lastCommittedRequests.get(String(jobId)), effects });
+    } catch (error) {
+      // Could not hold them on the server: send right away rather than risk never sending.
+      console.warn('Held send failed, sending now', error);
+      for (const effect of effects) await runSideEffect(effect.kind === 'job_stage' ? CONFIG.CREATE_JOB_URL : CONFIG.JOB_LOG_URL, effect.payload, effect.label, effect.kind);
+      showToast('Job closed. Undo was not available this time, so it was sent to GHL and Make right away.', true);
+    }
+    render();
   } catch (error) { showToast(error.message, true); }
   finally { btn.disabled = false; }
 }
 
+/* ---------- Undo window for Completed / Cancelled ----------
+   The board closes the job right away. The GHL stage change and the job log
+   are handed to the server as held sends that wait CLOSE_UNDO_MS. The server
+   owns the timer: if this tab is closed, reloaded or the browser crashes, the
+   sends still go out when the window ends (any open board, or the
+   effect-dispatcher scheduled function, sends whatever is due). Undo cancels
+   them on the server, reopens the job and puts the crew back. */
+const CLOSE_UNDO_MS = 30000;
+const pendingCloses = new Map();
+async function effectRequest(body, keepalive) {
+  const response = await fetch('/api/workflow-effect', { method: 'POST', keepalive: !!keepalive, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+  return result;
+}
+async function queueClose(info) {
+  const id = `${info.jobId}:${info.requestId || Date.now()}`;
+  const effectIds = [];
+  for (const effect of info.effects) {
+    const result = await effectRequest({ requestId: info.requestId, kind: effect.kind, payload: effect.payload, delayMs: CLOSE_UNDO_MS });
+    if (result.effectId) effectIds.push(result.effectId);
+  }
+  const entry = { ...info, id, effectIds, dueAt: Date.now() + CLOSE_UNDO_MS };
+  pendingCloses.set(id, { entry, timer: setTimeout(() => sendPendingClose(id), CLOSE_UNDO_MS) });
+  renderCloseBars();
+}
+async function sendPendingClose(id, keepalive) {
+  const live = pendingCloses.get(id);
+  if (!live) return;
+  clearTimeout(live.timer);
+  pendingCloses.delete(id); renderCloseBars();
+  if (keepalive) { effectRequest({ op: 'send', effectIds: live.entry.effectIds }, true).catch(() => {}); return; }
+  try {
+    const result = await effectRequest({ op: 'send', effectIds: live.entry.effectIds });
+    if (!result.ok) showToast(`${live.entry.jobName}: Make didn't confirm. Senior admins can retry it from Admin > Make / GHL problems.`, true);
+  } catch (error) {
+    // The server still sends it on its own; this tab just could not ask early.
+    console.warn('Send now failed; the server will send it when the window ends.', error);
+  }
+}
+async function undoPendingClose(id) {
+  const live = pendingCloses.get(id);
+  if (!live) return;
+  clearTimeout(live.timer);
+  pendingCloses.delete(id); renderCloseBars();
+  const { jobId, jobName, crew, effectIds } = live.entry;
+  try {
+    const result = await effectRequest({ op: 'cancel', effectIds });
+    if (result.tooLate && result.tooLate.length) {
+      showToast(`Too late to undo ${jobName}: it already went to GHL and Make. Use Reopen job on the Completed tab if it needs to come back.`, true);
+      return;
+    }
+    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reopen', jobId, jobAddress: jobName });
+    if (crew && crew.length) await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'assign', jobId, jobAddress: jobName, crewChanges: crew });
+    render();
+    showToast('Undone. The job is back on the board and nothing was sent to GHL or Make.');
+  } catch (error) {
+    showToast(`Couldn't undo: ${error.message}. Check the Completed tab before trying again.`, true);
+  }
+}
+function renderCloseBars() {
+  let host = document.getElementById('closeUndoHost');
+  if (!host) { host = document.createElement('div'); host.id = 'closeUndoHost'; host.className = 'close-undo-host'; host.setAttribute('aria-live', 'polite'); document.body.appendChild(host); }
+  host.innerHTML = [...pendingCloses.values()].map(({ entry }) => {
+    const left = Math.max(0, Math.ceil((entry.dueAt - Date.now()) / 1000));
+    return `<div class="close-undo-bar" data-close-id="${escapeAttr(entry.id)}">
+      <div class="close-undo-text"><b>${entry.action === 'cancel' ? 'Cancelled' : 'Completed'}:</b> ${escapeAttr(entry.jobName)}<span>Sending to GHL and Make in <b class="close-undo-secs">${left}</b>s</span></div>
+      <button type="button" class="close-undo-btn" data-close-undo="${escapeAttr(entry.id)}">Undo</button>
+      <button type="button" class="close-send-btn" data-close-send="${escapeAttr(entry.id)}">Send now</button>
+      <i class="close-undo-meter" style="animation-duration:${Math.max(0, entry.dueAt - Date.now())}ms"></i></div>`;
+  }).join('');
+}
+setInterval(() => {
+  if (!pendingCloses.size) return;
+  document.querySelectorAll('.close-undo-bar').forEach(bar => {
+    const p = pendingCloses.get(bar.dataset.closeId);
+    const secs = bar.querySelector('.close-undo-secs');
+    if (p && secs) secs.textContent = Math.max(0, Math.ceil((p.entry.dueAt - Date.now()) / 1000));
+  });
+}, 1000);
+document.addEventListener('click', e => {
+  const undo = e.target.closest('[data-close-undo]');
+  if (undo) { undo.disabled = true; undoPendingClose(undo.dataset.closeUndo); return; }
+  const send = e.target.closest('[data-close-send]');
+  if (send) { send.disabled = true; sendPendingClose(send.dataset.closeSend); }
+});
+// Tab closing or reloading: send now instead of leaving it to the server's sweep.
+window.addEventListener('pagehide', () => { for (const id of [...pendingCloses.keys()]) sendPendingClose(id, true); });
 
 // Sends the complete current dispatch snapshot so Make can map every field,
 // then clears only the daily schedule in the browser. The Opportunity and its
@@ -5731,8 +6038,11 @@ async function pollSharedState() {
     const [jobs, moves, effects] = await Promise.all([
       fetchJsonStrict(CONFIG.SHARED_STATE_SYNC_URL, 'Shared state'),
       logisticsLoaded ? fetchJsonStrict(CONFIG.LOGISTICS_STATE_URL, 'Logistics state') : Promise.resolve(null),
-      fetchJsonStrict('/api/workflow-effect', 'Workflow status')
+      Promise.resolve({ issues: [] })
     ]);
+    // Also nudges the server to send any held Completed/Cancelled sends that are
+    // due. Not awaited: a slow Make answer must never hold up live updates.
+    fetch('/api/workflow-effect?_=' + Date.now(), { cache: 'no-store' }).catch(() => {});
     if (editingDispatch()) return;
     acceptJobRecords(jobs.sharedState || []);
     for (const pending of jobs.pendingSync || []) showPersistentIssue('crm-' + pending.jobId, 'Dispatch saved; GHL schedule sync needs a retry.', () => retryCrm(pending.jobId));

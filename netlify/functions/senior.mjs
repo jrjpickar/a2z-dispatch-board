@@ -24,7 +24,7 @@ async function problems(sql) {
   // Nothing counts as a problem until Make has had 45 s to answer. A run still
   // marked "sending" after that never got an answer (Make or Netlify timed out).
   const effects = (await sql`select effect_id, kind, status, last_error, payload, created_at, updated_at from dispatch_effects
-    where status <> 'confirmed' and updated_at < now() - interval '45 seconds'
+    where status not in ('confirmed', 'cancelled', 'scheduled') and updated_at < now() - interval '45 seconds'
     order by updated_at desc limit 100`).map(r => ({
       id: r.effect_id, kind: r.kind, label: KIND_LABELS[r.kind] || r.kind, status: r.status,
       error: r.status === 'sending' ? 'No answer from Make (timed out). Check Make history.' : (r.last_error || ''),
@@ -94,7 +94,7 @@ export default async function handler(request) {
     }
     if (body.action === 'resolve_all') {
       const cleared = await sql`update dispatch_effects set status = 'confirmed', last_error = 'Acknowledged by ' || ${session.name}, updated_at = now()
-        where status <> 'confirmed' and updated_at < now() - interval '45 seconds' returning effect_id`;
+        where status not in ('confirmed', 'cancelled', 'scheduled') and updated_at < now() - interval '45 seconds' returning effect_id`;
       await logActivity(sql, session, 'Acknowledged all Make problems', `${cleared.length} runs`);
       return json({ ok: true, ...(await problems(sql)) });
     }

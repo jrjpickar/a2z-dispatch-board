@@ -96,3 +96,32 @@ test('unconfirmed creation is not blindly retried', async () => {
   } finally { globalThis.fetch = original; }
 });
 test.after(async () => pg.close());
+test('held sends: undo cancels, due sends go out once, a crash cannot lose them', async () => {
+  const { recordEffect, sendHeldEffects, cancelHeldEffects } = await import('../lib/effect-queue.mjs');
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { calls.push(JSON.parse(init.body)); return new Response('{"ok":true}', { status: 200 }); };
+  try {
+    const closed = await saveState(sql, 'job', request('job-held', { action: 'create', crew: 'Ana' }));
+    await saveState(sql, 'job', request('job-held', { action: 'complete', expectedVersion: closed.record.version }));
+    const [req] = await sql`select request_id from dispatch_requests where result->'record'->>'jobId' = 'job-held' and result->'record'->>'status' = 'completed'`;
+    const stage = await recordEffect(sql, { requestId: req.request_id, kind: 'job_stage', payload: { action: 'complete', jobId: 'job-held' }, delayMs: 30000 });
+    const log = await recordEffect(sql, { requestId: req.request_id, kind: 'job_log', payload: { action: 'complete', jobId: 'job-held', assignedWorkers: [] }, delayMs: 30000 });
+    assert.equal(stage.status, 'new');
+    // Not due yet: the sweep leaves them alone.
+    assert.deepEqual((await sendHeldEffects(sql)).claimed, []);
+    // Undo the job log only; the stage stays held.
+    const undo = await cancelHeldEffects(sql, [log.effectId]);
+    assert.deepEqual(undo.cancelled, [log.effectId]); assert.deepEqual(undo.tooLate, []);
+    // Browser gone: once due, the sweep sends the stage exactly once.
+    await sql`update dispatch_effects set due_at = now() - interval '1 second' where effect_id = ${stage.effectId}`;
+    const first = await sendHeldEffects(sql); const second = await sendHeldEffects(sql);
+    assert.deepEqual(first.sent, [stage.effectId]); assert.deepEqual(second.claimed, []);
+    assert.equal(calls.length, 1); assert.equal(calls[0].action, 'complete');
+    // Too late to undo something already sent.
+    const late = await cancelHeldEffects(sql, [stage.effectId]);
+    assert.deepEqual(late.tooLate, [stage.effectId]);
+    // Repeating the same held request does not queue a second copy.
+    assert.equal((await recordEffect(sql, { requestId: req.request_id, kind: 'job_stage', payload: { action: 'complete', jobId: 'job-held' }, delayMs: 30000 })).status, 'confirmed');
+  } finally { globalThis.fetch = realFetch; }
+});
