@@ -1423,6 +1423,10 @@
   .dash-grid > .panel[hidden] { display: none; }
   .dash-grid > .panel.fixed-h { height: var(--h); display: flex; flex-direction: column; overflow: hidden; }
   .dash-grid > .panel.fixed-h > .admin-list-scroll, .dash-grid > .panel.fixed-h > .history-groups, .dash-grid > .panel.fixed-h > .jobs-table-wrap, .dash-grid > .panel.fixed-h > .chart-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
+  /* A resized panel squeezes its scroll list first. Never let a list shrink to nothing
+     (that hid every worker under "On the board"); the panel scrolls instead. */
+  .dash-grid > .panel.fixed-h > .admin-list-scroll { flex: 1 0 auto; min-height: 200px; max-height: 420px; }
+  .dash-grid > .panel.fixed-h:has(> .admin-list-scroll) { overflow-y: auto; }
   .dash-grid > .panel.collapsed { height: auto; padding-bottom: 0; }
   .dash-grid > .panel.collapsed > :not(.panel-head):not(.dash-chrome):not(.dash-resize) { display: none; }
   .dash-grid > .panel.collapsed > .panel-head { border-bottom: none; }
