@@ -521,6 +521,8 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
     padding: 10px;
     min-width: 190px;
+    width: 280px;
+    max-width: calc(100vw - 32px);
   }
   .crew-assign-panel.open { display: block; }
   .crew-assign-option {
@@ -535,6 +537,40 @@
   .crew-assign-option:hover { background: var(--grey-light); }
   .crew-assign-option input { accent-color: var(--orange); }
   .crew-assign-option.is-booked { display: none; }
+  .crew-assign-search { display: block; width: 100%; margin: 0 0 6px; padding: 6px 8px; border: 1px solid #b9bcbf; border-radius: 6px; font: 13px 'Inter', -apple-system, sans-serif; background: #fff; color: #1c1d1f; -webkit-text-fill-color: #1c1d1f; }
+  .crew-assign-search:focus { outline: none; border-color: var(--orange); }
+  .crew-assign-list { max-height: 320px; overflow-y: auto; }
+  .crew-assign-panel .crew-assign-option.search-hidden { display: none; }
+  .crew-split-picks { margin-top: 8px; display: grid; gap: 8px; }
+  .crew-split-pick { display: grid; gap: 6px; font-size: 11px; color: var(--ink-soft); padding: 7px; border: 1px solid var(--orange-tint); border-radius: 6px; background: var(--orange-tint-soft); }
+  .crew-split-pick b { color: var(--ink); }
+  .crew-split-pick select { width: 100%; height: 32px; font: 500 13px 'Inter', -apple-system, sans-serif; padding: 4px 6px; border: 1px solid #b9bcbf; border-radius: 6px; background: #fff; color: #1c1d1f; -webkit-text-fill-color: #1c1d1f; color-scheme: light; }
+  .crew-split-pick select.needs-pick { border-color: var(--orange); }
+  .crew-split-pick small { font-size: 10px; }
+  input.qtime-source { display: none !important; }
+  .qtime { display: inline-flex; gap: 2px; align-items: center; min-width: 0; }
+  .qtime select { height: 30px; padding: 2px 3px; border: 1px solid #b9bcbf; border-radius: 6px; background: #fff; color: #1c1d1f; -webkit-text-fill-color: #1c1d1f; color-scheme: light; font: 500 12px 'Inter', -apple-system, sans-serif; cursor: pointer; }
+  .qtime select[data-qpart="h"] { width: 44px; } .qtime select[data-qpart="m"] { width: 46px; } .qtime select[data-qpart="ap"] { width: 50px; }
+  .crew-time-row .qtime { width: 100%; } .crew-time-row .qtime select { flex: 1; width: auto; }
+  body.dark-mode .qtime select { background: #1b1d20 !important; color: #f1f3f4 !important; -webkit-text-fill-color: #f1f3f4; border-color: #4a4f55 !important; color-scheme: dark; }
+  .crew-split-note { font-size: 11px; color: var(--ink-soft); }
+  .crew-time-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 4px 6px; }
+  .crew-time-lbl { font-size: 11px; color: var(--ink-soft); }
+  .crew-time-row > span:first-child { grid-column: 1 / -1; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+  /* Explicit text color everywhere: some browsers (Safari, a dark system theme) otherwise draw these empty looking. */
+  .crew-time-row input[type=time] { width: 100%; min-width: 0; height: 32px; font: 500 13px 'Inter', -apple-system, sans-serif; padding: 4px 6px; border: 1px solid #b9bcbf; border-radius: 6px; background: #fff; color: #1c1d1f; -webkit-text-fill-color: #1c1d1f; color-scheme: light; }
+  .crew-time-row input[type=time]::-webkit-datetime-edit, .crew-time-row input[type=time]::-webkit-datetime-edit-fields-wrapper,
+  .crew-time-row input[type=time]::-webkit-datetime-edit-hour-field, .crew-time-row input[type=time]::-webkit-datetime-edit-minute-field,
+  .crew-time-row input[type=time]::-webkit-datetime-edit-ampm-field, .crew-time-row input[type=time]::-webkit-datetime-edit-text { color: #1c1d1f; -webkit-text-fill-color: #1c1d1f; }
+  .crew-custom-time-toggle { display: block; margin-top: 6px; background: none; border: 0; padding: 0; color: var(--orange-dark); font-size: 11px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+  .crew-custom-time-toggle[hidden] { display: none; }
+  body.dark-mode .crew-split-pick { background: #35251e; border-color: #5a3a2a; }
+  body.dark-mode .crew-split-pick select, body.dark-mode .crew-time-row input[type=time] { background: #1b1d20; color: #f1f3f4; -webkit-text-fill-color: #f1f3f4; border-color: #4a4f55; color-scheme: dark; }
+  body.dark-mode .crew-time-row input[type=time]::-webkit-datetime-edit, body.dark-mode .crew-time-row input[type=time]::-webkit-datetime-edit-fields-wrapper,
+  body.dark-mode .crew-time-row input[type=time]::-webkit-datetime-edit-hour-field, body.dark-mode .crew-time-row input[type=time]::-webkit-datetime-edit-minute-field,
+  body.dark-mode .crew-time-row input[type=time]::-webkit-datetime-edit-ampm-field, body.dark-mode .crew-time-row input[type=time]::-webkit-datetime-edit-text { color: #f1f3f4; -webkit-text-fill-color: #f1f3f4; }
+  .crew-assign-nomatch { padding: 5px 2px; color: var(--ink-soft); font-size: 11px; }
+  body.dark-mode .crew-assign-search { background: #1b1d20; color: #f1f3f4; -webkit-text-fill-color: #f1f3f4; border-color: #4a4f55; }
   .crew-assign-panel.include-booked .crew-assign-option.is-booked { display: flex; }
   .crew-assign-worker-name { flex: 1; min-width: 0; }
   .crew-booked-badge {
@@ -697,8 +733,8 @@
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
   }
-  .job-stage-btn.complete { border: 1px solid var(--gold); color: var(--gold); }
-  .job-stage-btn.complete:hover { background: var(--gold); color: #fff; }
+  .job-stage-btn.complete { border: 1px solid #2f8a57; color: #fff; background: linear-gradient(135deg, #34a065 0%, #24804b 100%); font-weight: 700; }
+  .job-stage-btn.complete:hover { filter: brightness(1.07); }
   .job-stage-btn.cancel { border: 1px solid var(--danger); color: var(--danger); }
   .job-stage-btn.cancel:hover { background: var(--danger); color: #fff; }
   .job-stage-btn.edit { border: 1px solid var(--grey-dark); color: var(--ink-soft); }
@@ -722,6 +758,20 @@
   .completed-empty { padding: 18px; color: var(--ink-soft); font-size: 13px; }
   .sent-home-backdrop { position: fixed; inset: 0; z-index: 900; background: rgba(20,21,23,.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
   .sent-home-backdrop[hidden] { display: none; }
+  .sent-home-card.unsched-card { border-top-color: var(--danger); }
+  .hold-btn { position: relative; isolation: isolate; overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+  .hold-btn::before { content: ''; position: absolute; inset: 0; z-index: -1; transform: scaleX(0); transform-origin: left; background: rgba(0,0,0,.28); pointer-events: none; }
+  .hold-btn.cancel::before, .hold-btn.unsched-go::before { background: rgba(192,57,43,.28); }
+  .hold-btn.holding::before { transform: scaleX(1); transition: transform var(--hold-ms, 5000ms) linear; }
+  .unsched-body { font-size: 13px; line-height: 1.5; margin: 0 0 16px; }
+  .unsched-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .unsched-actions .btn-ghost { color: var(--ink-soft); border-color: var(--border); }
+  .unsched-keep { background: linear-gradient(135deg, #d0453a 0%, #a8322a 100%); }
+  .unsched-go { background: #fff; color: #a8322a; border: 1px solid #c9a3a0; padding: 9px 16px; font-size: 13px; font-weight: 600; }
+  body.dark-mode .unsched-go { background: #26292c; color: #ff9d92; border-color: #6b3b37; }
+  .hold-hint { margin: 8px 0 0; text-align: right; font-size: 11px; color: var(--ink-soft); }
+  .unsched-slack { margin: 8px 0 0; font-size: 12px; color: #4a154b; font-weight: 600; }
+  body.dark-mode .unsched-slack { color: #d9a7d9; }
   .sent-home-card { width: 100%; max-width: 420px; max-height: calc(100vh - 32px); overflow: auto; background: var(--card); color: var(--ink); border-radius: 8px; border-top: 4px solid #5a4aa3; box-shadow: 0 12px 40px rgba(0,0,0,.3); padding: 18px 20px; }
   .sent-home-card h2 { margin: 0 0 2px; font-family: 'Oswald', sans-serif; font-size: 17px; text-transform: uppercase; letter-spacing: .04em; }
   .sent-home-job { font-size: 12px; color: var(--ink-soft); margin-bottom: 14px; }
@@ -798,7 +848,26 @@
   .logistics-stat:nth-child(2){border-top-color:var(--orange)} .logistics-stat:nth-child(3){border-top-color:var(--gold)} .logistics-stat:nth-child(4){border-top-color:#287a54}
   .logistics-stat .num { display:block; font-family:'Oswald',sans-serif; font-size:34px; font-weight:700; line-height:1.1; }
   .logistics-stat .label-caps { font-size:11px; color:var(--ink-soft); }
-  .logistics-layout { display:grid; grid-template-columns:280px 280px minmax(650px,1fr); gap:1px; background:var(--border); min-height:calc(100vh - 210px); }
+  .logistics-layout { display:grid; grid-template-columns:290px minmax(0,1fr); grid-template-rows:auto 1fr; gap:1px; background:var(--border); min-height:calc(100vh - 210px); align-items:start; }
+  .logistics-layout > .logistics-drivers-panel { grid-column:1; grid-row:1; }
+  .logistics-layout > .logistics-assets-panel { grid-column:1; grid-row:2; }
+  .logistics-layout > .panel:not(.logistics-drivers-panel):not(.logistics-assets-panel) { grid-column:2; grid-row:1 / span 2; }
+  .logistics-layout .logistics-resource-list { max-height:360px; }
+  table.logistics-table td .logi-dest { margin-top:5px; font-weight:600; font-size:13px; line-height:1.35; }
+  .logi-client { margin-top:2px; color:var(--ink-soft); font-size:12px; }
+  .logi-id { margin-top:4px; font-size:10px; color:#8a8d91; }
+  .logi-move { font-weight:700; font-size:13px; }
+  .logi-detail { margin-top:2px; font-size:12px; color:var(--ink); }
+  .logi-note { margin-top:5px; padding:4px 7px; border-radius:5px; background:var(--stripe); font-size:11px; color:var(--ink-soft); }
+  .logi-value { font-weight:700; white-space:nowrap; }
+  .logi-who { display:grid; gap:1px; margin-bottom:6px; font-size:12px; font-weight:600; }
+  .logi-who > span:first-child { font:700 9px 'IBM Plex Mono',monospace; letter-spacing:.06em; text-transform:uppercase; color:#8a8d91; }
+  .logi-none { color:#a3a6aa; font-weight:500; font-style:italic; }
+  .status-line { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .unschedule-btn { background:#fff; border:1px solid #c7cacd; color:#5a5d61; border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; line-height:1.4; cursor:pointer; white-space:nowrap; }
+  .unschedule-btn:hover { border-color:var(--danger); color:var(--danger); background:#fff6f5; }
+  .unschedule-btn:disabled { opacity:.6; cursor:default; }
+  body.dark-mode .unschedule-btn { background:#26292c; border-color:#4a4f55; color:#c4c8cc; }
   .logistics-resource-list { list-style:none; margin:0; padding:0; max-height:650px; overflow:auto; }
   .logistics-resource { padding:12px 15px; border-bottom:1px solid var(--stripe); }
   .logistics-resource:nth-child(even){background:var(--stripe)} .logistics-resource-top{display:flex; justify-content:space-between; gap:8px}.logistics-resource-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin-top:3px}
@@ -809,8 +878,8 @@
   .logistics-driver-select,.logistics-dump-truck-select{max-width:145px;border:1px solid var(--border);border-radius:4px;background:#fff;padding:4px 6px;font-size:10px}
   .driver-break-schedule{display:flex;flex-wrap:wrap;gap:4px;width:100%;margin-top:2px}.driver-break-field{display:flex;align-items:center;gap:3px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--ink-soft);text-transform:uppercase}.driver-break-field input{width:76px;border:1px solid var(--border);border-radius:4px;padding:3px;font:9px 'IBM Plex Mono',monospace;background:#fff}
   .logistics-toolbar{display:flex;gap:8px}.logistics-toolbar select{border:1px solid var(--border);border-radius:var(--radius);padding:7px;background:#fff;font-size:12px}
-  table.logistics-table{width:100%;min-width:960px;border-collapse:collapse}table.logistics-table th{background:linear-gradient(90deg,var(--ink),#2c2d30);color:#fff;text-align:left;padding:10px 12px;font-family:'Oswald',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.06em}table.logistics-table td{padding:12px;border-bottom:1px solid var(--stripe);font-size:12px;vertical-align:top}table.logistics-table tr:nth-child(even) td{background:var(--stripe)}
-  .logistics-job-link{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);text-decoration:none}.logistics-job-link:hover{color:var(--orange)}.logistics-route{color:var(--ink-soft);max-width:230px}.logistics-note{margin:12px 14px;padding:10px 12px;background:var(--gold-tint-soft);border-left:3px solid var(--gold);color:#655514;font-size:11px}
+  table.logistics-table{width:100%;min-width:860px;border-collapse:collapse}table.logistics-table th{background:linear-gradient(90deg,var(--ink),#2c2d30);color:#fff;text-align:left;padding:10px 12px;font-family:'Oswald',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.06em}table.logistics-table td{padding:12px;border-bottom:1px solid var(--stripe);font-size:12px;vertical-align:top}table.logistics-table tr:nth-child(even) td{background:var(--stripe)}
+  .logistics-job-link{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--ink);text-decoration:none}.logistics-job-link:hover{color:var(--orange)}.logistics-route{color:var(--ink-soft);max-width:230px}.logistics-note{margin:12px 14px;padding:10px 12px;background:var(--gold-tint-soft);border-left:3px solid var(--gold);color:#655514;font-size:11px}
   #logisticsDispatchView{background:linear-gradient(180deg,#f3f4f5 0%,#eceeef 100%);min-height:calc(100vh - 104px);padding-bottom:18px}
   #logisticsDispatchView .logistics-stats{gap:12px;padding:16px 18px;background:transparent;border:0}
   #logisticsDispatchView .logistics-stat{border:1px solid rgba(21,22,24,.10);border-top-width:4px;border-radius:10px;padding:16px 18px;box-shadow:0 5px 18px rgba(21,22,24,.06)}
@@ -830,12 +899,27 @@
   #logisticsDispatchView .logistics-job-link{font-size:12px;text-decoration-thickness:2px;text-underline-offset:3px}
   #logisticsDispatchView .logistics-driver-select,#logisticsDispatchView .logistics-asset-select,#logisticsDispatchView .logistics-dump-truck-select{min-height:30px;border-radius:6px;border-color:#cfd3d7;box-shadow:0 1px 2px rgba(21,22,24,.04)}
   #logisticsDispatchView .job-stage-btn{min-height:28px;padding:5px 9px;box-shadow:0 1px 2px rgba(21,22,24,.05)}
-  #logisticsDispatchView .logistics-primary-actions .complete{background:#fffaf0}
+  #logisticsDispatchView .logistics-primary-actions .complete{background:linear-gradient(135deg,#34a065,#24804b)}
   #logisticsDispatchView .logistics-primary-actions .cancel{background:#fff8f7}
   #logisticsDispatchView .job-group-header{border-top:1px solid #3a3c40;border-bottom:1px solid #3a3c40;padding:9px 12px}
   #logisticsDispatchView .logistics-primary-actions{padding-top:7px;border-top:1px solid var(--stripe);margin-top:7px}
   #logisticsDispatchView .logistics-primary-actions .job-stage-btn{border-radius:5px}
   #logisticsDispatchView .logistics-status{padding:4px 8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+  #logisticsDispatchView table.logistics-table td{vertical-align:top;border-bottom:1px solid #eceef0}
+  #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):not(.job-group-empty-row) td{background:#fff}
+  #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):hover td{background:#fff8f2}
+  #logisticsDispatchView table.logistics-table td[data-label="Status"]{min-width:230px}
+  #logisticsDispatchView table.logistics-table td[data-label="Route"]{max-width:200px}
+  #logisticsDispatchView .logistics-status{font-size:10px;letter-spacing:.05em}
+  #logisticsDispatchView .logistics-source{font-size:9px}
+  #logisticsDispatchView .assignment-edit-panel select{font-size:11px;min-height:30px}
+  #logisticsDispatchView .time-edit-wrap.locked span{font-weight:600}
+  #logisticsDispatchView .logistics-resource{display:block}
+  #logisticsDispatchView .logistics-resource-top strong,#logisticsDispatchView .logistics-resource-top b{font-size:13px}
+  body.dark-mode #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):not(.job-group-empty-row) td{background:#1f2124}
+  body.dark-mode #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):hover td{background:#2a2420}
+  body.dark-mode .logi-note{background:#2a2c30;color:#c4c8cc}
+  body.dark-mode .logi-detail{color:#e3e5e8}
   .assignment-lock{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:8px 9px;border:1px solid #d5d9dc;border-radius:7px;background:#f1f3f4}
   .assignment-lock-copy{min-width:0}.assignment-lock-label{display:block;font:700 8px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#6b7075}.assignment-lock-value{display:block;margin-top:2px;font-size:11px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
   .assignment-edit-panel{margin-top:7px;padding:8px;border:1px solid #d5d9dc;border-radius:7px;background:#f7f8f8}.assignment-edit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font:700 9px 'IBM Plex Mono',monospace;text-transform:uppercase;color:var(--ink-soft)}.assignment-edit-items{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}.assignment-edit-item{display:flex;align-items:center;gap:5px;padding:4px 6px;border:1px solid #d9dcdf;border-radius:5px;background:#fff;font-size:10px}
@@ -907,7 +991,7 @@
     #laborDispatchView .job-stage-actions .job-stage-btn.edit:has(+ .reset),#laborDispatchView .job-stage-actions .job-stage-btn.reset,#laborDispatchView .job-stage-actions .job-stage-btn.reopen{grid-column:1/-1}
     #laborDispatchView .job-stage-actions .job-stage-btn.reset{background:var(--orange-tint-soft);font-weight:700}
     #laborDispatchView .job-stage-actions .job-stage-btn.reset:hover{background:var(--orange);color:#fff}
-    #laborDispatchView .job-stage-actions .job-stage-btn.complete{background:#fffaf0}
+    #laborDispatchView .job-stage-actions .job-stage-btn.complete{background:linear-gradient(135deg,#34a065,#24804b)}
     #laborDispatchView .job-stage-actions .job-stage-btn.cancel{background:#fff8f7}
     body.dark-mode #laborDispatchView{background:linear-gradient(180deg,#17191b,#202326)}
     body.dark-mode #laborDispatchView .panel,body.dark-mode #laborDispatchView .status-card,body.dark-mode #laborDispatchView .jobs-table-wrap{background:#222427;border-color:#3b3f43;box-shadow:0 7px 22px rgba(0,0,0,.25)}
@@ -996,7 +1080,7 @@
     #laborDispatchView .job-stage-actions .job-stage-btn{padding:5px 6px}
   }
   @media (min-width:761px) and (max-width:1250px){#laborDispatchView .layout{grid-template-columns:250px minmax(0,1fr)}#laborDispatchView .roster-list li{padding:9px 12px}}
-  @media(max-width:1150px){.logistics-layout{grid-template-columns:250px minmax(650px,1fr)}.logistics-assets-panel{display:none}}
+  @media(max-width:1150px){.logistics-layout{grid-template-columns:240px minmax(0,1fr)}}
   @media(max-width:760px){
     body{font-size:13px}.topbar{padding:11px 12px}.topbar .brand h1,.topbar .brand span.tag{font-size:17px}.topbar .date{font-size:10px}.topbar .actions{gap:6px}.topbar .btn-ghost,.topbar .btn-primary{min-height:40px;padding:8px 11px}
     .dispatch-view-tabs{position:sticky;top:0;z-index:20;padding:0}.dispatch-view-tab{flex:1;min-height:44px;padding:11px 6px;font-size:11px;background:#fff}
@@ -1050,7 +1134,7 @@
   body.dark-mode .assignment-edit-panel{background:#26292c;border-color:#484d52}
   body.dark-mode .assignment-edit-item{background:#1d1f22;border-color:#454a4f}
   body.dark-mode .job-stage-btn,body.dark-mode .time-unlock,body.dark-mode .end-save{border-color:#555b61;color:#f1f3f4;background:#303438}
-  body.dark-mode .job-stage-btn.complete{background:#3a321f!important;color:#f4d36b}
+  body.dark-mode .job-stage-btn.complete{background:linear-gradient(135deg,#2f8a57,#1f6b3f)!important;color:#fff;border-color:#2f8a57}
   body.dark-mode .job-stage-btn.cancel{background:#3b2322!important;color:#f1a09a}
   body.dark-mode .job-stage-btn.edit{background:#293642!important;color:#a9d5fa}
   body.dark-mode .sent-home-worker:has(input:checked){background:#2a2540;border-color:#8f80d8}
@@ -1129,10 +1213,10 @@
   body.dark-mode .eod-summary { border-color: #f1f3f4; }
   body.dark-mode .eod-table td { border-color: #33373b; }
   /* ---------- Project Schedule (Contract jobs) ---------- */
-  .job-stage-btn.schedule { border: 1px solid var(--ink); color: var(--ink); }
-  .job-stage-btn.schedule:hover { background: var(--ink); color: #fff; }
+  .job-stage-btn.schedule { border: 1px solid #c9a000; color: #1c1d1f; background: linear-gradient(135deg, #ffd23f 0%, #f2b705 100%); font-weight: 700; }
+  .job-stage-btn.schedule:hover { filter: brightness(1.07); }
   .job-stage-btn.schedule.sent::after { content: ' \2713'; }
-  body.dark-mode .job-stage-btn.schedule { background:#26303a!important; color:#d9e4ee; border-color:#4b5a68 }
+  body.dark-mode .job-stage-btn.schedule { background:linear-gradient(135deg,#ffd23f,#f2b705)!important; color:#1c1d1f; border-color:#c9a000 }
   .sheet.ps-sheet { width: 1120px; }
   .ps-layout { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
   @media (max-width: 1000px) { .ps-layout { grid-template-columns: minmax(0, 1fr); } }
@@ -1719,7 +1803,7 @@
   <div class="logistics-layout">
     <div class="panel logistics-drivers-panel"><div class="panel-head"><h2>Drivers</h2><span class="mono" id="logisticsDriverCount">0 TOTAL</span></div><ul class="logistics-resource-list" id="logisticsDrivers"></ul></div>
     <div class="panel logistics-assets-panel"><div class="panel-head"><h2>Assets</h2><span class="mono" id="logisticsAssetCount">0 TOTAL</span></div><div class="logistics-note">Drivers and assets stay independent so either can be reassigned.</div><ul class="logistics-resource-list" id="logisticsAssets"></ul></div>
-    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Move</th><th>Destination</th><th>Monetary Value</th><th>Type / Equipment</th><th>Notes</th><th>Route</th><th>Schedule</th><th>Driver</th><th>Asset</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="10" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
+    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
   </div>
 </div>
 
@@ -1824,7 +1908,7 @@
       </div>
       <div class="field">
         <label for="jobTime">Report Time</label>
-        <input type="time" id="jobTime">
+        <input type="time" id="jobTime" step="900">
       </div>
     </div>
     <div class="field-row">
@@ -1834,7 +1918,7 @@
       </div>
       <div class="field">
         <label for="jobEndTime">Report End Time</label>
-        <input type="time" id="jobEndTime">
+        <input type="time" id="jobEndTime" step="900">
       </div>
     </div>
     <div class="field night-field">
@@ -1995,6 +2079,18 @@
 
 <!-- Worker sent home: pick the worker and the hours worked. Posts workerName +
      hoursWorked to the worker_sent_home webhook and releases them from the job. -->
+<div class="sent-home-backdrop" id="unschedBackdrop" hidden>
+  <div class="sent-home-card unsched-card" role="dialog" aria-modal="true" aria-labelledby="unschedTitle">
+    <div id="unschedStep1">
+      <h2 id="unschedTitle">Unschedule?</h2>
+      <div class="sent-home-job" id="unschedWhat"></div>
+      <p class="unsched-body" id="unschedBody"></p>
+      <p class="unsched-slack">Post it in the job's Slack thread after.</p>
+      <div class="unsched-actions"><button type="button" class="btn-primary unsched-keep unsched-cancel">Keep it</button><button type="button" class="unsched-go hold-btn" id="unschedConfirm" title="Hold for 5 seconds to unschedule">Unschedule</button></div>
+      <p class="hold-hint">Hold <b>Unschedule</b> for 5 seconds.</p>
+    </div>
+  </div>
+</div>
 <div class="sent-home-backdrop" id="sentHomeBackdrop" hidden>
   <div class="sent-home-card" role="dialog" aria-modal="true" aria-labelledby="sentHomeTitle">
     <h2 id="sentHomeTitle">Worker sent home</h2>
@@ -3083,7 +3179,110 @@ function jobMatchesSearch(job, q) {
   return words.every(w => hay.includes(w));
 }
 
+function hasSavedJobTimes(job) {
+  return !!(getReportDate(job) && getReportTime(job) && getReportEndDate(job) && getReportEndTime(job));
+}
 function renderJobs(allJobs) {
+  const pickerState = openCrewPickerState();
+  const timeEdits = openTimeEditsState();
+  renderJobsTable(allJobs);
+  restoreTimeEdits(timeEdits);
+  restoreCrewPicker(pickerState);
+  enhanceQuarterTimes(document.getElementById('jobsBody'));
+}
+/* Quarter hour time picker. Browsers' own time dial ignores 15 minute steps in
+   some cases, so every <input type="time" step="900"> gets three small menus
+   (hour, :00 :15 :30 :45, AM/PM). The real input stays (hidden) and keeps the
+   HH:MM value every save and payload already reads. */
+const QT_VALUE = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+let qtSeq = 0;
+function enhanceQuarterTimes(root) {
+  (root || document).querySelectorAll('input[type=time][step="900"]:not([data-qt])').forEach(enhanceQuarterTime);
+}
+function enhanceQuarterTime(input) {
+  input.dataset.qt = String(++qtSeq);
+  const box = document.createElement('span');
+  box.className = 'qtime'; box.dataset.for = input.dataset.qt;
+  const label = input.getAttribute('aria-label') || input.title || 'Time';
+  box.innerHTML = `<select data-qpart="h" aria-label="${escapeAttr(label)} hour"><option value="">--</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select>`
+    + `<select data-qpart="m" aria-label="${escapeAttr(label)} minutes"><option value="">--</option>${['00', '15', '30', '45'].map(m => `<option value="${m}">${m}</option>`).join('')}</select>`
+    + `<select data-qpart="ap" aria-label="${escapeAttr(label)} AM or PM"><option value="AM">AM</option><option value="PM">PM</option></select>`;
+  input.after(box);
+  input.classList.add('qtime-source');
+  const [h, m, ap] = box.querySelectorAll('select');
+  const show = v => {
+    const match = /^(\d{2}):(\d{2})/.exec(v || '');
+    m.querySelectorAll('option[data-extra]').forEach(o => o.remove());
+    if (!match) { h.value = ''; m.value = ''; return; }
+    const hh = Number(match[1]), mm = match[2];
+    h.value = String(hh % 12 || 12); ap.value = hh >= 12 ? 'PM' : 'AM';
+    if (!['00', '15', '30', '45'].includes(mm)) { const o = new Option(mm, mm); o.dataset.extra = '1'; m.add(o); }
+    m.value = mm;
+  };
+  Object.defineProperty(input, 'value', { configurable: true, get() { return QT_VALUE.get.call(this); }, set(v) { QT_VALUE.set.call(this, v); show(v); } });
+  show(input.value);
+  box.addEventListener('change', e => {
+    e.stopPropagation();
+    if (!h.value) { QT_VALUE.set.call(input, ''); }
+    else {
+      if (!m.value) m.value = '00';
+      const hh = (Number(h.value) % 12) + (ap.value === 'PM' ? 12 : 0);
+      QT_VALUE.set.call(input, `${String(hh).padStart(2, '0')}:${m.value}`);
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
+// Typed but unsaved times in open rows survive a board refresh.
+const TIME_EDIT_FIELDS = ['report-date-input', 'report-time-input', 'end-date-input', 'end-time-input', 'night-input'];
+function openTimeEditsState() {
+  const out = {}; let focus = null;
+  document.querySelectorAll('#jobsBody .time-edit-wrap:not(.locked)').forEach(wrap => {
+    const id = wrap.dataset.jobId; if (!id) return;
+    for (const cls of TIME_EDIT_FIELDS) {
+      const el = wrap.querySelector('.' + cls); if (!el) continue;
+      (out[id] = out[id] || {})[cls] = el.type === 'checkbox' ? el.checked : el.value;
+    }
+    const a = document.activeElement;
+    if (a && wrap.contains(a)) focus = { id, cls: [...a.classList].find(c => TIME_EDIT_FIELDS.includes(c)) || '', part: a.dataset.qpart || '', of: a.closest('.qtime')?.dataset.for || '' };
+  });
+  return { values: out, focus };
+}
+function restoreTimeEdits(state) {
+  if (!state) return;
+  for (const [id, fields] of Object.entries(state.values)) {
+    document.querySelectorAll(`#jobsBody .time-edit-wrap:not(.locked)[data-job-id="${CSS.escape(id)}"]`).forEach(wrap => {
+      for (const [cls, v] of Object.entries(fields)) { const el = wrap.querySelector('.' + cls); if (!el) continue; if (el.type === 'checkbox') el.checked = v; else el.value = v; }
+    });
+  }
+  const f = state.focus; if (!f) return;
+  enhanceQuarterTimes(document.getElementById('jobsBody'));
+  const wraps = document.querySelectorAll(`#jobsBody .time-edit-wrap:not(.locked)[data-job-id="${CSS.escape(f.id)}"]`);
+  for (const wrap of wraps) {
+    const target = f.part ? wrap.querySelector(`.qtime[data-for="${f.of}"] [data-qpart="${f.part}"]`) : (f.cls ? wrap.querySelector('.' + f.cls) : null);
+    if (target) { target.focus(); break; }
+  }
+}
+// Clicking away from a row you opened with Edit but didn't change closes it again.
+document.getElementById('jobsBody').addEventListener('focusout', e => {
+  const wrap = e.target.closest('.time-edit-wrap:not(.locked)'); if (!wrap || wrap.closest('#logisticsMoves')) return;
+  const row = wrap.closest('tr'); const jobId = wrap.dataset.jobId;
+  setTimeout(() => {
+    if (!row.isConnected || (document.activeElement && row.contains(document.activeElement) && document.activeElement.closest('.time-edit-wrap'))) return;
+    if (window.jobTimesLocked[jobId] !== false) return;
+    const job = (dashboardData.jobs || []).find(j => j.id === jobId); if (!job) return;
+    const val = cls => row.querySelector('.' + cls)?.value || '';
+    const same = val('report-date-input') === getReportDate(job) && val('report-time-input') === getReportTime(job)
+      && val('end-date-input') === getReportEndDate(job) && val('end-time-input') === getReportEndTime(job)
+      && !!row.querySelector('.night-input')?.checked === !!getNightWork(job);
+    if (!same) return;
+    delete window.jobTimesLocked[jobId];
+    persistTimeOverride('jobTimesLocked', window.jobTimesLocked);
+    renderJobs(dashboardData.jobs || []);
+  }, 0);
+});
+function renderJobsTable(allJobs) {
   const body = document.getElementById('jobsBody');
   const emptyState = document.getElementById('jobsEmpty');
   const table = document.getElementById('jobsTable');
@@ -3106,8 +3305,9 @@ function renderJobs(allJobs) {
   // yet) stay below them in whatever order they arrived in.
   function sortGroup(list) {
     return list.slice().sort((a, b) => {
-      const aLocked = isJobTimeLocked(a);
-      const bLocked = isJobTimeLocked(b);
+      // A row open for editing keeps its place: sort by its saved times, not the Edit state.
+      const aLocked = isJobTimeLocked(a) || hasSavedJobTimes(a);
+      const bLocked = isJobTimeLocked(b) || hasSavedJobTimes(b);
       if (aLocked !== bLocked) return aLocked ? -1 : 1;
       if (!aLocked) return 0;
       const aTime = parseJobDateTime(getReportDate(a), getReportTime(a));
@@ -3196,33 +3396,11 @@ function renderJobs(allJobs) {
       : !timesLocked
       ? `<span class="crew-chip empty-slot" title="Save and lock report/end time before assigning crew">save &amp; lock times first</span>`
       : (assignableWorkers.length
+        // The picker's worker list is built only when it is opened (buildCrewPanel).
+        // Building it for every row on every refresh was most of the board's lag.
         ? `<div class="crew-assign-wrap" data-job-id="${jobId}">
              <button type="button" class="crew-assign-toggle">+ Assign crew</button>
-             <div class="crew-assign-panel${hasAvailableWorkers ? '' : ' no-available'}">
-               <label class="split-day-control" title="Allow workers booked on another job to be assigned here too">
-                 <span>Split day · Include booked</span>
-                 <span class="split-day-switch">
-                   <input type="checkbox" class="include-booked-toggle">
-                   <span class="split-day-slider"></span>
-                 </span>
-               </label>
-               <div class="split-day-empty">No available workers. Turn on Split day to include booked workers.</div>
-               ${assignableWorkers.map(w => {
-                 const phone = normalizePhone(w.phone);
-                 return `
-                   <label class="crew-assign-option${w.effectiveStatus === 'booked' ? ' is-booked' : ''}">
-                     <input type="checkbox" class="crew-worker-select" value="${phone}" data-name="${w.name}">
-                     <span class="crew-assign-worker-name">${w.name}${tempTag(w)}</span>
-                     ${w.effectiveStatus === 'booked' ? '<span class="crew-booked-badge">booked</span>' : ''}
-                   </label>
-                 `;
-               }).join('')}
-               <div class="crew-assign-confirm-bar">
-                 <div class="crew-assign-summary"></div>
-                 <button type="button" class="btn btn-primary crew-assign-confirm">Assign selected</button>
-                 <button type="button" class="btn crew-assign-rapid" title="Assign and text each worker their schedule right away">Send schedule now</button>
-               </div>
-             </div>
+             <div class="crew-assign-panel"></div>
            </div>`
         : `<span class="crew-chip empty-slot">no one available</span>`);
 
@@ -3241,7 +3419,7 @@ function renderJobs(allJobs) {
       : `
       <div class="time-edit-wrap" data-job-id="${jobId}">
         <input type="date" class="report-date-input mono" value="${reportDateVal}">
-        <input type="time" class="report-time-input mono" value="${reportTimeVal}">
+        <input type="time" step="900" class="report-time-input mono" value="${reportTimeVal}">
       </div>
     `;
 
@@ -3255,7 +3433,7 @@ function renderJobs(allJobs) {
       : `
       <div class="time-edit-wrap" data-job-id="${jobId}">
         <input type="date" class="end-date-input mono" value="${endDateVal}">
-        <input type="time" class="end-time-input mono" value="${endTimeVal}">
+        <input type="time" step="900" class="end-time-input mono" value="${endTimeVal}">
         <label class="night-inline" title="Night work: an end time earlier than the start rolls to the next morning"><input type="checkbox" class="night-input"${nightWork ? ' checked' : ''}> Night</label>
         <button type="button" class="end-save" title="Save report and end date/time">Save</button>
       </div>
@@ -3286,13 +3464,13 @@ function renderJobs(allJobs) {
           ${closedOnBoard ? `<span class="status-tag closed">${/cancel/.test(closedRec.status || '') ? 'Cancelled' : 'Completed'}</span>
           <div class="job-closed-note">Closed on the board${closedRec.closedBy ? ' by ' + escapeAttr(closedRec.closedBy) : ''}${closedRec.closedAt ? ' ' + escapeAttr(new Date(closedRec.closedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : ''}, but GHL still shows it as an active job.</div>
           <div class="job-stage-actions"><button type="button" class="job-stage-btn reopen" data-job-id="${jobId}" title="Undo Completed/Cancelled so crew and times can be edited again">Reopen job</button></div>`
-          : `<span class="status-tag ${statusClass}">${statusLabel}</span>`}
+          : `<div class="status-line"><span class="status-tag ${statusClass}">${statusLabel}</span>${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length) ? `<button type="button" class="unschedule-btn job-unschedule" data-job-id="${jobId}" title="Clear this job's times and take the crew off. It moves to Unscheduled.">Unschedule</button>` : ''}</div>`}
           ${terminalLocally || closedOnBoard ? '' : `<div class="job-stage-actions">
             <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">Edit Details</button>
             ${isHourlyJob(j) ? '' : `<button type="button" class="job-stage-btn schedule${(psSchedules[jobId] || {}).sentAt ? ' sent' : ''}" data-job-id="${jobId}" title="Project Schedule for this contract job">Project Schedule</button>`}
             <button type="button" class="job-stage-btn reset" data-job-id="${jobId}">Complete EOD Sheet</button>
-            <button type="button" class="job-stage-btn complete" data-job-id="${jobId}">Completed</button>
-            <button type="button" class="job-stage-btn cancel" data-job-id="${jobId}">Cancelled</button>
+            <button type="button" class="job-stage-btn complete hold-btn" data-job-id="${jobId}" title="Hold for 5 seconds to mark this job completed">Completed</button>
+            <button type="button" class="job-stage-btn cancel hold-btn" data-job-id="${jobId}" title="Hold for 5 seconds to mark this job cancelled">Cancelled</button>
           </div>`}
         </td>
       </tr>
@@ -3376,12 +3554,19 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false } = {}) {
   if (!jobId || !selected.length) return showToast('Selected workers need a phone number.', true);
   const job = dashboardData.jobs.find(j => j.id === jobId) || {};
   const assignedWorkers = selected.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone }));
+  const timesFor = new Map(selected.map(w => [w.name, w]));
+  const splitPicks = new Map(selected.filter(w => w.splitDay).map(w => [w.name, w.otherJobId || '']));
+  const missingPick = [...splitPicks].filter(([, id]) => !id).map(([name]) => name);
+  if (missingPick.length) return showToast(`Split day: pick the other job for ${missingPick.join(', ')} first.`, true);
   const base = { action: 'assign', jobId, jobAddress: job.name || '', clientName: getClientName(job), clientPhone: getClientPhone(job),
     scopeOfWork: getScopeOfWork(job), toolsRequired: getToolsRequired(job), monetaryValue: getOpportunityValue(job),
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
     nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day' };
   const bar = confirmBtn.closest('.crew-assign-confirm-bar');
   const barButtons = bar ? [...bar.querySelectorAll('button')] : [confirmBtn];
+  // Close the picker now so a refresh can't reopen it with live buttons mid send.
+  const openPanel = confirmBtn.closest('.crew-assign-panel');
+  if (openPanel) { openPanel.classList.remove('open'); openPanel.innerHTML = ''; fitCrewPanel(); }
   barButtons.forEach(b => { b.disabled = true; });
   const label = confirmBtn.textContent; confirmBtn.textContent = rapid ? 'Sending...' : 'Assigning...';
   try {
@@ -3389,18 +3574,255 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false } = {}) {
   } catch (error) {
     showToast(error.message, true); barButtons.forEach(b => { b.disabled = false; }); confirmBtn.textContent = label; return;
   }
+  // Split day: also put each split worker on their other job (unless they're already on it).
+  // This is state only; the one split day run below covers both jobs, so no other Make run is sent.
+  const addedToOther = new Set(), splitFailed = new Map();
+  const byOtherJob = new Map();
+  for (const w of assignedWorkers) {
+    const otherId = splitPicks.get(w.workerName); if (!otherId) continue;
+    const other = (dashboardData.jobs || []).find(j => j.id === otherId);
+    if (other && workerOnJob(other, { id: w.contactId, name: w.workerName, phone: w.workerPhone })) continue;
+    if (!byOtherJob.has(otherId)) byOtherJob.set(otherId, []);
+    byOtherJob.get(otherId).push(w);
+  }
+  for (const [otherId, list] of byOtherJob) {
+    const other = (dashboardData.jobs || []).find(j => j.id === otherId) || {};
+    try {
+      await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'assign', jobId: otherId, jobAddress: other.name || '', assignedWorkers: list, crewChanges: list, splitDayFrom: jobId });
+      list.forEach(w => addedToOther.add(w.workerName));
+    } catch (error) { list.forEach(w => splitFailed.set(w.workerName, `${other.name || otherId}: ${error.message}`)); }
+  }
   const effectBase = rapid ? { ...base, action: 'rapid_assign', rapidAssign: true } : base;
-  const results = await Promise.allSettled(assignedWorkers.map((worker, index) =>
-    runSideEffect(CONFIG.MOVE_WORKER_URL,
-      { ...effectBase, ...worker, assignedWorkers: [worker], workerIndex: index + 1, workerCount: assignedWorkers.length },
+  // The worker's own times on a job (HH:MM like reportTime). Same as the job's unless dispatch set custom times.
+  const workerTimes = (j, start, end) => {
+    const s = start || getReportTime(j), e = end || getReportEndTime(j);
+    const date = getReportDate(j);
+    let endDate = getReportEndDate(j) || date;
+    if (start || end) endDate = (s && e && e <= s && date) ? toLocalYMD(new Date(new Date(date + 'T12:00:00').getTime() + 86400000)) : date;
+    return { workerReportDate: date, workerReportTime: s, workerReportEndDate: endDate, workerReportEndTime: e, customTime: !!((start && start !== getReportTime(j)) || (end && end !== getReportEndTime(j))) };
+  };
+  const results = await Promise.allSettled(assignedWorkers.map((worker, index) => {
+    const workerKey = String(worker.workerPhone || '').replace(/\D/g, '') || worker.contactId || index;
+    // Split day: this worker is already booked on another job. Only their notification
+    // goes to the split day webhook (kind split_day); the rest of the crew is unchanged.
+    // One run carries both jobs: this one and the other job dispatch picked for the worker.
+    if (splitFailed.has(worker.workerName)) return Promise.reject(new Error('Not added to the other job'));
+    if (splitPicks.has(worker.workerName)) {
+      const t = timesFor.get(worker.workerName) || {};
+      const otherRaw = (dashboardData.jobs || []).find(j => j.id === splitPicks.get(worker.workerName)) || { id: splitPicks.get(worker.workerName) };
+      const thisJob = { ...splitJobSummary(job), ...workerTimes(job, t.start, t.end) };
+      const otherJob = { ...splitJobSummary(otherRaw), ...workerTimes(otherRaw, t.otherStart, t.otherEnd) };
+      // Both jobs as numbered flat fields (jobAddress1, jobAddress2, ...), no arrays.
+      // Job 1 is the job being assigned, job 2 is the other job dispatch picked.
+      const numbered = {};
+      [thisJob, otherJob].forEach((j, i) => { for (const [k, v] of Object.entries(j)) numbered[k + (i + 1)] = v; });
+      return runSideEffect(CONFIG.MOVE_WORKER_URL,
+        { ...effectBase, ...worker, action: 'split_day_assign', splitDay: true, sendNow: rapid, originalAction: effectBase.action,
+          addedToJob2: addedToOther.has(worker.workerName),
+          workerReportDate: thisJob.workerReportDate, workerReportTime: thisJob.workerReportTime, workerReportEndDate: thisJob.workerReportEndDate, workerReportEndTime: thisJob.workerReportEndTime, customTime: thisJob.customTime,
+          jobCount: 2, ...numbered, assignedWorkers: [worker], workerIndex: index + 1, workerCount: assignedWorkers.length },
+        `Split day booking for ${worker.workerName}`, 'split_day', 'split-day-' + workerKey);
+    }
+    const t = timesFor.get(worker.workerName) || {};
+    return runSideEffect(CONFIG.MOVE_WORKER_URL,
+      { ...effectBase, ...worker, ...workerTimes(job, t.start, t.end), assignedWorkers: [worker], workerIndex: index + 1, workerCount: assignedWorkers.length },
       `${rapid ? 'Schedule' : 'Assignment notification'} for ${worker.workerName}`,
       undefined,
-      (rapid ? 'rapid-assign-' : 'assign-') + (String(worker.workerPhone || '').replace(/\D/g, '') || worker.contactId || index))));
-  const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected').map(w => w.workerName);
-  if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
+      (rapid ? 'rapid-assign-' : 'assign-') + workerKey);
+  }));
+  const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected' && !splitFailed.has(assignedWorkers[i].workerName)).map(w => w.workerName);
+  if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only and nothing was sent for them. Take them off with the x and try again.`, true);
+  else if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
   else if (rapid) showToast(assignedWorkers.length === 1 ? 'Crew assigned. Schedule sent now.' : `Crew assigned. Schedule sent now to ${assignedWorkers.length} workers.`);
   else showToast(assignedWorkers.length === 1 ? 'Crew assignment saved.' : `Crew assignment saved. ${assignedWorkers.length} notifications sent.`);
   render();
+}
+
+/* ---------- + Assign crew picker ----------
+   Built on demand for the one job being assigned, with a search box. A refresh
+   while it is open rebuilds it with the same search, Split day and ticks. */
+function crewPickerWorkers(jobId) {
+  const job = (dashboardData.jobs || []).find(j => j.id === jobId) || {};
+  const live = getLiveBookedIdentifiers();
+  const assigned = new Set([...getCrew(job), ...((window.jobCrewOverride && window.jobCrewOverride[jobId]) || [])]
+    .map(c => String(c.name || '').toLowerCase().trim()));
+  return (dashboardData.labor || []).filter(w => !assigned.has(String(w.name || '').toLowerCase().trim()))
+    .map(w => ({ ...w, effectiveStatus: getEffectiveLaborStatus(w, live) }));
+}
+function crewPickerPhone(raw) {
+  if (!raw) return '';
+  const digits = String(raw).replace(/[^\d]/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+  if (String(raw).startsWith('+')) return raw;
+  return digits ? '+' + digits : '';
+}
+function buildCrewPanel(panel, jobId, keep = {}) {
+  const workers = crewPickerWorkers(jobId);
+  const checked = new Set(keep.checked || []);
+  panel._extras = JSON.parse(JSON.stringify(keep.extras || {}));
+  panel._customOpen = !!keep.customOpen;
+  panel.classList.toggle('no-available', !workers.some(w => w.effectiveStatus === 'available'));
+  panel.classList.toggle('include-booked', !!keep.includeBooked);
+  panel.innerHTML = `
+    <label class="split-day-control" title="Workers you tick go on this job and one other job, with one text. Also shows workers already booked elsewhere.">
+      <span>Split day (two jobs) · Include booked</span>
+      <span class="split-day-switch"><input type="checkbox" class="include-booked-toggle"${keep.includeBooked ? ' checked' : ''}><span class="split-day-slider"></span></span>
+    </label>
+    <input type="search" class="crew-assign-search" placeholder="Search workers..." autocomplete="off" aria-label="Search workers" value="${escapeAttr(keep.search || '')}">
+    <div class="split-day-empty">No available workers. Turn on Split day to include booked workers.</div>
+    <div class="crew-assign-list">${workers.map(w => {
+      const booked = w.effectiveStatus === 'booked';
+      const hay = [w.name, w.phone, String(w.phone || '').replace(/\D/g, ''), workerTemperature(w)].join(' ').toLowerCase();
+      return `<label class="crew-assign-option${booked ? ' is-booked' : ''}" data-search="${escapeAttr(hay)}">
+        <input type="checkbox" class="crew-worker-select" value="${escapeAttr(crewPickerPhone(w.phone))}" data-name="${escapeAttr(w.name)}" data-id="${escapeAttr(w.id || '')}"${booked ? ' data-booked="1"' : ''}${checked.has(w.name) ? ' checked' : ''}>
+        <span class="crew-assign-worker-name">${escapeAttr(w.name)}${tempTag(w)}</span>
+        ${booked ? '<span class="crew-booked-badge">booked</span>' : ''}
+      </label>`;
+    }).join('')}</div>
+    <div class="crew-assign-nomatch" hidden>No one matches.</div>
+    <div class="crew-assign-confirm-bar">
+      <div class="crew-assign-summary"></div>
+      <button type="button" class="crew-custom-time-toggle" hidden>Custom times for a worker</button>
+      <div class="crew-split-picks" hidden></div>
+      <button type="button" class="btn btn-primary crew-assign-confirm">Assign selected</button>
+      <button type="button" class="btn crew-assign-rapid" title="Assign and text each worker their schedule right away">Send schedule now</button>
+    </div>`;
+  filterCrewPanel(panel);
+  updateCrewAssignSelection(panel);
+}
+// Search matches name, phone or temperature; every word has to match. Booked
+// workers still need Split day turned on. Ticked workers always stay visible.
+function filterCrewPanel(panel) {
+  const words = (panel.querySelector('.crew-assign-search')?.value || '').toLowerCase().split(/\s+/).filter(Boolean);
+  const includeBooked = panel.classList.contains('include-booked');
+  let visible = 0;
+  panel.querySelectorAll('.crew-assign-option').forEach(opt => {
+    const ticked = opt.querySelector('.crew-worker-select').checked;
+    const match = ticked || words.every(w => opt.dataset.search.includes(w));
+    opt.classList.toggle('search-hidden', !match);
+    if (match && (includeBooked || !opt.classList.contains('is-booked'))) visible++;
+  });
+  const none = panel.querySelector('.crew-assign-nomatch');
+  if (none) none.hidden = !(words.length && !visible);
+}
+function openCrewPickerState() {
+  const panel = document.querySelector('#jobsBody .crew-assign-panel.open');
+  if (!panel) return null;
+  const search = panel.querySelector('.crew-assign-search');
+  return {
+    jobId: panel.closest('.crew-assign-wrap')?.dataset.jobId || '',
+    search: search ? search.value : '',
+    focused: document.activeElement === search,
+    includeBooked: !!panel.querySelector('.include-booked-toggle')?.checked,
+    checked: [...panel.querySelectorAll('.crew-worker-select:checked')].map(cb => cb.dataset.name),
+    extras: readWorkerExtras(panel), customOpen: !!panel._customOpen,
+    scroll: panel.querySelector('.crew-assign-list')?.scrollTop || 0
+  };
+}
+function restoreCrewPicker(state) {
+  if (!state || !state.jobId) return;
+  const panel = document.querySelector(`#jobsBody .crew-assign-wrap[data-job-id="${CSS.escape(state.jobId)}"] .crew-assign-panel`);
+  if (!panel) return;
+  buildCrewPanel(panel, state.jobId, state);
+  panel.classList.add('open');
+  const list = panel.querySelector('.crew-assign-list'); if (list) list.scrollTop = state.scroll;
+  if (state.focused) { const s = panel.querySelector('.crew-assign-search'); s.focus(); try { s.setSelectionRange(s.value.length, s.value.length); } catch {} }
+  fitCrewPanel();
+}
+
+// The other open jobs a split day worker is already on (sent to Make with the split day booking).
+function workerOnJob(job, worker) {
+  const digits = v => String(v || '').replace(/\D/g, '').slice(-10);
+  const same = c => c && ((worker.id && c.id && c.id === worker.id) || (digits(worker.phone) && digits(c.phone) === digits(worker.phone))
+    || String(c.name || '').trim().toLowerCase() === String(worker.name || '').trim().toLowerCase());
+  return [...getCrew(job), ...((window.jobCrewOverride && window.jobCrewOverride[job.id]) || [])].some(same);
+}
+// Choices for a split day worker's other job: jobs they're already on first, then
+// every other open job with saved times (the worker gets added to that one too).
+function splitDayOtherJobs(worker, jobId) {
+  const open = (dashboardData.jobs || []).filter(j => j.id !== jobId && !isClosedOnBoard(j));
+  const theirs = open.filter(j => workerOnJob(j, worker));
+  const others = open.filter(j => !theirs.includes(j) && isJobTimeLocked(j))
+    .sort((a, b) => `${getReportDate(a)} ${getReportTime(a)}`.localeCompare(`${getReportDate(b)} ${getReportTime(b)}`));
+  return { theirs, others };
+}
+function splitJobSummary(j) {
+  return { jobId: j.id || '', jobAddress: j.name || '', clientName: getClientName(j), clientPhone: getClientPhone(j),
+    scopeOfWork: getScopeOfWork(j), toolsRequired: getToolsRequired(j), monetaryValue: getOpportunityValue(j), reportDate: getReportDate(j), reportTime: getReportTime(j),
+    reportEndDate: getReportEndDate(j), reportEndTime: getReportEndTime(j), nightWork: getNightWork(j), shiftType: getNightWork(j) ? 'night' : 'day' };
+}
+// For every ticked Split day worker the dispatcher must pick the other job they go to.
+// Both buttons stay off until each one has a pick.
+// Per worker extras under the ticked list:
+//  * Split day on: every ticked worker works this job AND one other job. Dispatch must
+//    pick that other job before either button works. Each job gets the worker's own times.
+//  * Custom times (any assignment): the worker's own start and end on this job.
+// Times are HH:MM, the same format as reportTime / reportEndTime.
+function readWorkerExtras(panel) {
+  const extras = panel._extras || (panel._extras = {});
+  panel.querySelectorAll('.crew-split-picks [data-worker][data-field]').forEach(el => {
+    const row = extras[el.dataset.worker] || (extras[el.dataset.worker] = {});
+    row[el.dataset.field] = el.value;
+  });
+  return extras;
+}
+function renderSplitPicks(panel) {
+  const host = panel.querySelector('.crew-split-picks'); if (!host) return true;
+  const wrap = panel.closest('.crew-assign-wrap'); const jobId = wrap?.dataset.jobId || '';
+  const job = (dashboardData.jobs || []).find(j => j.id === jobId) || {};
+  const extras = readWorkerExtras(panel);
+  const splitOn = panel.classList.contains('include-booked');
+  const ticked = [...panel.querySelectorAll('.crew-worker-select:checked')];
+  const customOpen = !!panel._customOpen;
+  const toggle = panel.querySelector('.crew-custom-time-toggle');
+  if (toggle) { toggle.hidden = splitOn || !ticked.length; toggle.textContent = customOpen ? 'Use the job times' : 'Custom times for a worker'; }
+  const rows = splitOn ? ticked : customOpen ? ticked : [];
+  const label = j => `${escapeAttr(j.name || j.id)} · ${escapeAttr([getReportDate(j), getReportTime(j)].filter(Boolean).join(' ') || 'no time')}`;
+  const time = (name, field, value, title) => `<input type="time" step="900" data-worker="${escapeAttr(name)}" data-field="${field}" value="${escapeAttr(value || '')}" aria-label="${escapeAttr(title)}" title="${escapeAttr(title)}">`;
+  let ready = true;
+  host.innerHTML = (splitOn && rows.length ? '<div class="crew-split-note">Split day: each worker goes on this job and the job you pick, with their own times. One text covers both.</div>' : '')
+    + (!splitOn && rows.length ? '<div class="crew-split-note">Custom times change only that worker\'s text. Leave them as is to use the job times.</div>' : '')
+    + rows.map(cb => {
+      const name = cb.dataset.name; const x = extras[name] || (extras[name] = {});
+      if (!x.start) x.start = getReportTime(job); if (!x.end) x.end = getReportEndTime(job);
+      let otherHtml = '';
+      if (splitOn) {
+        const { theirs, others } = splitDayOtherJobs({ id: cb.dataset.id, name, phone: cb.value }, jobId);
+        const opt = j => `<option value="${escapeAttr(j.id)}"${x.otherJobId === j.id ? ' selected' : ''}>${label(j)}</option>`;
+        const groups = (theirs.length ? `<optgroup label="Already on">${theirs.map(opt).join('')}</optgroup>` : '')
+          + (others.length ? `<optgroup label="${theirs.length ? 'Add to another job' : 'Add to job'}">${others.map(opt).join('')}</optgroup>` : '');
+        const other = (dashboardData.jobs || []).find(j => j.id === x.otherJobId);
+        if (other && x.otherFor !== other.id) { x.otherStart = getReportTime(other); x.otherEnd = getReportEndTime(other); x.otherFor = other.id; }
+        if (!other) ready = false;
+        otherHtml = `<select data-worker="${escapeAttr(name)}" data-field="otherJobId" class="${other ? '' : 'needs-pick'}"><option value="">Pick the other job...</option>${groups}</select>
+          ${groups ? '' : '<small>No other job with saved times. Save times on the other job first.</small>'}
+          ${other ? `<span class="crew-time-row"><span>Other job</span><span class="crew-time-lbl">From</span>${time(name, 'otherStart', x.otherStart, 'Start at the other job')}<span class="crew-time-lbl">To</span>${time(name, 'otherEnd', x.otherEnd, 'End at the other job')}</span>` : ''}`;
+      }
+      return `<div class="crew-split-pick"><span><b>${escapeAttr(name)}</b></span>
+        <span class="crew-time-row"><span>${splitOn ? 'This job' : 'Times'}</span><span class="crew-time-lbl">From</span>${time(name, 'start', x.start, 'Start at this job')}<span class="crew-time-lbl">To</span>${time(name, 'end', x.end, 'End at this job')}</span>${otherHtml}</div>`;
+    }).join('');
+  host.hidden = !rows.length;
+  enhanceQuarterTimes(host);
+  return ready && workerExtrasReady(panel);
+}
+function workerExtrasReady(panel) {
+  const extras = readWorkerExtras(panel);
+  const splitOn = panel.classList.contains('include-booked');
+  if (!splitOn && !panel._customOpen) return true;
+  return [...panel.querySelectorAll('.crew-worker-select:checked')].every(cb => {
+    const x = extras[cb.dataset.name] || {};
+    if (!x.start || !x.end || x.start === x.end) return false;
+    return !splitOn || (x.otherJobId && x.otherStart && x.otherEnd && x.otherStart !== x.otherEnd);
+  });
+}
+function setPickerButtons(panel, ready) {
+  panel.querySelectorAll('.crew-assign-confirm, .crew-assign-rapid').forEach(b => {
+    if (b.textContent.endsWith('...')) return; // mid send
+    b.disabled = !ready;
+    b.title = ready ? (b.classList.contains('crew-assign-rapid') ? 'Assign and text each worker their schedule right away' : '')
+      : (panel.classList.contains('include-booked') ? 'Pick the other job and both sets of times for each worker first' : 'Fill in a start and end time for each worker first');
+  });
 }
 
 function updateCrewAssignSelection(panel) {
@@ -3411,6 +3833,7 @@ function updateCrewAssignSelection(panel) {
   const btn = panel.querySelector('.crew-assign-confirm');
   if (summary) summary.innerHTML = names.length ? `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> texts the schedule 12 hours before the start time. <b>Send schedule now</b> texts it right away.` : '';
   if (btn && !btn.disabled) btn.textContent = 'Assign selected';
+  setPickerButtons(panel, renderSplitPicks(panel));
   // The jobs table scrolls horizontally, which also clips this dropdown on the
   // last rows, bring the Confirm button into view when it appears.
   fitCrewPanel();
@@ -3518,7 +3941,7 @@ document.addEventListener('keydown', e => {
 
 async function setJobStage(jobId, action, btn) {
   if (!jobId || !['complete', 'cancel'].includes(action)) return;
-  if (!confirm(`Mark this job ${action === 'complete' ? 'completed' : 'cancelled'}?`)) return;
+  // The 5 second hold on the button is the confirmation (see holdDone).
   btn.disabled = true;
   // Read the schedule before closing: completion clears the crew on the board.
   const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId) || {};
@@ -3641,11 +4064,77 @@ window.addEventListener('pagehide', () => { for (const id of [...pendingCloses.k
 // When eodSheet is given (the Complete EOD Sheet flow), the webhook calls are
 // is the sheet itself (action "eod_sheet") plus the job log (kind "job_log"),
 // both sent right after the reset is saved.
-async function resetJobDay(jobId, btn, eodSheet) {
+/* Hold to confirm (Completed, Cancelled, Unschedule): press and hold 5 seconds.
+   A CSS transition draws the fill (no per frame JS); one timer fires the click.
+   Letting go early cancels. Keyboard: hold Enter or Space. */
+const HOLD_MS = 5000;
+let holdState = null;
+function holdDone(btn) {
+  if (btn.dataset.held === '1') { delete btn.dataset.held; return true; }
+  if (btn._holdFiredAt && Date.now() - btn._holdFiredAt < 2000) return false; // the release click after a finished hold
+  if (!btn._holdHinted || Date.now() - btn._holdHinted > 4000) { btn._holdHinted = Date.now(); showToast(`Hold ${btn.textContent.trim()} for 5 seconds to confirm.`); }
+  return false;
+}
+function startHold(btn) {
+  if (holdState || btn.disabled) return;
+  btn.classList.add('holding');
+  btn.style.setProperty('--hold-ms', HOLD_MS + 'ms');
+  holdState = { btn, timer: setTimeout(() => {
+    const b = btn; endHold(false);
+    if (!b.isConnected) return;
+    b.dataset.held = '1'; b._holdHinted = b._holdFiredAt = Date.now();
+    b.click();
+  }, HOLD_MS) };
+}
+function endHold(early) {
+  if (!holdState) return;
+  clearTimeout(holdState.timer);
+  holdState.btn.classList.remove('holding');
+  holdState = null;
+}
+document.addEventListener('pointerdown', e => {
+  const btn = e.target.closest('.hold-btn'); if (!btn || e.button > 0) return;
+  startHold(btn);
+}, true);
+['pointerup', 'pointercancel', 'blur'].forEach(t => window.addEventListener(t, () => endHold(true), true));
+document.addEventListener('pointerout', e => { if (holdState && e.target.closest('.hold-btn') === holdState.btn && !holdState.btn.contains(e.relatedTarget)) endHold(true); }, true);
+document.addEventListener('contextmenu', e => { if (e.target.closest('.hold-btn')) e.preventDefault(); }, true);
+document.addEventListener('keydown', e => {
+  const btn = e.target.closest?.('.hold-btn'); if (!btn || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault(); if (!e.repeat) startHold(btn);
+}, true);
+document.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { if (e.target.closest?.('.hold-btn')) e.preventDefault(); endHold(true); } }, true);
+
+/* Unschedule confirmation, built in the page (browser pop ups are blocked in some
+   frames, like the sandbox). Resolves true when confirmed, false when cancelled. */
+function unscheduleFlow({ what, body }) {
+  const back = document.getElementById('unschedBackdrop');
+  document.getElementById('unschedWhat').textContent = what;
+  document.getElementById('unschedBody').textContent = body;
+  back.hidden = false;
+  back.querySelector('.unsched-keep').focus();
+  return new Promise(resolve => {
+    const done = ok => { back.hidden = true; back.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey, true); resolve(ok); };
+    const onClick = e => {
+      if (e.target === back || e.target.closest('.unsched-cancel')) return done(false);
+      const go = e.target.closest('#unschedConfirm');
+      if (go && holdDone(go)) done(true);
+    };
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
+    back.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey, true);
+  });
+}
+
+async function resetJobDay(jobId, btn, eodSheet, { unschedule = false } = {}) {
   const job = dashboardData.jobs.find(j => j.id === jobId);
   if (!job) return false;
-  if (!eodSheet && !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return false;
   const crewBeforeReset = getCrew(job);
+  if (unschedule) {
+    const ok = await unscheduleFlow({ what: [job.name, getClientName(job)].filter(Boolean).join(' · '),
+      body: `This clears its start and end times${crewBeforeReset.length ? ` and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job (they get the usual removed from job text)` : ''}. The job moves to Unscheduled. Job details are kept.` });
+    if (!ok) return false;
+  } else if (!eodSheet && !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return false;
   const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
   // Job log snapshot, taken BEFORE the reset clears the schedule and crew.
   const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet') : null;
@@ -3663,14 +4152,15 @@ async function resetJobDay(jobId, btn, eodSheet) {
       try { await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log'); }
       catch (error) { problems.push(error.message); }
     } else if (removedWorkers.length) {
-      try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers }, 'Worker release notifications'); }
+      try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers, ...(unschedule ? { reason: 'unscheduled', unscheduled: true } : {}) }, 'Worker release notifications'); }
       catch (error) { problems.push(error.message); }
     }
     render();
     // The reset is saved either way, so the sheet closes; an unconfirmed
     // effect must be checked in Make's history rather than resent.
     if (problems.length) { showToast(problems.join(' '), true); return true; }
-    showToast(eodSheet ? 'EOD sheet sent. Schedule and crew cleared for everyone.' : 'Schedule and crew cleared for everyone.');
+    if (unschedule) { delete window.jobTimesLocked[jobId]; persistTimeOverride('jobTimesLocked', window.jobTimesLocked); render(); }
+    showToast(eodSheet ? 'EOD sheet sent. Schedule and crew cleared for everyone.' : unschedule ? `${job.name || 'Job'} unscheduled. Post it in the job's Slack thread.` : 'Schedule and crew cleared for everyone.');
     return true;
   } catch (error) { showToast(error.message, true); return false; }
   finally { btn.disabled = false; }
@@ -4036,10 +4526,24 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
   if (toggle) {
     const panel = toggle.parentElement.querySelector('.crew-assign-panel');
     document.querySelectorAll('.crew-assign-panel.open').forEach(p => {
-      if (p !== panel) p.classList.remove('open');
+      if (p !== panel) { p.classList.remove('open'); p.innerHTML = ''; }
     });
-    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) { panel.classList.remove('open'); panel.innerHTML = ''; fitCrewPanel(); return; }
+    buildCrewPanel(panel, toggle.closest('.crew-assign-wrap').dataset.jobId);
+    panel.classList.add('open');
     fitCrewPanel();
+    // Mouse users can start typing a name right away; skip on touch so the keyboard doesn't pop up.
+    if (window.matchMedia('(hover: hover)').matches) panel.querySelector('.crew-assign-search')?.focus();
+    return;
+  }
+
+  const customToggle = e.target.closest('.crew-custom-time-toggle');
+  if (customToggle) {
+    const panel = customToggle.closest('.crew-assign-panel');
+    readWorkerExtras(panel);
+    panel._customOpen = !panel._customOpen;
+    if (!panel._customOpen) panel._extras = {};
+    updateCrewAssignSelection(panel);
     return;
   }
 
@@ -4050,7 +4554,14 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
     const existingNames = Array.from(document.querySelectorAll(`.crew-chip[data-job-id="${jobId}"]`)).map(chip => chip.dataset.name);
     const checked = Array.from(wrap.querySelectorAll('.crew-worker-select:checked'));
     const workers = checked
-      .map(cb => ({ phone: cb.value, name: cb.dataset.name }))
+      .map(cb => {
+        const panel = wrap.querySelector('.crew-assign-panel');
+        const split = panel.classList.contains('include-booked');
+        const x = (split || panel._customOpen) ? (readWorkerExtras(panel)[cb.dataset.name] || {}) : {};
+        return { phone: cb.value, name: cb.dataset.name, id: cb.dataset.id || '', splitDay: split,
+          otherJobId: split ? (x.otherJobId || '') : '',
+          start: x.start || '', end: x.end || '', otherStart: x.otherStart || '', otherEnd: x.otherEnd || '' };
+      })
       .filter(worker => !existingNames.includes(worker.name));
     if (!workers.length) {
       showToast("Select at least one new worker.", true);
@@ -4059,6 +4570,9 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
     assignCrew(jobId, workers, confirmBtn, { rapid: confirmBtn.classList.contains('crew-assign-rapid') });
     return;
   }
+
+  const unscheduleBtn = e.target.closest('.job-unschedule');
+  if (unscheduleBtn) { resetJobDay(unscheduleBtn.dataset.jobId, unscheduleBtn, null, { unschedule: true }); return; }
 
   const reopenBtn = e.target.closest('.job-stage-btn.reopen');
   if (reopenBtn) {
@@ -4086,12 +4600,14 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
 
   const completeBtn = e.target.closest('.job-stage-btn.complete');
   if (completeBtn) {
+    if (!holdDone(completeBtn)) return;
     setJobStage(completeBtn.dataset.jobId, 'complete', completeBtn);
     return;
   }
 
   const cancelBtn = e.target.closest('.job-stage-btn.cancel');
   if (cancelBtn) {
+    if (!holdDone(cancelBtn)) return;
     setJobStage(cancelBtn.dataset.jobId, 'cancel', cancelBtn);
     return;
   }
@@ -4103,6 +4619,8 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
     window.jobTimesLocked[jobId] = false;
     persistTimeOverride('jobTimesLocked', window.jobTimesLocked);
     renderJobs(dashboardData.jobs || []);
+    // Start in the row so clicking away without a change closes it again.
+    document.querySelector(`#jobsBody .time-edit-wrap:not(.locked)[data-job-id="${CSS.escape(jobId)}"] .report-date-input`)?.focus({ preventScroll: true });
     return;
   }
 
@@ -4123,7 +4641,7 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
   }
 
   if (!e.target.closest('.crew-assign-wrap')) {
-    document.querySelectorAll('.crew-assign-panel.open').forEach(p => p.classList.remove('open'));
+    document.querySelectorAll('.crew-assign-panel.open').forEach(p => { p.classList.remove('open'); p.innerHTML = ''; });
     fitCrewPanel();
   }
 });
@@ -4143,6 +4661,15 @@ function fitCrewPanel() {
 document.getElementById('jobsBody').addEventListener('change', (e) => {
   const workerBox = e.target.closest('.crew-worker-select');
   if (workerBox) { updateCrewAssignSelection(workerBox.closest('.crew-assign-panel')); return; }
+  const extra = e.target.closest('.crew-split-picks [data-field]');
+  if (extra) {
+    const panel = extra.closest('.crew-assign-panel');
+    // Picking the other job redraws the row (fills its times). Time edits only recheck the buttons,
+    // so the time box you are typing in keeps focus.
+    if (extra.dataset.field === 'otherJobId') updateCrewAssignSelection(panel);
+    else setPickerButtons(panel, workerExtrasReady(panel));
+    return;
+  }
   const splitDayToggle = e.target.closest('.include-booked-toggle');
   if (!splitDayToggle) return;
   const panel = splitDayToggle.closest('.crew-assign-panel');
@@ -4152,7 +4679,33 @@ document.getElementById('jobsBody').addEventListener('change', (e) => {
       cb.checked = false;
     });
   }
+  filterCrewPanel(panel);
   updateCrewAssignSelection(panel);
+});
+document.getElementById('jobsBody').addEventListener('input', (e) => {
+  const search = e.target.closest('.crew-assign-search');
+  if (search) { filterCrewPanel(search.closest('.crew-assign-panel')); return; }
+  const timeBox = e.target.closest('.crew-split-picks input[type=time]');
+  if (timeBox) { const panel = timeBox.closest('.crew-assign-panel'); setPickerButtons(panel, workerExtrasReady(panel)); }
+});
+// Esc clears the search, then closes the picker. Enter ticks the only match.
+document.getElementById('jobsBody').addEventListener('keydown', (e) => {
+  const search = e.target.closest('.crew-assign-search'); if (!search) return;
+  const panel = search.closest('.crew-assign-panel');
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (search.value) { search.value = ''; filterCrewPanel(panel); }
+    else { panel.classList.remove('open'); panel.innerHTML = ''; fitCrewPanel(); }
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const includeBooked = panel.classList.contains('include-booked');
+    const shown = [...panel.querySelectorAll('.crew-assign-option:not(.search-hidden)')].filter(o => includeBooked || !o.classList.contains('is-booked'));
+    const unticked = shown.filter(o => !o.querySelector('.crew-worker-select').checked);
+    if (search.value.trim() && unticked.length === 1) {
+      unticked[0].querySelector('.crew-worker-select').checked = true;
+      search.value = ''; filterCrewPanel(panel); updateCrewAssignSelection(panel);
+    }
+  }
 });
 
 /* ---------- Roster tabs / search ---------- */
@@ -5124,6 +5677,14 @@ function logisticsStatusClass(status) {
   return 'unassigned';
 }
 
+// container_drop -> "Container drop", lowboy -> "Lowboy", dump_and_return -> "Dump & return"
+function prettyMovement(v) {
+  const t = String(v || '').trim(); if (!t) return 'Move';
+  const known = { container_drop: 'Container drop', container_pickup: 'Container pickup', container_swap: 'Container swap', dump_and_return: 'Dump & return', lowboy: 'Lowboy haul', lowboy_load: 'Lowboy haul', driver: 'Driver load' };
+  if (known[t.toLowerCase()]) return known[t.toLowerCase()];
+  const words = t.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 function logisticsSourceType(move) {
   if (String(move.pipelineId || '') === CONTAINER_PIPELINE_ID) return 'container';
   const raw = String(move.sourceType || move.pipelineType || move.sourcePipeline || move.pipelineName || '').toLowerCase();
@@ -5251,7 +5812,20 @@ function renderLogistics() {
     const targetType = logisticsTargetType(m);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
     const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
-    return `<tr data-source="${sourceType}"><td data-label="Move"><strong class="mono">${escapeLogisticsHtml(m.moveId || m.id || 'N/A')}</strong></td><td data-label="Destination"><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType)}</span><br>${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}${contactName ? `<br><strong>${escapeLogisticsHtml(contactName)}</strong>` : ''}${contactSecondary ? `<br><span class="logistics-route">${escapeLogisticsHtml(contactSecondary)}</span>` : ''}</td><td data-label="Value"><strong>${escapeLogisticsHtml(standaloneValueDisplay)}</strong></td><td data-label="Type / equipment"><strong>${escapeLogisticsHtml(movement)}</strong><br><span class="logistics-route">${escapeLogisticsHtml(equipment)}</span></td><td data-label="Notes" class="logistics-route">${escapeLogisticsHtml(notes || 'N/A')}</td><td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td><td data-label="Schedule" class="mono">${scheduleCell}</td><td data-label="Driver">${escapeLogisticsHtml(assignedDriverName || 'N/A')}</td><td data-label="Vehicle">${escapeLogisticsHtml(assignedAssetDisplay || 'N/A')}</td><td data-label="Status"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(status)}</span>${actions}</td></tr>`;
+    const none = '<span class="logi-none">None yet</span>';
+    const moveName = prettyMovement(movement);
+    const moveDetail = [m.containerSize || '', equipment].filter(Boolean).join(' · ');
+    return `<tr data-source="${sourceType}">`
+      + `<td data-label="Job"><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType === 'demo' ? 'Job add on' : sourceType === 'container' ? 'Container job' : sourceType)}</span>`
+      + `<div class="logi-dest">${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}</div>`
+      + `${contactName ? `<div class="logi-client">${escapeLogisticsHtml(contactName)}${contactSecondary ? ` · ${escapeLogisticsHtml(contactSecondary)}` : ''}</div>` : ''}`
+      + `<div class="logi-id mono">${escapeLogisticsHtml(m.moveId || m.id || '')}</div></td>`
+      + `<td data-label="Move"><div class="logi-move">${escapeLogisticsHtml(moveName)}</div>${moveDetail ? `<div class="logi-detail">${escapeLogisticsHtml(moveDetail)}</div>` : ''}${notes ? `<div class="logi-note">${escapeLogisticsHtml(notes)}</div>` : ''}</td>`
+      + `<td data-label="Value"><span class="logi-value">${escapeLogisticsHtml(standaloneValueDisplay === 'N/A' ? 'On the job' : standaloneValueDisplay)}</span></td>`
+      + `<td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td>`
+      + `<td data-label="Schedule" class="mono">${scheduleCell}</td>`
+      + `<td data-label="Driver & vehicle"><div class="logi-who"><span>Driver</span>${assignedDriverName ? escapeLogisticsHtml(assignedDriverName) : none}</div><div class="logi-who"><span>Vehicle</span>${assignedAssetDisplay ? escapeLogisticsHtml(assignedAssetDisplay) : none}</div></td>`
+      + `<td data-label="Status"><div class="status-line"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(String(status).replace(/_/g, ' '))}</span>${!terminal && (scheduleLocked || date || assignedDriverName || assignedAssets.length) ? `<button type="button" class="unschedule-btn logistics-unschedule" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" title="Clear this move's time, driver and vehicles. It moves to Unscheduled.">Unschedule</button>` : ''}</div>${actions}</td></tr>`;
   };
   const sectionDefs = [
     { key: 'today', label: 'Today' },
@@ -5261,13 +5835,13 @@ function renderLogistics() {
   ];
   document.getElementById('logisticsMoves').innerHTML = visibleMoves.length ? sectionDefs.map(({ key, label }) => {
     const groupMoves = groups[key].slice().sort((a, b) => String(a.scheduledTime || a.requestedTime || a.reportTime || '').localeCompare(String(b.scheduledTime || b.requestedTime || b.reportTime || '')));
-    return `<tr class="job-group-header-row job-group-${key}"><td colspan="10" class="job-group-header">${label} <span class="job-group-count">${groupMoves.length}</span></td></tr>` +
-      (groupMoves.length ? groupMoves.map(buildLogisticsRow).join('') : `<tr class="job-group-empty-row"><td colspan="10" class="job-group-empty">No moves</td></tr>`);
-  }).join('') : '<tr><td colspan="10" class="empty-state">No logistics moves returned for this view.</td></tr>';
+    return `<tr class="job-group-header-row job-group-${key}"><td colspan="7" class="job-group-header">${label} <span class="job-group-count">${groupMoves.length}</span></td></tr>` +
+      (groupMoves.length ? groupMoves.map(buildLogisticsRow).join('') : `<tr class="job-group-empty-row"><td colspan="7" class="job-group-empty">No moves</td></tr>`);
+  }).join('') : '<tr><td colspan="7" class="empty-state">No logistics moves returned for this view.</td></tr>';
 }
 
 async function loadLogistics() {
-  document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="10" class="load-state"><div class="spinner"></div>Loading logistics...</td></tr>';
+  document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="7" class="load-state"><div class="spinner"></div>Loading logistics...</td></tr>';
   const errorEl = document.getElementById('logisticsBackendStatus');
   try {
     const [data, driverData, assetData, moveStateData] = await Promise.all([
@@ -5305,7 +5879,7 @@ async function loadLogistics() {
     console.error('Logistics webhook failed:', err);
     errorEl.style.display = 'block';
     errorEl.textContent = `Logistics webhook failed: ${err && err.message ? err.message : err}`;
-    document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="10" class="empty-state">Logistics data could not be loaded.</td></tr>';
+    document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="7" class="empty-state">Logistics data could not be loaded.</td></tr>';
   }
 }
 
@@ -5490,6 +6064,42 @@ async function persistLogisticsAsset(action, move, asset) {
   };
   await commitState(CONFIG.LOGISTICS_STATE_URL, { ...logisticsIdentity(move), ...payload, action: action === 'booked' ? 'assign_asset' : 'release_asset' });
   return payload;
+}
+
+// Unschedule a move: clears its time, driver and vehicles (state action reset_dispatch)
+// so it drops to Unscheduled. No driver log is sent; an assigned driver gets the usual
+// remove_driver notification.
+async function unscheduleLogisticsMove(jobId, button) {
+  const requestedMoveId = button.dataset.moveId || '';
+  const move = (logisticsData.moves || []).find(item => requestedMoveId && String(item.moveId || item.id || '') === String(requestedMoveId)) || findLogisticsMove(jobId);
+  if (!move) return showToast('Logistics move could not be found.', true);
+  const driverName = getLogisticsDriverName(move);
+  const where = move.jobAddress || move.destinationAddress || move.deliveryAddress || move.name || 'this move';
+  const ok = await unscheduleFlow({ what: `${prettyMovement(move.movementType || move.moveType || move.type || '')} · ${where}`,
+    body: `This clears its date and time${driverName ? `, takes ${driverName} off (they get the usual driver removed text)` : ''} and frees its vehicles. It moves to Unscheduled. The move and its GHL opportunity are kept. No driver log is sent.` });
+  if (!ok) return;
+  const moveKey = String(move.moveId || move.id || jobId);
+  const driver = (logisticsData.drivers || []).find(item => item.name === driverName) || {};
+  button.disabled = true; const original = button.textContent; button.textContent = 'Unscheduling...';
+  try {
+    await commitState(CONFIG.LOGISTICS_STATE_URL, { ...logisticsIdentity(move), action: 'reset_dispatch', moveId: move.moveId || move.id || '', jobId, opportunityId: jobId, unscheduled: true });
+    delete window.logisticsScheduleOverride[moveKey];
+    delete window.logisticsBreakSchedule[moveKey];
+    if (window.logisticsAssetAssignments) { delete window.logisticsAssetAssignments[moveKey]; persistLogisticsAssetAssignments(); }
+    if (driverName) {
+      await runSideEffect(CONFIG.DRIVER_ASSIGNMENT_URL, {
+        action: 'remove_driver', bookingMode: 'driver_assignment', reason: 'unscheduled', unscheduled: true,
+        targetType: logisticsTargetType(move), moveId: move.moveId || move.id || '', jobId, opportunityId: jobId,
+        sourceOpportunityId: move.sourceOpportunityId || move.opportunityId || jobId,
+        jobAddress: where, driverId: move.driverId || driver.id || '', driverName, driverPhone: move.driverPhone || driver.phone || '', active: true
+      }, 'Driver release notifications');
+    }
+    showToast('Move unscheduled. Post it in the job\'s Slack thread.');
+    await loadLogistics();
+  } catch (err) {
+    console.error('Unschedule failed:', err);
+    showToast(err.message || 'Could not unschedule the move.', true);
+  } finally { button.disabled = false; button.textContent = original; }
 }
 
 async function resetLogisticsDay(jobId, button) {
@@ -5772,6 +6382,8 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
       .finally(() => { assignButton.disabled = false; assignButton.textContent = 'Assign'; });
     return;
   }
+  const unBtn = event.target.closest('.logistics-unschedule');
+  if (unBtn) { unscheduleLogisticsMove(unBtn.dataset.id, unBtn); return; }
   const button = event.target.closest('.logistics-action');
   if (!button) return;
   if (button.dataset.action === 'edit') openEditContainerSheetFn(button.dataset.moveId || button.dataset.id);
@@ -5914,14 +6526,15 @@ document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListe
   document.getElementById('completedDispatchView').hidden = view !== 'completed';
   if (view === 'completed') renderCompletedView();
   document.getElementById('adminDispatchView').hidden = view !== 'admin';
-  if ((logistics || view === 'admin') && !logisticsLoaded) loadLogistics();
+  if (logistics && !logisticsLoaded) loadLogistics();
+  else if (logistics) schedulePoll(200); // catch up on moves changed while another tab was open
   if (view === 'admin') renderAdminView();
   if (view === 'schedule') { renderScheduleView(); loadProjectSchedules(); }
 }));
 document.getElementById('logisticsSourceFilter').addEventListener('change', renderLogistics);
 document.getElementById('refreshBtn').addEventListener('click', () => {
   if (!document.getElementById('logisticsDispatchView').hidden) return loadLogistics();
-  if (!document.getElementById('adminDispatchView').hidden) { renderAdminView(true); return loadLogistics(); }
+  if (!document.getElementById('adminDispatchView').hidden) { renderAdminView(true); return ensureAdminDriverRoster(true); }
   refreshAll(); loadProjectSchedules();
 });
 
@@ -6045,27 +6658,53 @@ function runSideEffect(url, payload, label, kindOverride, effectKey) {
   return Promise.resolve({ ok: true, optimistic: true });
 }
 function editingDispatch() {
-  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && document.activeElement.type !== 'search' && !document.activeElement.closest('#signinBackdrop')) ||
+  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || document.querySelector('#jobsBody .crew-assign-panel.open') || document.querySelector('.hold-btn.holding') || !document.getElementById('unschedBackdrop')?.hidden || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && document.activeElement.type !== 'search' && !document.activeElement.closest('#signinBackdrop')) ||
     Object.values(window.jobTimesLocked || {}).some(v => v === false) || Object.values(window.logisticsScheduleOverride || {}).some(v => v.locked === false);
+}
+/* Live updates, light on Netlify:
+   - asks only for records changed since the last answer (?since=), so most polls are a few bytes
+   - redraws only when something actually changed
+   - every 15 s while someone is using the board, every 60 s after 3 idle minutes, never while the tab is hidden
+   - moves are only polled while the Logistics tab is open
+   - the held send nudge (/api/workflow-effect) only goes out while this browser has a Completed/Cancelled waiting;
+     the every minute server job covers everything else */
+let sharedSince = '', movesSince = '', lastActivity = Date.now(), pollTimer = null;
+['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => window.addEventListener(t, () => {
+  const wasIdle = Date.now() - lastActivity > 180000; lastActivity = Date.now();
+  if (wasIdle) schedulePoll(500);
+}, { passive: true, capture: true }));
+function schedulePoll(ms) {
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(async () => { await pollSharedState(); schedulePoll(Date.now() - lastActivity > 180000 ? 60000 : 15000); }, ms);
 }
 async function pollSharedState() {
   if (document.hidden || sharedPollBusy || editingDispatch()) return;
   sharedPollBusy = true;
   try {
-    const [jobs, moves, effects] = await Promise.all([
-      fetchJsonStrict(CONFIG.SHARED_STATE_SYNC_URL, 'Shared state'),
-      logisticsLoaded ? fetchJsonStrict(CONFIG.LOGISTICS_STATE_URL, 'Logistics state') : Promise.resolve(null),
-      Promise.resolve({ issues: [] })
+    const logisticsOpen = logisticsLoaded && !document.getElementById('logisticsDispatchView').hidden;
+    const q = since => since ? (CONFIG.SHARED_STATE_SYNC_URL.includes('?') ? '&' : '?') + 'since=' + encodeURIComponent(since) : '';
+    const [jobs, moves] = await Promise.all([
+      fetchJsonStrict(CONFIG.SHARED_STATE_SYNC_URL + q(sharedSince), 'Shared state'),
+      logisticsOpen ? fetchJsonStrict(CONFIG.LOGISTICS_STATE_URL + q(movesSince), 'Logistics state') : Promise.resolve(null)
     ]);
-    // Also nudges the server to send any held Completed/Cancelled sends that are
-    // due. Not awaited: a slow Make answer must never hold up live updates.
-    fetch('/api/workflow-effect?_=' + Date.now(), { cache: 'no-store' }).catch(() => {});
+    if (pendingCloses.size) fetch('/api/workflow-effect?_=' + Date.now(), { cache: 'no-store' }).catch(() => {});
     if (editingDispatch()) return;
-    acceptJobRecords(jobs.sharedState || []);
+    if (jobs.serverTime) sharedSince = jobs.serverTime;
+    if (moves && moves.serverTime) movesSince = moves.serverTime;
+    const jobRecords = (jobs.sharedState || []).filter(r => {
+      const old = dashboardData.sharedStateByJobId.get(r.jobId);
+      return !old || Number(r.version || 0) > Number(old.version || 0) || Object.hasOwn(r, 'active') && old.active !== r.active;
+    });
+    const moveRecords = moves ? (moves.states || []).filter(r => {
+      const old = logisticsData.moves.find(m => String(m.moveId || m.id) === String(r.moveId));
+      return !old || Number(r.version || 0) > Number(old.version || 0);
+    }) : [];
+    acceptJobRecords(jobRecords);
     for (const pending of jobs.pendingSync || []) showPersistentIssue('crm-' + pending.jobId, 'Dispatch saved; GHL schedule sync needs a retry.', () => retryCrm(pending.jobId));
-    if (moves) acceptMoveRecords(moves.states || []);
-    for (const issue of effects.issues || []) showPersistentIssue('effect-' + issue.id, `Dispatch saved; ${issue.kind.replaceAll('_', ' ')} needs checking in Make. Do not resend without checking execution history.`);
-    clearPersistentIssue('read'); render(); if (logisticsLoaded) renderLogistics();
+    if (moveRecords.length) acceptMoveRecords(moveRecords);
+    clearPersistentIssue('read');
+    if (jobRecords.length) render();
+    if (moveRecords.length && logisticsOpen) renderLogistics();
   } catch { showPersistentIssue('read', 'Live updates paused. Showing the last confirmed data. Retrying automatically.'); }
   finally { sharedPollBusy = false; }
 }
@@ -6819,7 +7458,7 @@ function renderAdminUsers() {
 }
 async function renderAdminView(force) {
   if (!currentSession.isAdmin) return;
-  renderAdminUsers(); renderManualWorkerList(); renderAdminLabor(); ensureAdminDriverRoster();
+  renderAdminUsers(); renderManualWorkerList(); renderAdminLabor(); ensureAdminDriverRoster(force); loadFieldAppAccess();
   loadDashLayout().then(() => { loadSeniorTools(); loadDashCharts(); });
   try { await fetchSessionUsers(); } catch {}
   try { adminRowsCache = (await adminApi()).admins || []; }
@@ -7299,7 +7938,7 @@ function renderHistory() {
   document.getElementById('historyCount').textContent = String(seniorSends.length);
   const groups = new Map();
   for (const item of shown) { const k = item.jobId || item.jobName; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(item); }
-  const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'job_log' ? 'Job log' : k === 'worker_sent_home' ? 'Worker sent home' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
+  const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'job_log' ? 'Job log' : k === 'worker_sent_home' ? 'Worker sent home' : k === 'split_day' ? 'Split day booking' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
   document.getElementById('historyList').innerHTML = groups.size ? [...groups.values()].map(items => `<div class="history-job"><h4>${sessionEsc(items[0].jobName || 'Job')}<small>${sessionEsc(items[0].jobId || '')} · ${items.length} sent</small></h4>`
     + items.map(i => `<div class="history-row"><div><span class="kind">${kindLabel(i.kind)}</span> <span class="file">${sessionEsc(i.fileName || i.detail || '')}</span></div><div>${i.status === 'failed' ? '<span class="st-failed">FAILED</span> ' : ''}${seniorWhen(i.at)}</div></div>`).join('') + '</div>').join('')
     : `<p class="load-state">${seniorSends.length ? 'No jobs match.' : 'Nothing sent yet. EOD sheets and Project Schedule PDFs show here once sent.'}</p>`;
@@ -7630,14 +8269,15 @@ document.getElementById('manualWorkerList').addEventListener('click', async e =>
 });
 
 /* ---------- Init ---------- */
+enhanceQuarterTimes(document);
 initSession();
 loadBoardDefaults();
 fmtDateHeader();
 loadDashboard();
 loadLaborRoster();
 loadProjectSchedules();
-setInterval(pollSharedState, 15000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) pollSharedState(); });
+schedulePoll(15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastActivity = Date.now(); schedulePoll(300); } });
 </script>
 
 </body>

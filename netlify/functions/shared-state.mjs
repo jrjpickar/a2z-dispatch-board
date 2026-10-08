@@ -5,17 +5,27 @@ import { syncJobSchedule } from '../../lib/ghl.mjs';
 import { linkChangeOrder, unlinkChangeOrder } from '../../lib/change-order.mjs';
 import { sessionFromRequest } from '../../lib/session.mjs';
 import { logActivity } from '../../lib/activity.mjs';
+// A since time a little in the past so a save that landed while the last poll ran is never missed.
+function sinceParam(request) {
+  const raw = new URL(request.url).searchParams.get('since');
+  const t = raw ? Date.parse(raw) : NaN;
+  return Number.isFinite(t) ? new Date(t - 5000) : null;
+}
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405, { Allow: 'GET, POST' });
     if (request.method === 'POST') authorizeWrite(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
-      const [rows, pendingSync] = await Promise.all([
-        sql`select * from job_shared_state order by updated_at desc`,
-        sql`select job_id as "jobId", last_error as error from dispatch_crm_sync where pending = true`
+      // ?since=<serverTime from the last answer>: only rows changed after it (polls stay tiny).
+      const since = sinceParam(request);
+      const [rows, pendingSync, [{ now }]] = await Promise.all([
+        since ? sql`select * from job_shared_state where updated_at > ${since} order by updated_at desc`
+              : sql`select * from job_shared_state order by updated_at desc`,
+        sql`select job_id as "jobId", last_error as error from dispatch_crm_sync where pending = true`,
+        sql`select now() as now`
       ]);
-      return json({ sharedState: rows.map(jobRecord), pendingSync });
+      return json({ sharedState: rows.map(jobRecord), pendingSync, serverTime: new Date(now).toISOString(), partial: !!since });
     }
     const payload = await readPayload(request);
     // Change order link/unlink: link also moves the opportunity to the Change Order pipeline in GHL.

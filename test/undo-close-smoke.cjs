@@ -42,8 +42,14 @@ const { pathToFileURL } = require('node:url');
   await page.goto('https://a2z.test/');
   await page.waitForSelector('.job-stage-btn.complete');
   page.setDefaultTimeout(8000);
+  // Completed / Cancelled need a 5 second hold.
+  const hold = async (sel, ms = 5200) => { const box = await page.locator(sel).first().boundingBox(); await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(ms); await page.mouse.up(); };
+  await page.click('.job-stage-btn.complete'); await page.waitForTimeout(300);
+  assert.equal(await page.locator('.close-undo-bar').count(), 0, 'a quick click does nothing');
+  await hold('.job-stage-btn.complete', 2000);
+  assert.equal(await page.locator('.close-undo-bar').count(), 0, 'letting go early does nothing');
   // 1. Completed, then Undo: job back with its crew, nothing sent.
-  await page.click('.job-stage-btn.complete');
+  await hold('.job-stage-btn.complete');
   await page.waitForSelector('.close-undo-bar');
   assert.equal(job.status, 'completed'); assert.equal(job.crew.length, 0);
   await page.waitForTimeout(1500); assert.equal(effects.length, 0, 'nothing sent during the undo window');
@@ -51,7 +57,7 @@ const { pathToFileURL } = require('node:url');
   assert.equal(job.active, true); assert.deepEqual(job.crew.map(w => w.name), ['Aldo Reyes', 'Jose Gutierrez']);
   assert.equal(effects.length, 0); assert.deepEqual(commits, ['complete', 'reopen', 'assign']);
   // 2. Completed, then Send now: stage + job log go out with the crew.
-  await page.click('.job-stage-btn.complete'); await page.waitForSelector('.close-send-btn');
+  await hold('.job-stage-btn.complete'); await page.waitForSelector('.close-send-btn');
   await page.click('.close-send-btn'); await page.waitForTimeout(800);
   assert.deepEqual(effects.map(e => e.kind), ['job_stage', 'job_log']);
   assert.equal(effects[1].payload.assignedWorkers.length, 2);
@@ -59,14 +65,14 @@ const { pathToFileURL } = require('node:url');
   // 3. Reopen + crew back, Completed, then leave the page: keepalive sends on pagehide.
   await page.evaluate(async () => { await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reopen', jobId: 'job00000001' }); render(); });
   effects.length = 0;
-  await page.waitForSelector('.job-stage-btn.complete'); await page.click('.job-stage-btn.complete'); await page.waitForSelector('.close-undo-bar');
+  await page.waitForSelector('.job-stage-btn.complete'); await hold('.job-stage-btn.complete'); await page.waitForSelector('.close-undo-bar');
   // Fire the tab closing event in place (a real unload's keepalive request escapes the test's network mock).
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide'))); await page.waitForTimeout(800);
   assert.deepEqual(effects.map(e => e.kind).sort(), ['job_log', 'job_stage'], 'sends on tab close');
   assert.ok(effects.every(e => e.delayMs === 30000), 'held for 30 seconds');
   // 4. Browser dies mid window (no pagehide): the sends stay held on the server, not cancelled, so its sweep sends them.
   await page.evaluate(async () => { await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reopen', jobId: 'job00000001' }); render(); });
-  await page.waitForSelector('.job-stage-btn.complete'); await page.click('.job-stage-btn.complete'); await page.waitForSelector('.close-undo-bar');
+  await page.waitForSelector('.job-stage-btn.complete'); await hold('.job-stage-btn.complete'); await page.waitForSelector('.close-undo-bar');
   const before = effects.length;
   // Nothing more from the browser; the server already holds both sends (its sweep is covered in database.test.mjs).
   assert.equal([...held.values()].filter(h => h.status === 'scheduled').length, 2, 'held sends live on the server');

@@ -22,6 +22,25 @@ The crew picker has two buttons once workers are ticked: **Assign selected** (ac
 
 Add a router path filtered on `action` = `rapid_assign` that sends the schedule right away, and end it with the `{"ok":true}` Webhook response. Until that path exists, rapid runs match no route and will show under Admin > Make / GHL problems after 45 seconds.
 
+## Split day booking (new webhook)
+
+**Split day** in **+ Assign crew** means: each ticked worker works this job **and one other job** that day, and gets **one** text covering both. Dispatch turns on Split day, ticks the workers (available or already booked), and for each one must pick the other job and that worker's times at each job before **Assign selected** or **Send schedule now** will work.
+
+The board puts the worker on both jobs (if they were not already on the other job) and posts **one run per split worker** to `https://hook.us2.make.com/pnoqc8i87kix7qiyjkmfek9axgvjh4z6` (override with `SPLIT_DAY_WEBHOOK` in Netlify). No run goes to the worker webhook for a split worker, for either job, so do any GHL association or labor status update for both jobs in this scenario. Workers assigned with Split day off still go to the normal worker webhook.
+
+Fields: everything a normal assignment sends (`jobId`, `jobAddress`, `clientName`, `clientPhone`, `scopeOfWork`, `toolsRequired`, `monetaryValue`, `reportDate`, `reportTime`, `reportEndDate`, `reportEndTime`, `nightWork`, `shiftType`, `workerName`, `workerPhone`, `contactId`, `assignedWorkers`, `workerIndex`, `workerCount`, `eventId`, plus the worker time fields below) and:
+
+- `action`: `"split_day_assign"`, `splitDay`: `true`, `sendNow` (`true` for **Send schedule now**), `originalAction` (`assign` or `rapid_assign`).
+- `jobCount`: `2`. Both jobs come as **numbered flat fields, no arrays**: job 1 is the job being assigned, job 2 is the other job dispatch picked. For each N in 1 and 2: `jobIdN`, `jobAddressN`, `clientNameN`, `clientPhoneN`, `scopeOfWorkN`, `toolsRequiredN`, `monetaryValueN`, `reportDateN`, `reportTimeN`, `reportEndDateN`, `reportEndTimeN`, `nightWorkN`, `shiftTypeN`, and the worker's own `workerReportDateN`, `workerReportTimeN`, `workerReportEndDateN`, `workerReportEndTimeN`, `customTimeN`. Example: `jobAddress1`, `jobAddress2`, `workerReportTime1`, `workerReportTime2`.
+- `addedToJob2`: `true` if the board just added the worker to job 2, `false` if they were already on it.
+- The unnumbered job fields (`jobId`, `jobAddress`, `reportTime`, `workerReportTime`, ...) are still sent and always equal job 1. `assignedWorkers` is the same one item list every assignment has always sent.
+
+End the scenario with the `{"ok":true}` Webhook response. Without it every split day booking shows under Admin > Make / GHL problems (as "Split day booking") after 45 seconds. The worker stays on both jobs on the board either way.
+
+## Worker times (every assignment)
+
+Every assignment run (worker webhook and split day webhook) now also carries the worker's own times in the same format as the job's: `workerReportDate`, `workerReportTime` (`HH:MM`), `workerReportEndDate`, `workerReportEndTime` (`HH:MM`) and `customTime`. They equal the job's `reportDate` / `reportTime` / `reportEndDate` / `reportEndTime` unless dispatch set custom times for that worker (**Custom times for a worker** in the crew picker, or the times on a Split day row), in which case `customTime` is `true`. If a custom end is earlier than the start, `workerReportEndDate` is the next day. Map the text's times to `workerReportTime` / `workerReportEndTime` so custom times reach the worker. The job's own `reportTime` / `reportEndTime` never change.
+
 ## Worker sent home (new webhook)
 
 The **Worker sent home** button posts JSON to `https://hook.us2.make.com/mo2wtttzdfhpl4liym6c8uw3pbq6mmth` (override with `WORKER_SENT_HOME_WEBHOOK` in Netlify), one run per worker:

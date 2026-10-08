@@ -53,6 +53,8 @@ const { pathToFileURL } = require('node:url');
  // Logistics reset must clear schedules/drivers/assets across pages.
  await a.evaluate(()=>loadLogistics());await b.evaluate(()=>loadLogistics());
  await a.evaluate(()=>resetLogisticsDay('parent1',Object.assign(document.createElement('button'),{textContent:'Reset'})));
+ // Moves are only polled while the Logistics tab is open.
+ await b.evaluate(()=>{document.getElementById('logisticsDispatchView').hidden=false;});
  await b.evaluate(()=>pollSharedState());
  assert.equal(await b.evaluate(()=>logisticsData.moves[0].scheduledDate),'');
  assert.equal(await b.evaluate(()=>getLogisticsDriverName(logisticsData.moves[0])),'');
