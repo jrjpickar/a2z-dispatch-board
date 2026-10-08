@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "netlify dev",
     "build": "node scripts/build.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --experimental-test-module-mocks --test test/*.test.mjs"
   },
   "dependencies": {
     "@netlify/database": "latest",

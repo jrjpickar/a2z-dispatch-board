@@ -7420,10 +7420,11 @@ let manualWorkersLoaded = null;
    Looked up by contact id through /api/worker-temperatures (cached server side). */
 let workerTemperatures = {};
 let workerTempTimer = null, workerTempSeq = 0;
+const tempPhoneKey = p => { const d = String(p || '').replace(/\D/g, '').slice(-10); return d.length === 10 ? `phone:${d}` : ''; };
 function workerTemperature(w) {
   if (!w) return '';
-  const id = w.id || w.contactId || '';
-  return String((id && workerTemperatures[id]) || w.temperature || '').trim();
+  const id = String(w.id || w.contactId || '').trim(), pk = tempPhoneKey(w.phone);
+  return String((id && workerTemperatures[id]) || (pk && workerTemperatures[pk]) || w.temperature || '').trim();
 }
 function tempTag(w) {
   const t = workerTemperature(w); if (!t) return '';
@@ -7431,33 +7432,50 @@ function tempTag(w) {
   const cls = /hot|high/.test(v) ? ' temp-hot' : /warm|med/.test(v) ? ' temp-warm' : /cold|cool|low/.test(v) ? ' temp-cold' : '';
   return `<span class="temp-tag${cls}" title="GHL Temperature">${escapeAttr(t)}</span>`;
 }
+function rerenderTemperatures() {
+  render();
+  if (typeof renderAdminLabor === 'function') renderAdminLabor();
+  if (typeof renderFieldAppAccess === 'function') renderFieldAppAccess();
+  if (logisticsLoaded) renderLogistics();
+}
+// Looks up every worker on the board: by GHL contact id, or by phone when the roster has no id.
+// The server answers in short slices and lists what it hasn't reached as "pending"; keep asking until done.
 function loadWorkerTemperatures(force) {
   clearTimeout(workerTempTimer);
   workerTempTimer = setTimeout(async () => {
-    const ids = [...new Set([...(dashboardData.labor || []), ...(logisticsData.drivers || []), ...manualWorkers.map(m => ({ id: m.contactId }))]
-      .map(w => String(w.id || '').trim()).filter(id => /^[A-Za-z0-9_-]{1,80}$/.test(id)))];
-    if (!ids.length) return;
     const seq = ++workerTempSeq;
-    try {
-      const all = {};
-      for (let i = 0; i < ids.length; i += 150) {
-        const res = await fetchWithTimeout('/api/worker-temperatures?' + new URLSearchParams({ ids: ids.slice(i, i + 150).join(','), ...(force ? { refresh: '1' } : {}) }), { headers: { Accept: 'application/json' } }, 30000);
+    const people = [...(dashboardData.labor || []), ...(logisticsData.drivers || []), ...manualWorkers.map(m => ({ id: m.contactId, phone: m.phone }))];
+    const ids = new Set(), phones = new Set();
+    for (const w of people) {
+      const id = String(w.id || '').trim();
+      if (/^[A-Za-z0-9_-]{1,80}$/.test(id)) ids.add(id);
+      else if (tempPhoneKey(w.phone)) phones.add(tempPhoneKey(w.phone).slice(6));
+    }
+    let wantIds = [...ids], wantPhones = [...phones], refresh = !!force;
+    let lastPending = Infinity, stuck = 0;
+    for (let round = 0; round < 40 && (wantIds.length || wantPhones.length); round++) {
+      if (seq !== workerTempSeq) return; // a newer load took over
+      try {
+        const res = await fetchWithTimeout('/api/worker-temperatures?' + new URLSearchParams({ ids: wantIds.slice(0, 150).join(','), phones: wantPhones.slice(0, 150).join(','), ...(refresh ? { refresh: '1' } : {}) }), { headers: { Accept: 'application/json' } }, 15000);
         const data = await res.json().catch(() => ({}));
-        Object.assign(all, data.temperatures || {});
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
         if (data.error) console.warn('Worker temperature:', data.error);
-      }
-      if (seq !== workerTempSeq) return;
-      const changed = Object.keys(all).some(id => all[id] !== workerTemperatures[id]);
-      workerTemperatures = { ...workerTemperatures, ...all };
-      if (!changed) return;
-      render();
-      if (typeof renderAdminLabor === 'function') renderAdminLabor();
-      if (typeof renderFieldAppAccess === 'function') renderFieldAppAccess();
-      if (logisticsLoaded) renderLogistics();
-    } catch (err) { console.warn('Worker temperature could not load:', err); }
+        const changed = Object.keys(data.temperatures || {}).some(k => data.temperatures[k] !== workerTemperatures[k]);
+        workerTemperatures = { ...workerTemperatures, ...(data.temperatures || {}) };
+        if (changed) rerenderTemperatures();
+        // Next round: what the server didn't reach, plus anything beyond the first 150 of each list.
+        const pending = new Set(Array.isArray(data.pending) ? data.pending : []);
+        const sentIds = new Set(wantIds.slice(0, 150)), sentPhones = new Set(wantPhones.slice(0, 150));
+        wantIds = [...wantIds.filter(id => !sentIds.has(id)), ...[...sentIds].filter(id => pending.has(id))];
+        wantPhones = [...wantPhones.filter(p => !sentPhones.has(p)), ...[...sentPhones].filter(p => pending.has(tempPhoneKey(p)))];
+        const left = wantIds.length + wantPhones.length;
+        stuck = left >= lastPending ? stuck + 1 : 0; lastPending = left;
+        if (stuck >= 3) { console.warn('Worker temperature: GHL kept failing for', left, 'workers'); return; }
+        if (left) await new Promise(r => setTimeout(r, data.rateLimited ? 4000 : 400));
+      } catch (err) { console.warn('Worker temperature could not load:', err); return; }
+    }
   }, 250);
 }
-// The Admin page needs the driver roster even if Logistics hasn't been opened yet.
 let adminDriverRoster = null, adminDriversLoading = null;
 function ensureAdminDriverRoster(force) {
   if (logisticsLoaded && !force) return Promise.resolve();
