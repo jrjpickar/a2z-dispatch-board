@@ -2,8 +2,10 @@
 //   GET  /api/manual-workers -> { workers: [{ contactId, name, phone, email, labor, driver }] }
 //   POST /api/manual-workers { action: "add", contactId, labor, driver, fieldApp }   (admins only)
 //   POST /api/manual-workers { action: "remove", contactId }                          (admins only)
-//   POST /api/manual-workers { action: "hide" | "unhide", contactId?, name, phone }   (admins only)
-//        Removes / restores a Make-roster laborer on the board only.
+//   POST /api/manual-workers { action: "hide" | "unhide", contactId?, name, phone, role? }   (admins only)
+//        Removes / restores any worker (crew, driver or both) on the board only.
+//        Hiding also drops them from the GHL-added list and revokes Field App
+//        access. GHL and the Make rosters are not touched.
 //   GET  /api/manual-workers?contact=<id>                                            (admins) -> GHL first/last name + phone
 //   POST /api/manual-workers { action: "edit", contactId, firstName, lastName, phone } (admins only)
 //        Saves the name/phone on the GHL contact, then updates the board to match:
@@ -50,10 +52,17 @@ export default async function handler(request) {
       const contactId = String(body.contactId || '').trim().slice(0, 80);
       if (!name && !phone && !contactId) throw new StateError('Worker name or phone is required.');
       const key = body.key ? String(body.key) : hiddenKey({ contactId, phone, name });
-      if (body.action === 'hide') await sql`insert into dispatch_hidden_workers (worker_key, role, name, phone, contact_id, hidden_by)
-        values (${key}, 'labor', ${name}, ${phone}, ${contactId}, ${session.name}) on conflict (worker_key) do nothing`;
-      else await sql`delete from dispatch_hidden_workers where worker_key = ${key}`;
-      await logActivity(sql, session, body.action === 'hide' ? 'Removed laborer from the board' : 'Restored laborer to the board', name || phone, { contactId });
+      const role = ['labor', 'driver', 'both'].includes(body.role) ? body.role : 'both';
+      if (body.action === 'hide') {
+        await sql`insert into dispatch_hidden_workers (worker_key, role, name, phone, contact_id, hidden_by)
+          values (${key}, ${role}, ${name}, ${phone}, ${contactId}, ${session.name}) on conflict (worker_key) do update set role = excluded.role`;
+        // Off the board means off everywhere on the board: GHL-added entry and Field App sign-in go too.
+        let manual = null;
+        if (contactId) [manual] = await sql`delete from dispatch_manual_workers where contact_id = ${contactId} returning name, phone`;
+        const keys = [...new Set([driverKeyFor({ phone, name }), manual ? driverKeyFor(manual) : ''].filter(Boolean))];
+        if (keys.length) await sql`delete from dispatch_driver_codes where driver_key = any(${keys})`;
+      } else await sql`delete from dispatch_hidden_workers where worker_key = ${key}`;
+      await logActivity(sql, session, body.action === 'hide' ? 'Removed worker from the board' : 'Restored worker to the board', name || phone, { contactId, role });
       return json({ ok: true, workers: await rows(sql), hidden: await hiddenRows(sql) });
     }
     const contactId = String(body.contactId || '').trim();
@@ -62,7 +71,7 @@ export default async function handler(request) {
     if (body.action === 'remove') {
       const [row] = await sql`delete from dispatch_manual_workers where contact_id = ${contactId} returning name, phone`;
       if (row && body.revokeFieldApp !== false) await sql`delete from dispatch_driver_codes where driver_key = ${driverKeyFor(row)}`;
-      if (row) await logActivity(sql, session, 'Removed laborer added from GHL', row.name, { contactId });
+      if (row) await logActivity(sql, session, 'Removed worker added from GHL', row.name, { contactId });
       return json({ ok: true, workers: await rows(sql), hidden: await hiddenRows(sql) });
     }
     if (body.action !== 'add') throw new StateError('Unknown action');

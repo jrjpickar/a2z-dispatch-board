@@ -82,12 +82,17 @@ async function createSchema(sql) {
     email text not null default '', is_labor boolean not null default true, is_driver boolean not null default false,
     added_by text not null default '', created_at timestamptz not null default now()
   )`;
-  // Roster (Make) laborers an admin removed from the board. Hidden only on
-  // the board; nothing changes in GHL or the Make roster. Restorable.
+  // Workers (crew and/or drivers) an admin removed from the board. Hidden only
+  // on the board; nothing changes in GHL or the Make rosters. Restorable.
   await sql`create table if not exists dispatch_hidden_workers (
     worker_key text primary key, role text not null default 'labor', name text not null default '',
     phone text not null default '', contact_id text not null default '', hidden_by text not null default '',
     created_at timestamptz not null default now()
+  )`;
+  // Each worker's GHL Temperature custom field, cached so the board doesn't hit
+  // GHL for every worker on every load. Refreshed by /api/worker-temperatures.
+  await sql`create table if not exists dispatch_worker_temperature (
+    contact_id text primary key, value text not null default '', fetched_at timestamptz not null default now()
   )`;
   // Senior admin tools (1.8): activity log, send history, settings, and the
   // payload kept on each Make workflow so a failed one can be retried.

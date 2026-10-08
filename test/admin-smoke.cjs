@@ -3,7 +3,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const fs = require('node:fs'); const path = require('node:path'); const assert = require('node:assert/strict');
 const ROOT = process.argv[2] || path.resolve(__dirname, '..');
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.PW_EXEC ? { executablePath: process.env.PW_EXEC } : {}) });
   const users = [{ id: 'uJesse0001', name: 'Jesse Pickar', email: 'jesse@a2zcs.net' }, { id: 'uSam000002', name: 'Sam Dispatcher', email: 'sam@a2zcs.net' }];
   const errors = []; const posts = [];
   let manual = [], hidden = [], seniorPosts = [], editPosts = [];
@@ -64,6 +64,7 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
         return reply({ workers: manual, hidden });
       }
       if (u.pathname === '/api/dashboard-data') return reply({ jobs: [{ id: 'job1', name: 'Test job', sourceType: 'labor', contact: { name: 'Client' }, customFields: [] }], sharedState: [] });
+      if (u.pathname === '/api/worker-temperatures') { const t = { w1: 'Hot', d1: 'Cold' }; return reply({ ok: true, temperatures: Object.fromEntries((u.searchParams.get('ids') || '').split(',').filter(id => t[id]).map(id => [id, t[id]])) }); }
       if (u.pathname === '/api/roster') return reply(u.searchParams.get('kind') === 'labor' ? [{ id: 'w1', name: 'Worker', phone: '+15555550100' }] : u.searchParams.get('kind') === 'drivers' ? [{ id: 'd1', name: 'Driver', phone: '+15555550111' }] : []);
       if (u.pathname === '/api/logistics-data') return reply({ moves: [] });
       if (u.pathname === '/api/logistics-state') return reply({ states: [] });
@@ -107,6 +108,9 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   // Admin page
   await page.click('#adminViewTab');
   await page.waitForSelector('#adminLaborList .roster-remove[data-name="Worker"]');
+  // GHL Temperature shows on the roster and the Admin Workers list.
+  await page.waitForFunction(() => document.querySelector('#adminLaborList .temp-tag.temp-hot')?.textContent === 'Hot' && document.querySelector('#adminLaborList .temp-tag.temp-cold')?.textContent === 'Cold');
+  assert.ok((await page.textContent('#rosterList')).includes('Hot'));
   await page.click('#adminLaborList .roster-remove[data-name="Worker"]');
   await page.waitForFunction(() => !dashboardData.labor.some(w => w.name === 'Worker') && logisticsLoaded && document.getElementById('hiddenWorkerList').textContent.includes('Worker'));
   assert.ok(!(await page.textContent('#rosterList')).includes('Worker'));
@@ -117,6 +121,13 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   assert.ok((await page.textContent('#adminCount')).startsWith('2 ADMINS'));
   await page.click('#hiddenWorkerList .hidden-restore');
   await page.waitForFunction(() => dashboardData.labor.some(w => w.name === 'Worker'));
+  // Drivers can be removed from the board too.
+  await page.waitForSelector('#adminLaborList .roster-remove[data-name="Driver"]');
+  await page.click('#adminLaborList .roster-remove[data-name="Driver"]');
+  await page.waitForFunction(() => !logisticsData.drivers.some(d => d.name === 'Driver') && document.getElementById('hiddenWorkerList').textContent.includes('Driver'));
+  assert.ok(!(await page.textContent('#adminLaborList')).includes('Driver'));
+  await page.click('#hiddenWorkerList .hidden-restore');
+  await page.waitForFunction(() => logisticsData.drivers.some(d => d.name === 'Driver'));
   await page.click('#addGhlWorkerBtn');
   await page.fill('#ghlWorkerSearch', 'mar');
   await page.waitForSelector('#ghlWorkerResults button[data-index]');

@@ -1355,6 +1355,14 @@
   .ghl-picked-meta { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
   .ghl-roles { display: grid; gap: 6px; font-size: 13px; }
   .ghl-roles label { display: flex; gap: 8px; align-items: center; }
+  .temp-tag { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; padding: 1px 6px; margin-left: 6px; border-radius: 999px; border: 1px solid #c9ccd0; background: #f1f2f3; color: #3c4043; vertical-align: 1px; white-space: nowrap; }
+  .temp-tag.temp-hot { background: #fde8e6; border-color: #e8a29a; color: #a3261a; }
+  .temp-tag.temp-warm { background: #fff1dc; border-color: #ebc07a; color: #8a5300; }
+  .temp-tag.temp-cold { background: #e4effb; border-color: #9cbde6; color: #1f4f8a; }
+  body.dark-mode .temp-tag { background: #2c2f33; border-color: #4a4f55; color: #e3e5e8; }
+  body.dark-mode .temp-tag.temp-hot { background: #4a201c; border-color: #8a3a31; color: #ffb4aa; }
+  body.dark-mode .temp-tag.temp-warm { background: #46331a; border-color: #8a6326; color: #ffd08a; }
+  body.dark-mode .temp-tag.temp-cold { background: #1b2f48; border-color: #34598a; color: #a9cdf5; }
   .manual-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 1px 5px; margin-left: 6px; border: 1px solid var(--gold); color: var(--ink-soft); border-radius: var(--radius); }
   body.dark-mode .user-menu, body.dark-mode .signin-card { background: #222427; color: #f1f3f4; border-color: #3b3f43; }
   body.dark-mode .user-menu button { color: #f1f3f4; }
@@ -1627,14 +1635,14 @@
   <div class="dash-grid" id="adminDash">
     <div class="panel" data-panel="admins">
       <div class="panel-head"><h2>Admins</h2><span class="mono" id="adminCount">0 ADMINS</span></div>
-      <div class="logistics-note" id="adminUsersNote">Admins can add and remove laborers and manage Field App access. Senior admins can also enroll and revoke admins.</div>
+      <div class="logistics-note" id="adminUsersNote">Admins can add and remove workers and manage Field App access. Senior admins can also enroll and revoke admins.</div>
       <div class="admin-search"><input type="search" id="adminUserSearch" placeholder="Search GHL users..." autocomplete="off"></div>
       <ul class="admin-list" id="adminUserList"><li class="load-state">Loading GHL users...</li></ul>
     </div>
     <div class="panel" data-panel="laborers">
-      <div class="panel-head"><h2>Laborers</h2><button type="button" class="btn-primary" id="addGhlWorkerBtn">+ Add from GHL</button></div>
-      <div class="logistics-note">Add anyone from GHL contacts to the crew or driver pickers. Removing a Make roster laborer only hides them on the board; GHL and Make are not touched.</div>
-      <div class="admin-search"><input type="search" id="adminLaborSearch" placeholder="Search laborers..." autocomplete="off"></div>
+      <div class="panel-head"><h2>Workers</h2><button type="button" class="btn-primary" id="addGhlWorkerBtn">+ Add from GHL</button></div>
+      <div class="logistics-note">Add anyone from GHL contacts to the crew or driver pickers. Remove takes any worker (crew or driver) off the board and out of the Field App. GHL and the Make rosters are not touched, and you can restore them below.</div>
+      <div class="admin-search"><input type="search" id="adminLaborSearch" placeholder="Search workers..." autocomplete="off"></div>
       <h3 class="admin-h">On the board <span class="mono" id="adminLaborCount"></span></h3>
       <ul class="admin-list admin-list-scroll" id="adminLaborList"><li class="load-state">Loading roster...</li></ul>
       <h3 class="admin-h">Added from GHL</h3>
@@ -2637,7 +2645,8 @@ function normalizeLabor(data) {
       name: w.name || w.full_name || w.fullName || custom.name || 'Unknown',
       phone: w.phone || custom.phone || '',
       status: String(w.status || custom.status || 'available').toLowerCase().trim(),
-      jobId: w.jobId || w.job_id || ''
+      jobId: w.jobId || w.job_id || '',
+      temperature: String(w.temperature || custom.temperature || '').trim()
     };
   });
 }
@@ -2791,6 +2800,7 @@ async function loadLaborRoster() {
     const [data] = await Promise.all([fetchJsonStrict(CONFIG.LABOR_ROSTER_URL, 'Labor webhook'), loadManualWorkers()]);
     clearBackendError('Labor webhook');
     dashboardData.labor = mergeManualWorkers(normalizeLabor(data), 'labor');
+    loadWorkerTemperatures();
   } catch (err) {
     console.error("Labor roster webhook failed:", err);
     await loadManualWorkers();
@@ -2863,7 +2873,7 @@ function renderRoster() {
       <div class="worker-main">
         <span class="worker-avatar${effectiveStatus === 'available' ? '' : ' is-booked'}" aria-hidden="true">${escapeAttr(workerInitials(w.name))}</span>
         <div>
-          <div class="worker-name">${w.name}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}</div>
+          <div class="worker-name">${w.name}${tempTag(w)}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}</div>
           <div class="worker-meta">${formatPhoneDisplay(w.phone)}${w.jobId ? ' · ' + w.jobId : ''}</div>
         </div>
       </div>
@@ -3198,7 +3208,7 @@ function renderJobs(allJobs) {
                  return `
                    <label class="crew-assign-option${w.effectiveStatus === 'booked' ? ' is-booked' : ''}">
                      <input type="checkbox" class="crew-worker-select" value="${phone}" data-name="${w.name}">
-                     <span class="crew-assign-worker-name">${w.name}</span>
+                     <span class="crew-assign-worker-name">${w.name}${tempTag(w)}</span>
                      ${w.effectiveStatus === 'booked' ? '<span class="crew-booked-badge">booked</span>' : ''}
                    </label>
                  `;
@@ -5016,7 +5026,8 @@ function normalizeDriverRoster(data) {
     name: driver.name || driver.fullName || driver.full_name || driver.driverName || 'Unnamed Driver',
     phone: driver.phone || '', license: driver.license || driver.cdl || '', hours: driver.hours || driver.totalHours || '',
     status: String(driver.status || driver.driverStatus || 'available').toLowerCase().trim(),
-    moveId: driver.moveId || driver.jobId || ''
+    moveId: driver.moveId || driver.jobId || '',
+    temperature: String(driver.temperature || '').trim()
   }));
 }
 
@@ -5217,7 +5228,7 @@ function renderLogistics() {
       const id = String(asset.id || asset.assetId || '');
       return id && list.findIndex(item => String(item.id || item.assetId || '') === id) === index;
     });
-    const availableDriverOptions = drivers.filter(d => d.status === 'available').map(d => `<option value="${escapeLogisticsHtml(logisticsDriverKey(d))}">${escapeLogisticsHtml(d.name)}</option>`).join('');
+    const availableDriverOptions = drivers.filter(d => d.status === 'available').map(d => `<option value="${escapeLogisticsHtml(logisticsDriverKey(d))}">${escapeLogisticsHtml(d.name)}${workerTemperature(d) ? ' · ' + escapeLogisticsHtml(workerTemperature(d)) : ''}</option>`).join('');
     if ((m.assetId || m.lowboyId || (m.asset && m.asset.id)) && !assignedAssets.some(asset => String(asset.id || asset.assetId || '') === String(m.assetId || m.lowboyId || (m.asset && m.asset.id)))) assignedAssets.unshift({ id: m.assetId || m.lowboyId || (m.asset && m.asset.id), name: m.assetName || (m.asset && m.asset.name) || '' });
     const assignedAssetIds = new Set(assignedAssets.map(asset => String(asset.id || asset.assetId || '')));
     const assignedAssetDisplay = assignedAssets.map(asset => asset.name || asset.assetName || asset.id || asset.assetId).filter(Boolean).join(', ');
@@ -5266,7 +5277,8 @@ async function loadLogistics() {
     logisticsData = normalizeLogisticsPayload(data);
     const moveStates = new Map(((moveStateData && moveStateData.states) || []).map(state => [String(state.moveId || ''), state]));
     logisticsData.moves = (logisticsData.moves || []).map(move => ({ ...move, ...(moveStates.get(String(move.moveId || move.id || '')) || {}) }));
-    logisticsData.drivers = mergeManualWorkers(normalizeDriverRoster(driverData), 'driver');
+    adminDriverRoster = normalizeDriverRoster(driverData); // raw Make roster, kept so removed drivers can be restored
+    logisticsData.drivers = mergeManualWorkers(adminDriverRoster, 'driver');
     const cachedAssignments = Object.values(window.logisticsAssetAssignments || {}).flatMap(item => Array.isArray(item) ? item : [item]);
     logisticsData.assets = normalizeAssetRoster(assetData).map(asset => {
       const cached = cachedAssignments.find(item => item && String(item.assetId || item.id || '') === String(asset.id || asset.assetId || ''));
@@ -5284,6 +5296,7 @@ async function loadLogistics() {
     errorEl.style.display = 'none'; errorEl.textContent = '';
     renderLogistics();
     loadFieldAppAccess();
+    loadWorkerTemperatures();
   } catch (err) {
     console.error('Logistics webhook failed:', err);
     errorEl.style.display = 'block';
@@ -5317,8 +5330,8 @@ async function loadFieldAppAccess() {
 function renderFieldAppAccess() {
   const list = document.getElementById('fieldAppAccessList');
   document.getElementById('fieldAppLink').textContent = `${window.location.origin}/driver/`;
-  const drivers = (logisticsData.drivers || []).map(d => ({ id: d.id || '', name: d.name, phone: d.phone, role: 'Driver', manual: !!d.manual }));
-  const labor = (dashboardData.labor || []).map(w => ({ id: w.id || '', name: w.name, phone: w.phone, role: 'Crew', manual: !!w.manual }));
+  const drivers = (logisticsData.drivers || []).map(d => ({ id: d.id || '', name: d.name, phone: d.phone, temperature: d.temperature || '', role: 'Driver', manual: !!d.manual }));
+  const labor = (dashboardData.labor || []).map(w => ({ id: w.id || '', name: w.name, phone: w.phone, temperature: w.temperature || '', role: 'Crew', manual: !!w.manual }));
   const admin = currentSession.isAdmin;
   const merged = new Map();
   [...drivers, ...labor].filter(p => p.name && p.name !== 'Unnamed Driver').forEach(p => {
@@ -5333,8 +5346,8 @@ function renderFieldAppAccess() {
     const key = fieldAppKeyFor(p);
     const isEnabled = fieldAppEnabled.some(e => e.driverKey === key);
     const statusCell = isEnabled ? '<span class="logistics-status assigned">Enabled</span>' : '<span class="logistics-route">Not enabled</span>';
-    if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td><td></td></tr>`;
-    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
+    if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${tempTag(p)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td><td></td></tr>`;
+    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${tempTag(p)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
       + `<td class="field-app-actions">${p.id ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${escapeLogisticsHtml(p.id)}" data-name="${escapeLogisticsHtml(p.name)}">Edit</button> ` : ''}${isEnabled
         ? `<button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>`
         : `<button type="button" class="job-stage-btn edit field-app-enable" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}" ${p.phone ? '' : 'disabled title="Needs a phone number on file"'}>Enable</button>`}</td></tr>`;
@@ -6782,7 +6795,7 @@ function renderAdminUsers() {
   const people = senior ? [...(sessionGhlUsers || []).map(u => ({ userId: u.id, name: u.name, email: u.email })), ...admins.filter(a => !(sessionGhlUsers || []).some(u => u.id === a.userId))] : admins.map(a => ({ ...a }));
   document.getElementById('adminUserSearch').parentElement.hidden = !senior;
   document.getElementById('adminUsersNote').textContent = senior
-    ? 'You are a senior admin: tap Enroll or Revoke next to anyone in GHL. Admins can add and remove laborers and manage Field App access.'
+    ? 'You are a senior admin: tap Enroll or Revoke next to anyone in GHL. Admins can add and remove workers and manage Field App access.'
     : 'Admins can add, edit and remove laborers and manage Field App access.';
   const q = document.getElementById('adminUserSearch').value.trim().toLowerCase();
   const shown = people.filter(p => !q || `${p.name} ${p.email}`.toLowerCase().includes(q))
@@ -6802,7 +6815,7 @@ function renderAdminUsers() {
 }
 async function renderAdminView(force) {
   if (!currentSession.isAdmin) return;
-  renderAdminUsers(); renderManualWorkerList(); renderAdminLabor();
+  renderAdminUsers(); renderManualWorkerList(); renderAdminLabor(); ensureAdminDriverRoster();
   loadDashLayout().then(() => { loadSeniorTools(); loadDashCharts(); });
   try { await fetchSessionUsers(); } catch {}
   try { adminRowsCache = (await adminApi()).admins || []; }
@@ -6811,16 +6824,29 @@ async function renderAdminView(force) {
   await loadManualWorkers(force); renderManualWorkerList();
 }
 document.getElementById('adminUserSearch').addEventListener('input', renderAdminUsers);
+// Everyone on the board: crew roster + driver roster (Make and GHL added), one row per person.
+function adminBoardWorkers() {
+  const merged = [];
+  const add = (w, role) => {
+    if (!w || !w.name || w.name === 'Unnamed Driver') return;
+    const hit = merged.find(p => samePerson(p, w));
+    if (hit) { hit.roles.add(role); hit.id = hit.id || w.id || ''; hit.phone = hit.phone || w.phone || ''; hit.temperature = hit.temperature || w.temperature || ''; if (w.manual) hit.manual = true; else hit.fromRoster = true; }
+    else merged.push({ id: w.id || '', name: w.name, phone: w.phone || '', temperature: w.temperature || '', roles: new Set([role]), manual: !!w.manual, fromRoster: !w.manual });
+  };
+  (dashboardData.labor || []).forEach(w => add(w, 'Crew'));
+  (logisticsData.drivers || []).forEach(w => add(w, 'Driver'));
+  return merged.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
 function renderAdminLabor() {
   const list = document.getElementById('adminLaborList');
   if (!list || !currentSession.isAdmin) return;
-  const all = [...(dashboardData.labor || [])].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const all = adminBoardWorkers();
   const q = document.getElementById('adminLaborSearch').value.trim().toLowerCase();
-  const shown = all.filter(w => !q || `${w.name} ${w.phone || ''}`.toLowerCase().includes(q));
+  const shown = all.filter(w => !q || `${w.name} ${w.phone || ''} ${[...w.roles].join(' ')}`.toLowerCase().includes(q));
   document.getElementById('adminLaborCount').textContent = `${all.length}`;
-  list.innerHTML = shown.length ? shown.map(w => `<li><div class="who">${sessionEsc(w.name)}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}<small>${sessionEsc(w.phone || 'no phone')}</small></div>`
-    + `<div class="problem-actions">${w.id ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${sessionEsc(w.id)}" data-name="${sessionEsc(w.name)}">Edit</button>` : ''}<button type="button" class="job-stage-btn cancel roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-manual="${w.manual ? '1' : ''}">Remove</button></div></li>`).join('')
-    : `<li class="load-state">${all.length ? 'No one matches.' : 'No laborers on the board.'}</li>`;
+  list.innerHTML = shown.length ? shown.map(w => `<li><div class="who">${sessionEsc(w.name)}${tempTag(w)}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}<small>${sessionEsc([...w.roles].join('/'))} · ${sessionEsc(w.phone || 'no phone')}</small></div>`
+    + `<div class="problem-actions">${w.id ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${sessionEsc(w.id)}" data-name="${sessionEsc(w.name)}">Edit</button>` : ''}<button type="button" class="job-stage-btn cancel roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-roster="${w.fromRoster ? '1' : ''}">Remove</button></div></li>`).join('')
+    : `<li class="load-state">${all.length ? 'No one matches.' : 'No workers on the board.'}</li>`;
 }
 document.getElementById('adminLaborSearch').addEventListener('input', renderAdminLabor);
 document.getElementById('adminUserList').addEventListener('click', async e => {
@@ -7297,7 +7323,7 @@ async function loadSeniorTools() {
   ].filter(Boolean);
   await Promise.all(jobs);
 }
-document.getElementById('seniorRefresh').addEventListener('click', () => renderAdminView(true));
+document.getElementById('seniorRefresh').addEventListener('click', () => { renderAdminView(true); loadWorkerTemperatures(true); });
 document.getElementById('historySearch').addEventListener('input', renderHistory);
 document.getElementById('problemList').addEventListener('click', async e => {
   const btn = e.target.closest('.problem-btn'); if (!btn) return;
@@ -7390,6 +7416,56 @@ document.getElementById('resolveAllProblems').addEventListener('click', async ()
 let manualWorkers = [];
 let hiddenWorkers = [];
 let manualWorkersLoaded = null;
+/* Worker temperature: GHL contact custom field {{contact.temperature}} (read only).
+   Looked up by contact id through /api/worker-temperatures (cached server side). */
+let workerTemperatures = {};
+let workerTempTimer = null, workerTempSeq = 0;
+function workerTemperature(w) {
+  if (!w) return '';
+  const id = w.id || w.contactId || '';
+  return String((id && workerTemperatures[id]) || w.temperature || '').trim();
+}
+function tempTag(w) {
+  const t = workerTemperature(w); if (!t) return '';
+  const v = t.toLowerCase();
+  const cls = /hot|high/.test(v) ? ' temp-hot' : /warm|med/.test(v) ? ' temp-warm' : /cold|cool|low/.test(v) ? ' temp-cold' : '';
+  return `<span class="temp-tag${cls}" title="GHL Temperature">${escapeAttr(t)}</span>`;
+}
+function loadWorkerTemperatures(force) {
+  clearTimeout(workerTempTimer);
+  workerTempTimer = setTimeout(async () => {
+    const ids = [...new Set([...(dashboardData.labor || []), ...(logisticsData.drivers || []), ...manualWorkers.map(m => ({ id: m.contactId }))]
+      .map(w => String(w.id || '').trim()).filter(id => /^[A-Za-z0-9_-]{1,80}$/.test(id)))];
+    if (!ids.length) return;
+    const seq = ++workerTempSeq;
+    try {
+      const all = {};
+      for (let i = 0; i < ids.length; i += 150) {
+        const res = await fetchWithTimeout('/api/worker-temperatures?' + new URLSearchParams({ ids: ids.slice(i, i + 150).join(','), ...(force ? { refresh: '1' } : {}) }), { headers: { Accept: 'application/json' } }, 30000);
+        const data = await res.json().catch(() => ({}));
+        Object.assign(all, data.temperatures || {});
+        if (data.error) console.warn('Worker temperature:', data.error);
+      }
+      if (seq !== workerTempSeq) return;
+      const changed = Object.keys(all).some(id => all[id] !== workerTemperatures[id]);
+      workerTemperatures = { ...workerTemperatures, ...all };
+      if (!changed) return;
+      render();
+      if (typeof renderAdminLabor === 'function') renderAdminLabor();
+      if (typeof renderFieldAppAccess === 'function') renderFieldAppAccess();
+      if (logisticsLoaded) renderLogistics();
+    } catch (err) { console.warn('Worker temperature could not load:', err); }
+  }, 250);
+}
+// The Admin page needs the driver roster even if Logistics hasn't been opened yet.
+let adminDriverRoster = null, adminDriversLoading = null;
+function ensureAdminDriverRoster(force) {
+  if (logisticsLoaded && !force) return Promise.resolve();
+  if (!adminDriversLoading || force) adminDriversLoading = Promise.all([fetchJsonStrict(CONFIG.DRIVER_ROSTER_URL, 'Driver roster webhook'), loadManualWorkers()])
+    .then(([driverData]) => { adminDriverRoster = normalizeDriverRoster(driverData); if (!logisticsLoaded) logisticsData.drivers = mergeManualWorkers(adminDriverRoster, 'driver'); renderAdminLabor(); renderFieldAppAccess(); loadWorkerTemperatures(); })
+    .catch(err => { console.warn('Driver roster could not load for the Admin page:', err); adminDriversLoading = null; });
+  return adminDriversLoading;
+}
 function loadManualWorkers(force) {
   if (!manualWorkersLoaded || force) manualWorkersLoaded = fetchJsonStrict('/api/manual-workers', 'Added workers')
     .then(data => { manualWorkers = Array.isArray(data.workers) ? data.workers : []; hiddenWorkers = Array.isArray(data.hidden) ? data.hidden : []; })
@@ -7399,12 +7475,14 @@ function loadManualWorkers(force) {
 const samePerson = (a, b) => (a.id && b.id && a.id === b.id) ||
   (String(a.phone || '').replace(/\D/g, '').slice(-10) && String(a.phone || '').replace(/\D/g, '').slice(-10) === String(b.phone || '').replace(/\D/g, '').slice(-10)) ||
   String(a.name || '').trim().toLowerCase() === String(b.name || '').trim().toLowerCase();
-const isHiddenWorker = w => hiddenWorkers.some(h => samePerson({ id: h.contactId, name: h.name, phone: h.phone }, w));
+// role on a hidden row: 'both' (current), or 'labor' for rows saved before drivers could be removed.
+const isHiddenWorker = (w, role) => hiddenWorkers.some(h => (!h.role || h.role === 'both' || h.role === role) && samePerson({ id: h.contactId, name: h.name, phone: h.phone }, w));
 function mergeManualWorkers(list, role) {
-  // Laborers an admin removed from the board stay off the crew picker.
-  const out = (list || []).filter(p => role !== 'labor' || !isHiddenWorker(p));
+  // Workers an admin removed from the board stay off the crew and driver pickers.
+  const out = (list || []).filter(p => !isHiddenWorker(p, role));
   for (const w of manualWorkers.filter(m => role === 'driver' ? m.driver : m.labor)) {
     const person = { id: w.contactId, name: w.name, phone: w.phone, status: 'available', jobId: '', manual: true };
+    if (isHiddenWorker(person, role)) continue;
     const existing = out.find(p => samePerson(p, person));
     if (!existing) out.push(role === 'driver' ? { ...person, license: '', hours: '', moveId: '' } : person);
   }
@@ -7414,7 +7492,7 @@ const ghlWorkerOverlay = document.getElementById('ghlWorkerOverlay'), ghlWorkerS
 let ghlWorkerPick = null, ghlSearchTimer = null, ghlSearchSeq = 0;
 function renderManualWorkerList() {
   const list = document.getElementById('manualWorkerList');
-  list.innerHTML = manualWorkers.length ? manualWorkers.map(w => `<li><div class="who">${sessionEsc(w.name)}<small>${sessionEsc(w.phone || 'no phone')} · ${[w.labor ? 'Crew' : '', w.driver ? 'Driver' : ''].filter(Boolean).join('/')}${w.addedBy ? ' · added by ' + sessionEsc(w.addedBy) : ''}</small></div>`
+  list.innerHTML = manualWorkers.length ? manualWorkers.map(w => `<li><div class="who">${sessionEsc(w.name)}${tempTag({ id: w.contactId })}<small>${sessionEsc(w.phone || 'no phone')} · ${[w.labor ? 'Crew' : '', w.driver ? 'Driver' : ''].filter(Boolean).join('/')}${w.addedBy ? ' · added by ' + sessionEsc(w.addedBy) : ''}</small></div>`
     + `<div class="problem-actions"><button type="button" class="job-stage-btn edit worker-edit" data-id="${sessionEsc(w.contactId)}" data-name="${sessionEsc(w.name)}">Edit</button><button type="button" class="job-stage-btn cancel manual-remove" data-contact-id="${sessionEsc(w.contactId)}" data-name="${sessionEsc(w.name)}">Remove</button></div></li>`).join('') : '<li class="load-state">None yet.</li>';
   const hidden = document.getElementById('hiddenWorkerList');
   hidden.innerHTML = hiddenWorkers.length ? hiddenWorkers.map(h => `<li><div class="who">${sessionEsc(h.name || h.phone)}<small>${sessionEsc(h.phone || '')}${h.hiddenBy ? ' · removed by ' + sessionEsc(h.hiddenBy) : ''}</small></div>`
@@ -7479,7 +7557,11 @@ async function afterManualWorkersChange(data) {
   manualWorkersLoaded = Promise.resolve();
   renderManualWorkerList();
   await loadLaborRoster();
-  if (logisticsLoaded) { logisticsData.drivers = mergeManualWorkers(logisticsData.drivers.filter(d => !d.manual), 'driver'); renderLogistics(); }
+  if (adminDriverRoster) logisticsData.drivers = mergeManualWorkers(adminDriverRoster, 'driver');
+  else if (logisticsLoaded) logisticsData.drivers = mergeManualWorkers(logisticsData.drivers.filter(d => !d.manual), 'driver');
+  else await ensureAdminDriverRoster(true);
+  if (logisticsLoaded) { reconcileLogisticsResources(); renderLogistics(); }
+  renderAdminLabor();
   await loadFieldAppAccess();
 }
 document.getElementById('saveGhlWorker').addEventListener('click', async () => {
@@ -7501,18 +7583,18 @@ document.getElementById('hiddenWorkerList').addEventListener('click', async e =>
   try { await afterManualWorkersChange(await manualWorkerApi({ action: 'unhide', key: btn.dataset.key, name: btn.dataset.name })); showToast(`${btn.dataset.name} is back on the board.`); }
   catch (err) { showToast(err.message, true); btn.disabled = false; }
 });
-// Remove a laborer (Admin page > Laborers on the board).
+// Remove any worker (Admin page > Workers > On the board): crew, driver or both.
 document.getElementById('adminLaborList').addEventListener('click', async e => {
   const btn = e.target.closest('.roster-remove'); if (!btn) return;
-  const { id, name, phone, manual } = btn.dataset;
-  const added = manual ? manualWorkers.find(w => w.contactId === id) : null;
-  if (!confirm(added ? `Remove ${name} from the crew picker? Their GHL contact isn't touched.` : `Remove ${name} from the board? They stay in GHL and the Make roster, and you can restore them on the Admin page.`)) return;
+  const { id, name, phone, roster } = btn.dataset;
+  const added = id ? manualWorkers.find(w => w.contactId === id) : null;
+  if (!confirm(`Remove ${name} from the board? They come off the crew and driver pickers and lose Field App access. ${roster ? 'GHL and the Make roster are not touched, and you can restore them on the Admin page.' : 'Their GHL contact is not touched.'}`)) return;
   btn.disabled = true;
   try {
-    let data;
-    if (added && added.driver) data = await manualWorkerApi({ action: 'add', contactId: id, labor: false, driver: true, fieldApp: false });
-    else if (added) data = await manualWorkerApi({ action: 'remove', contactId: id });
-    else data = await manualWorkerApi({ action: 'hide', contactId: id, name, phone });
+    // Only on the board because an admin added them from GHL: just delete that entry.
+    // Anyone on a Make roster gets hidden (which also clears any GHL added entry).
+    const data = !roster && added ? await manualWorkerApi({ action: 'remove', contactId: id })
+      : await manualWorkerApi({ action: 'hide', contactId: id, name, phone, role: 'both' });
     await afterManualWorkersChange(data);
     showToast(`${name} removed from the board.`);
   } catch (err) { showToast(err.message, true); btn.disabled = false; }

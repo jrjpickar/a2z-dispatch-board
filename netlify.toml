@@ -110,6 +110,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/worker-temperatures"
+  to = "/.netlify/functions/worker-temperatures"
+  status = 200
+
+[[redirects]]
   from = "/api/manual-workers"
   to = "/.netlify/functions/manual-workers"
   status = 200
