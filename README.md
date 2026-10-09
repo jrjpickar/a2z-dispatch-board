@@ -8,6 +8,15 @@ Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response ch
 
 Includes the backend, edited dashboard, the read-only Field App for drivers/crew, tests, dependency lockfile, and minimal Make JSON templates. Credentials and production site linkage are not included.
 
+## Don't text, remove confirmation, Pacific time
+
+- **Don't text workers** (+ Assign crew, above Assign selected). Saves the crew on the board (and GHL's schedule fields) only. No Make run goes out: the worker webhook `https://hook.us2.make.com/dk8dm3t7opzdpmemah0gor2wiq3swq5l` is not hit, nor the split day webhook. Send schedule now hides while it's ticked and the button reads **Assign without texting**.
+- **Remove worker confirmation.** The x on a crew chip now opens a Remove worker box (Keep is focused; Esc or clicking outside cancels) with **Don't text <name>**. Ticked: the worker comes off the job on the board only and the worker webhook (`remove` run) is not hit.
+- **Unschedule** (labor jobs with a crew) has the same **Don't text the crew** box.
+- Anything the worker webhook route does in Make besides texting (GHL association, labor status) also doesn't run for a no text assign or removal.
+- **Pacific time.** The board uses America/Los_Angeles no matter where the browser is: today, Today / Tomorrow groups, on now, Worker sent home hours, default dates and every shown timestamp. The Project Schedule PDF's Issued date is Pacific too (`BOARD_TIME_ZONE` overrides it, like the dashboard stats). Assignment runs to Make also carry `timeZone: "America/Los_Angeles"`. Make's own time zone (Organization settings) should be Pacific too, since Make schedules the 12 hour reminder text.
+- Fix: a 5 second hold no longer gets cancelled when focus moves to the button you're holding (Unschedule in its box couldn't be held because Keep it has focus).
+
 ## Worker sent home, job search, Completed tab
 
 - **+ Assign crew picker.** Has a search box (name, phone or temperature; Enter ticks the only match, Esc clears). The worker list is built only when the picker opens, which cut the jobs table from about 16,000 page elements to about 1,300 with 40 jobs and 80 workers; a refresh while it is open keeps the search, Split day, ticks and picks.

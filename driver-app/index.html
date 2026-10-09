@@ -476,7 +476,7 @@
     try {
       const data = await api('/api/driver-moves', { method: 'GET' });
       renderData(data);
-      updatedLabel.textContent = t('updated', { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+      updatedLabel.textContent = t('updated', { time: new Date().toLocaleTimeString([], { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit' }) });
     } catch (error) {
       if (error.status === 401) return goToLogin(t('sessionEnded'));
       if (showSpinner) showToast(error.message, true);

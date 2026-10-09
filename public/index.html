@@ -665,6 +665,15 @@
   .crew-assign-rapid:disabled, .crew-assign-confirm:disabled { opacity: .6; cursor: default; }
   body.dark-mode .crew-assign-rapid { color: #ff9b6e; border-color: #c94f1f; }
   body.dark-mode .crew-assign-rapid:hover { background: #35251e; }
+  /* Don't text: save the crew change on the board only; the worker webhook is not hit. */
+  .no-text-toggle { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 8px; padding: 7px 9px; border: 1px dashed var(--grey-dark); border-radius: var(--radius); font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ink); cursor: pointer; }
+  .no-text-toggle input { width: auto; min-height: 0; margin: 2px 0 0; flex: 0 0 auto; }
+  .no-text-toggle small { display: block; margin-top: 2px; font-weight: 400; font-size: 11px; color: var(--ink-soft); line-height: 1.4; }
+  .no-text-toggle code { font: 10px 'IBM Plex Mono', monospace; word-break: break-all; }
+  .no-text-toggle:has(input:checked) { border-style: solid; border-color: var(--danger); background: #fff6f5; }
+  body.dark-mode .no-text-toggle:has(input:checked) { background: #3a2422; }
+  .no-text-toggle[hidden] { display: none; }
+  .crew-assign-panel.no-text .crew-assign-rapid { display: none; }
   .crew-chip.removable {
     display: inline-flex;
     align-items: center;
@@ -2085,10 +2094,22 @@
       <h2 id="unschedTitle">Unschedule?</h2>
       <div class="sent-home-job" id="unschedWhat"></div>
       <p class="unsched-body" id="unschedBody"></p>
+      <label class="no-text-toggle" id="unschedNoTextRow" hidden><input type="checkbox" id="unschedNoText"><span>Don't text the crew<small>The removed from job text goes out through the worker webhook <code class="worker-hook-url"></code>. Tick this and that webhook is not hit.</small></span></label>
       <p class="unsched-slack">Post it in the job's Slack thread after.</p>
       <div class="unsched-actions"><button type="button" class="btn-primary unsched-keep unsched-cancel">Keep it</button><button type="button" class="unsched-go hold-btn" id="unschedConfirm" title="Hold for 5 seconds to unschedule">Unschedule</button></div>
       <p class="hold-hint">Hold <b>Unschedule</b> for 5 seconds.</p>
     </div>
+  </div>
+</div>
+<!-- Remove a worker from a job (the x on a crew chip): confirm first, with the
+     option to skip the removal text (the worker webhook is then not hit). -->
+<div class="sent-home-backdrop" id="removeWorkerBackdrop" hidden>
+  <div class="sent-home-card unsched-card" role="dialog" aria-modal="true" aria-labelledby="removeWorkerTitle">
+    <h2 id="removeWorkerTitle">Remove worker?</h2>
+    <div class="sent-home-job" id="removeWorkerWhat"></div>
+    <p class="unsched-body" id="removeWorkerBody"></p>
+    <label class="no-text-toggle"><input type="checkbox" id="removeWorkerNoText"><span>Don't text <span id="removeWorkerNoTextName">them</span><small>The removed from job text goes out through the worker webhook <code class="worker-hook-url"></code>. Tick this and that webhook is not hit.</small></span></label>
+    <div class="unsched-actions"><button type="button" class="btn-primary unsched-keep remove-worker-cancel">Keep</button><button type="button" class="unsched-go" id="removeWorkerConfirm">Remove</button></div>
   </div>
 </div>
 <div class="sent-home-backdrop" id="sentHomeBackdrop" hidden>
@@ -2284,6 +2305,22 @@ function setSessionToken(token) {
 /* ============================================================
    CONFIG: replace with your live Make.com webhook URLs
    ============================================================ */
+/* The board runs on Pacific time no matter where the browser is: "today",
+   Today / Tomorrow groups, "on now", default dates and every shown timestamp
+   use America/Los_Angeles (PST/PDT handled). */
+const BOARD_TZ = 'America/Los_Angeles';
+const pacificFmt = new Intl.DateTimeFormat('en-US', { timeZone: BOARD_TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+function pacificParts(d = new Date()) {
+  const p = {}; for (const x of pacificFmt.formatToParts(d)) p[x.type] = x.value;
+  return { y: +p.year, mo: +p.month, d: +p.day, h: +p.hour % 24, mi: +p.minute, s: +p.second };
+}
+// The real moment for a Pacific wall clock time (date + HH:MM as dispatch typed it).
+function pacificDate(y, mo, d, h = 0, mi = 0) {
+  const want = Date.UTC(y, mo - 1, d, h, mi);
+  let t = want;
+  for (let i = 0; i < 3; i++) { const p = pacificParts(new Date(t)); const diff = want - Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi, p.s); if (!diff) break; t += diff; }
+  return new Date(t);
+}
 const CONFIG = {
   GET_DASHBOARD_DATA_URL: "/api/dashboard-data",
   LABOR_ROSTER_URL: "/api/roster?kind=labor",
@@ -2694,10 +2731,11 @@ function isJobTimeLocked(job) {
 }
 
 /* ---------- Utilities ---------- */
+document.querySelectorAll('.worker-hook-url').forEach(el => { el.textContent = CONFIG.MOVE_WORKER_URL; });
 function fmtDateHeader() {
   const d = new Date();
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    timeZone: BOARD_TZ, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
   }).toUpperCase();
 }
 
@@ -3050,7 +3088,8 @@ function parseJobDateTime(dateStr, timeStr) {
     minutes = parseInt(t24[2], 10);
   }
 
-  const dt = new Date(parseInt(y, 10), parseInt(mo, 10) - 1, parseInt(d, 10), hours, minutes, 0, 0);
+  // Job times are Pacific wall clock times.
+  const dt = pacificDate(parseInt(y, 10), parseInt(mo, 10), parseInt(d, 10), hours, minutes);
   return isNaN(dt.getTime()) ? null : dt;
 }
 
@@ -3130,13 +3169,11 @@ function getEffectiveLaborStatus(worker, liveBooked) {
   return 'available';
 }
 
-// Local (not UTC) YYYY-MM-DD, matching the format getReportDate() and the
-// <input type="date"> fields already use, so string comparisons line up.
+// Pacific (not UTC, not the browser's zone) YYYY-MM-DD, matching the format
+// getReportDate() and the <input type="date"> fields use, so string comparisons line up.
 function toLocalYMD(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  const p = pacificParts(d);
+  return `${p.y}-${String(p.mo).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
 }
 
 // Purely client-side grouping; no GHL field, no backend change.
@@ -3320,9 +3357,7 @@ function renderJobsTable(allJobs) {
   }
 
   const todayStr = toLocalYMD(new Date());
-  const tomorrowDate = new Date();
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrowStr = toLocalYMD(tomorrowDate);
+  const tomorrowStr = addDaysYMD(todayStr, 1);
 
   const groups = { today: [], tomorrow: [], future: [], unscheduled: [] };
   jobs.forEach(j => groups[getJobDateBucket(j, todayStr, tomorrowStr)].push(j));
@@ -3462,7 +3497,7 @@ function renderJobsTable(allJobs) {
         <td data-label="Scope of work" class="scope-cell">${buildScopeCell(j, jobId, terminalLocally || closedOnBoard)}</td>
         <td data-label="Status">
           ${closedOnBoard ? `<span class="status-tag closed">${/cancel/.test(closedRec.status || '') ? 'Cancelled' : 'Completed'}</span>
-          <div class="job-closed-note">Closed on the board${closedRec.closedBy ? ' by ' + escapeAttr(closedRec.closedBy) : ''}${closedRec.closedAt ? ' ' + escapeAttr(new Date(closedRec.closedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : ''}, but GHL still shows it as an active job.</div>
+          <div class="job-closed-note">Closed on the board${closedRec.closedBy ? ' by ' + escapeAttr(closedRec.closedBy) : ''}${closedRec.closedAt ? ' ' + escapeAttr(new Date(closedRec.closedAt).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' })) : ''}, but GHL still shows it as an active job.</div>
           <div class="job-stage-actions"><button type="button" class="job-stage-btn reopen" data-job-id="${jobId}" title="Undo Completed/Cancelled so crew and times can be edited again">Reopen job</button></div>`
           : `<div class="status-line"><span class="status-tag ${statusClass}">${statusLabel}</span>${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length) ? `<button type="button" class="unschedule-btn job-unschedule" data-job-id="${jobId}" title="Clear this job's times and take the crew off. It moves to Unscheduled.">Unschedule</button>` : ''}</div>`}
           ${terminalLocally || closedOnBoard ? '' : `<div class="job-stage-actions">
@@ -3549,7 +3584,11 @@ window.jobStageOverride = {};
 // rapid: "Send schedule now". Same assignment on the board, but each worker's
 // Make run (worker webhook) carries action "rapid_assign" so Make can send
 // the schedule immediately. Normal Confirm keeps action "assign".
-async function assignCrew(jobId, workers, confirmBtn, { rapid = false } = {}) {
+// noText: "Don't text workers" ticked. The crew is saved on the board (and GHL's
+// schedule sync) but no Make run goes out: the worker webhook and the split day
+// webhook are not hit, so nobody gets a text.
+async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = false } = {}) {
+  if (noText) rapid = false;
   const selected = workers.filter(w => w.phone && w.phone.trim());
   if (!jobId || !selected.length) return showToast('Selected workers need a phone number.', true);
   const job = dashboardData.jobs.find(j => j.id === jobId) || {};
@@ -3561,7 +3600,7 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false } = {}) {
   const base = { action: 'assign', jobId, jobAddress: job.name || '', clientName: getClientName(job), clientPhone: getClientPhone(job),
     scopeOfWork: getScopeOfWork(job), toolsRequired: getToolsRequired(job), monetaryValue: getOpportunityValue(job),
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job),
-    nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day' };
+    nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day', timeZone: BOARD_TZ };
   const bar = confirmBtn.closest('.crew-assign-confirm-bar');
   const barButtons = bar ? [...bar.querySelectorAll('button')] : [confirmBtn];
   // Close the picker now so a refresh can't reopen it with live buttons mid send.
@@ -3592,13 +3631,19 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false } = {}) {
       list.forEach(w => addedToOther.add(w.workerName));
     } catch (error) { list.forEach(w => splitFailed.set(w.workerName, `${other.name || otherId}: ${error.message}`)); }
   }
+  if (noText) {
+    if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only. No texts were sent.`, true);
+    else showToast(assignedWorkers.length === 1 ? `${assignedWorkers[0].workerName} assigned. No text sent.` : `Crew assigned. No texts sent to the ${assignedWorkers.length} workers.`);
+    render();
+    return;
+  }
   const effectBase = rapid ? { ...base, action: 'rapid_assign', rapidAssign: true } : base;
   // The worker's own times on a job (HH:MM like reportTime). Same as the job's unless dispatch set custom times.
   const workerTimes = (j, start, end) => {
     const s = start || getReportTime(j), e = end || getReportEndTime(j);
     const date = getReportDate(j);
     let endDate = getReportEndDate(j) || date;
-    if (start || end) endDate = (s && e && e <= s && date) ? toLocalYMD(new Date(new Date(date + 'T12:00:00').getTime() + 86400000)) : date;
+    if (start || end) endDate = (s && e && e <= s && date) ? addDaysYMD(date, 1) : date;
     return { workerReportDate: date, workerReportTime: s, workerReportEndDate: endDate, workerReportEndTime: e, customTime: !!((start && start !== getReportTime(j)) || (end && end !== getReportEndTime(j))) };
   };
   const results = await Promise.allSettled(assignedWorkers.map((worker, index) => {
@@ -3664,6 +3709,7 @@ function buildCrewPanel(panel, jobId, keep = {}) {
   panel._customOpen = !!keep.customOpen;
   panel.classList.toggle('no-available', !workers.some(w => w.effectiveStatus === 'available'));
   panel.classList.toggle('include-booked', !!keep.includeBooked);
+  panel.classList.toggle('no-text', !!keep.noText);
   panel.innerHTML = `
     <label class="split-day-control" title="Workers you tick go on this job and one other job, with one text. Also shows workers already booked elsewhere.">
       <span>Split day (two jobs) · Include booked</span>
@@ -3685,6 +3731,7 @@ function buildCrewPanel(panel, jobId, keep = {}) {
       <div class="crew-assign-summary"></div>
       <button type="button" class="crew-custom-time-toggle" hidden>Custom times for a worker</button>
       <div class="crew-split-picks" hidden></div>
+      <label class="no-text-toggle"><input type="checkbox" class="crew-no-text"${keep.noText ? ' checked' : ''}><span>Don't text workers<small>Saves the crew on the board only. The worker webhook <code>${escapeAttr(CONFIG.MOVE_WORKER_URL)}</code> is not hit (nor the split day one).</small></span></label>
       <button type="button" class="btn btn-primary crew-assign-confirm">Assign selected</button>
       <button type="button" class="btn crew-assign-rapid" title="Assign and text each worker their schedule right away">Send schedule now</button>
     </div>`;
@@ -3715,6 +3762,7 @@ function openCrewPickerState() {
     search: search ? search.value : '',
     focused: document.activeElement === search,
     includeBooked: !!panel.querySelector('.include-booked-toggle')?.checked,
+    noText: !!panel.querySelector('.crew-no-text')?.checked,
     checked: [...panel.querySelectorAll('.crew-worker-select:checked')].map(cb => cb.dataset.name),
     extras: readWorkerExtras(panel), customOpen: !!panel._customOpen,
     scroll: panel.querySelector('.crew-assign-list')?.scrollTop || 0
@@ -3831,26 +3879,61 @@ function updateCrewAssignSelection(panel) {
   panel.classList.toggle('has-selection', names.length > 0);
   const summary = panel.querySelector('.crew-assign-summary');
   const btn = panel.querySelector('.crew-assign-confirm');
-  if (summary) summary.innerHTML = names.length ? `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> texts the schedule 12 hours before the start time. <b>Send schedule now</b> texts it right away.` : '';
-  if (btn && !btn.disabled) btn.textContent = 'Assign selected';
+  const noText = panel.classList.contains('no-text');
+  if (summary) summary.innerHTML = !names.length ? '' : noText
+    ? `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. Saved on the board only. Nobody gets a text.`
+    : `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> texts the schedule 12 hours before the start time. <b>Send schedule now</b> texts it right away.`;
+  if (btn && !btn.textContent.endsWith('...')) btn.textContent = noText ? 'Assign without texting' : 'Assign selected';
   setPickerButtons(panel, renderSplitPicks(panel));
   // The jobs table scrolls horizontally, which also clips this dropdown on the
   // last rows, bring the Confirm button into view when it appears.
   fitCrewPanel();
-  const last = panel.querySelector('.crew-assign-rapid') || btn;
+  const last = (!noText && panel.querySelector('.crew-assign-rapid')) || btn;
   if (last && names.length) last.scrollIntoView({ block: 'nearest' });
 }
 
 
+/* Remove worker confirmation, built in the page like Unschedule. Resolves
+   { ok, noText }. Keep is focused; Esc or clicking outside cancels. */
+function removeWorkerFlow({ name, what }) {
+  const back = document.getElementById('removeWorkerBackdrop');
+  const box = document.getElementById('removeWorkerNoText');
+  const body = document.getElementById('removeWorkerBody');
+  const setBody = () => {
+    body.textContent = box.checked
+      ? `Takes ${name} off this job on the board only. No text goes out.`
+      : `Takes ${name} off this job. They get the usual removed from job text.`;
+  };
+  document.getElementById('removeWorkerWhat').textContent = what;
+  document.getElementById('removeWorkerNoTextName').textContent = name;
+  box.checked = false; setBody();
+  back.hidden = false;
+  back.querySelector('.remove-worker-cancel').focus();
+  return new Promise(resolve => {
+    const done = ok => { back.hidden = true; back.removeEventListener('click', onClick); box.removeEventListener('change', setBody); document.removeEventListener('keydown', onKey, true); resolve({ ok, noText: ok && box.checked }); };
+    const onClick = e => {
+      if (e.target === back || e.target.closest('.remove-worker-cancel')) return done(false);
+      if (e.target.closest('#removeWorkerConfirm')) done(true);
+    };
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
+    back.addEventListener('click', onClick);
+    box.addEventListener('change', setBody);
+    document.addEventListener('keydown', onKey, true);
+  });
+}
+
 async function removeCrewMember(jobId, phone, name, chipEl) {
   const job = dashboardData.jobs.find(j => j.id === jobId) || {};
+  const choice = await removeWorkerFlow({ name, what: [job.name, getClientName(job)].filter(Boolean).join(' · ') });
+  if (!choice.ok) return;
   const worker = dashboardData.labor.find(w => String(w.name || '').trim().toLowerCase() === name.trim().toLowerCase()) || {};
   const payload = { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers: [{ contactId: worker.id || '', workerName: name, workerPhone: phone || worker.phone || '' }] };
   chipEl.style.opacity = '0.5';
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, payload);
-    await runSideEffect(CONFIG.MOVE_WORKER_URL, payload, 'Worker removal notifications');
-    showToast('Worker removed.'); render();
+    // Don't text ticked: the worker webhook is not hit at all.
+    if (!choice.noText) await runSideEffect(CONFIG.MOVE_WORKER_URL, payload, 'Worker removal notifications');
+    showToast(choice.noText ? `${name} removed. No text sent.` : 'Worker removed.'); render();
   } catch (error) { showToast(error.message, true); chipEl.style.opacity = '1'; }
 }
 
@@ -4096,7 +4179,9 @@ document.addEventListener('pointerdown', e => {
   const btn = e.target.closest('.hold-btn'); if (!btn || e.button > 0) return;
   startHold(btn);
 }, true);
-['pointerup', 'pointercancel', 'blur'].forEach(t => window.addEventListener(t, () => endHold(true), true));
+['pointerup', 'pointercancel'].forEach(t => window.addEventListener(t, () => endHold(true), true));
+// Only the whole window losing focus cancels (not focus moving between buttons, which fires blur on pointerdown).
+window.addEventListener('blur', e => { if (e.target === window) endHold(true); });
 document.addEventListener('pointerout', e => { if (holdState && e.target.closest('.hold-btn') === holdState.btn && !holdState.btn.contains(e.relatedTarget)) endHold(true); }, true);
 document.addEventListener('contextmenu', e => { if (e.target.closest('.hold-btn')) e.preventDefault(); }, true);
 document.addEventListener('keydown', e => {
@@ -4107,10 +4192,16 @@ document.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' '
 
 /* Unschedule confirmation, built in the page (browser pop ups are blocked in some
    frames, like the sandbox). Resolves true when confirmed, false when cancelled. */
-function unscheduleFlow({ what, body }) {
+// bodyNoText: labor jobs with a crew show "Don't text the crew"; ticking it swaps
+// the body to this text. Read #unschedNoText after it resolves.
+function unscheduleFlow({ what, body, bodyNoText }) {
   const back = document.getElementById('unschedBackdrop');
+  const row = document.getElementById('unschedNoTextRow'), box = document.getElementById('unschedNoText');
+  const bodyEl = document.getElementById('unschedBody');
   document.getElementById('unschedWhat').textContent = what;
-  document.getElementById('unschedBody').textContent = body;
+  box.checked = false; row.hidden = !bodyNoText;
+  bodyEl.textContent = body;
+  box.onchange = () => { bodyEl.textContent = box.checked && bodyNoText ? bodyNoText : body; };
   back.hidden = false;
   back.querySelector('.unsched-keep').focus();
   return new Promise(resolve => {
@@ -4130,10 +4221,13 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false } = {}) {
   const job = dashboardData.jobs.find(j => j.id === jobId);
   if (!job) return false;
   const crewBeforeReset = getCrew(job);
+  let noText = false;
   if (unschedule) {
     const ok = await unscheduleFlow({ what: [job.name, getClientName(job)].filter(Boolean).join(' · '),
-      body: `This clears its start and end times${crewBeforeReset.length ? ` and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job (they get the usual removed from job text)` : ''}. The job moves to Unscheduled. Job details are kept.` });
+      body: `This clears its start and end times${crewBeforeReset.length ? ` and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job (they get the usual removed from job text)` : ''}. The job moves to Unscheduled. Job details are kept.`,
+      bodyNoText: crewBeforeReset.length ? `This clears its start and end times and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job. No text goes out. The job moves to Unscheduled. Job details are kept.` : '' });
     if (!ok) return false;
+    noText = !!crewBeforeReset.length && document.getElementById('unschedNoText').checked;
   } else if (!eodSheet && !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return false;
   const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
   // Job log snapshot, taken BEFORE the reset clears the schedule and crew.
@@ -4151,7 +4245,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false } = {}) {
       catch (error) { problems.push(error.message); }
       try { await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log'); }
       catch (error) { problems.push(error.message); }
-    } else if (removedWorkers.length) {
+    } else if (removedWorkers.length && !noText) {
       try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers, ...(unschedule ? { reason: 'unscheduled', unscheduled: true } : {}) }, 'Worker release notifications'); }
       catch (error) { problems.push(error.message); }
     }
@@ -4160,7 +4254,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false } = {}) {
     // effect must be checked in Make's history rather than resent.
     if (problems.length) { showToast(problems.join(' '), true); return true; }
     if (unschedule) { delete window.jobTimesLocked[jobId]; persistTimeOverride('jobTimesLocked', window.jobTimesLocked); render(); }
-    showToast(eodSheet ? 'EOD sheet sent. Schedule and crew cleared for everyone.' : unschedule ? `${job.name || 'Job'} unscheduled. Post it in the job's Slack thread.` : 'Schedule and crew cleared for everyone.');
+    showToast(eodSheet ? 'EOD sheet sent. Schedule and crew cleared for everyone.' : unschedule ? `${job.name || 'Job'} unscheduled.${noText ? ' No texts sent.' : ''} Post it in the job's Slack thread.` : 'Schedule and crew cleared for everyone.');
     return true;
   } catch (error) { showToast(error.message, true); return false; }
   finally { btn.disabled = false; }
@@ -4368,7 +4462,7 @@ function recalcEodSheet() {
 }
 
 function localIsoDate(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return toLocalYMD(d);
 }
 
 function openEodSheet(jobId, btn) {
@@ -4381,7 +4475,7 @@ function openEodSheet(jobId, btn) {
   const note = document.getElementById('eodDraftNote');
   if (draft) {
     applyEodDraft(draft);
-    note.textContent = `Draft restored from ${new Date(draft.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}.`;
+    note.textContent = `Draft restored from ${new Date(draft.savedAt).toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}.`;
     note.hidden = false;
   } else note.hidden = true;
   recalcEodSheet();
@@ -4567,7 +4661,7 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
       showToast("Select at least one new worker.", true);
       return;
     }
-    assignCrew(jobId, workers, confirmBtn, { rapid: confirmBtn.classList.contains('crew-assign-rapid') });
+    assignCrew(jobId, workers, confirmBtn, { rapid: confirmBtn.classList.contains('crew-assign-rapid'), noText: !!wrap.querySelector('.crew-no-text')?.checked });
     return;
   }
 
@@ -4668,6 +4762,13 @@ document.getElementById('jobsBody').addEventListener('change', (e) => {
     // so the time box you are typing in keeps focus.
     if (extra.dataset.field === 'otherJobId') updateCrewAssignSelection(panel);
     else setPickerButtons(panel, workerExtrasReady(panel));
+    return;
+  }
+  const noTextBox = e.target.closest('.crew-no-text');
+  if (noTextBox) {
+    const panel = noTextBox.closest('.crew-assign-panel');
+    panel.classList.toggle('no-text', noTextBox.checked);
+    updateCrewAssignSelection(panel);
     return;
   }
   const splitDayToggle = e.target.closest('.include-booked-toggle');
@@ -5083,7 +5184,7 @@ function renderCompletedView() {
     .filter(r => { const hay = [r.name, r.client, r.id, r.closedBy, r.parent].join(' ').toLowerCase(); return words.every(w => hay.includes(w)); });
   document.getElementById('completedCount').textContent = rows.length === all.length ? `${all.length} closed` : `${rows.length} of ${all.length}`;
   const shown = rows.slice(0, 300);
-  const fmtDate = v => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+  const fmtDate = v => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d.toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
   document.getElementById('completedBody').innerHTML = shown.length ? shown.map(r => {
     const link = getGhlOpportunityLink({ id: r.id });
     return `<tr data-completed-row="${escapeAttr(r.id)}">
@@ -5117,7 +5218,8 @@ let sentHomeChoices = [];
 function sentHomeElapsedHours(job) {
   const date = getReportDate(job), time = getReportTime(job);
   if (!date || !time || date !== toLocalYMD(new Date())) return null;
-  const start = new Date(`${date}T${time}:00`);
+  const start = parseJobDateTime(date, time);
+  if (!start) return null;
   const hours = Math.floor((Date.now() - start.getTime()) / 1800000) / 2;
   return hours >= 0.5 ? Math.min(16, hours) : null;
 }
@@ -5743,8 +5845,7 @@ function renderLogistics() {
     return (override && override.date) || m.scheduledDate || m.requestedDate || m.reportDate || m.date || (m.scheduledStart ? String(m.scheduledStart).slice(0, 10) : '');
   };
   const todayStr = toLocalYMD(new Date());
-  const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrowStr = toLocalYMD(tomorrowDate);
+  const tomorrowStr = addDaysYMD(todayStr, 1);
   const groups = { today: [], tomorrow: [], future: [], unscheduled: [] };
   visibleMoves.forEach(m => {
     const date = logisticsDate(m);
@@ -6406,7 +6507,7 @@ const containerOverlay = document.getElementById('containerOverlay');
 const containerSheet = document.getElementById('containerSheet');
 function closeContainerSheetFn() { containerOverlay.classList.remove('open'); containerSheet.classList.remove('open'); }
 function openContainerSheetFn() {
-  if (!document.getElementById('containerDate').value) document.getElementById('containerDate').value = new Date().toISOString().slice(0, 10);
+  if (!document.getElementById('containerDate').value) document.getElementById('containerDate').value = toLocalYMD(new Date());
   containerStopsEditor.render([]);
   containerOverlay.classList.add('open'); containerSheet.classList.add('open');
 }
@@ -6658,7 +6759,7 @@ function runSideEffect(url, payload, label, kindOverride, effectKey) {
   return Promise.resolve({ ok: true, optimistic: true });
 }
 function editingDispatch() {
-  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || document.querySelector('#jobsBody .crew-assign-panel.open') || document.querySelector('.hold-btn.holding') || !document.getElementById('unschedBackdrop')?.hidden || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && document.activeElement.type !== 'search' && !document.activeElement.closest('#signinBackdrop')) ||
+  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || document.querySelector('#jobsBody .crew-assign-panel.open') || document.querySelector('.hold-btn.holding') || !document.getElementById('unschedBackdrop')?.hidden || !document.getElementById('removeWorkerBackdrop')?.hidden || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && document.activeElement.type !== 'search' && !document.activeElement.closest('#signinBackdrop')) ||
     Object.values(window.jobTimesLocked || {}).some(v => v === false) || Object.values(window.logisticsScheduleOverride || {}).some(v => v.locked === false);
 }
 /* Live updates, light on Netlify:
@@ -6854,14 +6955,14 @@ function openProjectSchedule(jobId) {
     note.hidden = false;
   } else if (draft && draft.baseVersion === psState.version) {
     psState.input = { ...draft.input, phases: psWithIds(draft.input.phases) };
-    note.textContent = `Unsaved changes from ${new Date(draft.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} restored.`;
+    note.textContent = `Unsaved changes from ${new Date(draft.savedAt).toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} restored.`;
     note.hidden = false;
   } else if (draft) {
     psClearDraft(jobId); // someone saved a newer version since; theirs wins
   }
   if (note.hidden && record) {
     note.textContent = record.sentAt
-      ? `Last sent ${new Date(record.sentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. Submitting again sends an updated PDF.`
+      ? `Last sent ${new Date(record.sentAt).toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. Submitting again sends an updated PDF.`
       : 'Saved on the board, not sent yet.';
     note.hidden = false;
   }
@@ -7194,7 +7295,7 @@ function renderScheduleView() {
     const id = psEsc(job.id);
     const status = !record ? '<span class="psv-chip none">No schedule</span>'
       : t.dirty ? '<span class="psv-chip dirty">Unsaved changes</span>'
-      : record.sentAt ? `<span class="psv-chip sent">Sent ${new Date(record.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`
+      : record.sentAt ? `<span class="psv-chip sent">Sent ${new Date(record.sentAt).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' })}</span>`
       : '<span class="psv-chip saved">Saved, not sent</span>';
     const stats = sch ? `<span class="psv-stats"><b>${sch.workdays}</b> days · <b>${sch.loads}</b> loads · peak crew <b>${sch.peak}</b>${start ? ` · ${psMonthDay(start)} → ${finish ? psMonthDay(finish) : '?'}` : ''}</span>` : '';
     let body;
@@ -7222,7 +7323,7 @@ function renderScheduleView() {
           <div class="psv-table-wrap"><table class="psv-table"><thead><tr><th>#</th><th>Phase</th><th class="n">Crew</th><th class="n">Days</th><th class="n">Schedule</th><th class="n">Loads</th></tr></thead><tbody>
             ${sch.rows.map((r, i) => `<tr><td><span class="psv-dot" style="background:${psColor(r.p.name)}"></span>${i + 1}</td><td>${psEsc(r.p.name)}</td><td class="n">${r.crew}</td><td class="n">${r.days}</td><td class="n">${r.days ? `Day ${r.from}–${r.to}` : 'N/A'}${start && r.days ? `<small>${psShort(psWorkday(start, r.from))} – ${psShort(psWorkday(start, r.to))}</small>` : ''}</td><td class="n">${r.loads}</td></tr>`).join('')}
           </tbody></table></div>
-          <p class="psv-meta">${psModeLabel(input.mode)} · ${record.sentAt ? `PDF last sent ${new Date(record.sentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'PDF not sent yet'}</p>
+          <p class="psv-meta">${psModeLabel(input.mode)} · ${record.sentAt ? `PDF last sent ${new Date(record.sentAt).toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'PDF not sent yet'}</p>
           <div class="psv-actions">${actions}</div>
         </div>`;
     }
@@ -7912,7 +8013,7 @@ async function seniorApi(view, body) {
   if (!res.ok) { const err = new Error(data.error || `HTTP ${res.status}`); err.data = data; throw err; }
   return data;
 }
-const seniorWhen = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+const seniorWhen = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
 function renderProblems(data) {
   const effects = data.effects || [], crm = data.crm || [];
   document.getElementById('problemCount').textContent = String(effects.length + crm.length);
