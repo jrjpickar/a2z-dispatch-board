@@ -57,7 +57,7 @@ For an already-linked CLI project, run `netlify deploy --build --prod` from this
 - Crew additions/removals do not overwrite unrelated data. Time/detail saves do not overwrite crew.
 - Daily reset clears schedules, crew/drivers and vehicles on the server. Empty values remain empty.
 - Active vehicle ownership is checked across moves.
-- Shared state refreshes every 15 seconds while visible and not editing, without calling Make. Use Refresh to discover new GHL opportunities.
+- Shared state refreshes every 30 seconds (60 seconds after 3 idle minutes) while visible and not editing, without calling Make. Use Refresh to discover new GHL opportunities.
 - Job schedule updates go directly to GHL; failures preserve dispatch state and show Retry.
 - Existing worker/driver notifications, driver logs, and GHL creation/detail/stage workflows remain in Make.
 - Roster reads share a five-minute server cache. Optional `ROSTER_CACHE_SECONDS` changes this, minimum 30 seconds.

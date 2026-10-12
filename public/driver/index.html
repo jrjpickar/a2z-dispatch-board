@@ -211,7 +211,7 @@
   const TOKEN_KEY = 'a2zDriverToken';
   const NAME_KEY = 'a2zDriverName';
   const LANG_KEY = 'a2zFieldLang';
-  const POLL_MS = 20000;
+  const POLL_MS = 45000; // was 20 s; slowed to save Netlify credits (still refreshes on reopen)
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
 
   const TRANSLATIONS = {

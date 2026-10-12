@@ -6765,10 +6765,11 @@ function editingDispatch() {
 /* Live updates, light on Netlify:
    - asks only for records changed since the last answer (?since=), so most polls are a few bytes
    - redraws only when something actually changed
-   - every 15 s while someone is using the board, every 60 s after 3 idle minutes, never while the tab is hidden
+   - every 30 s while someone is using the board, every 60 s after 3 idle minutes, never while the tab is hidden
+     (was 15 s; slowed to save Netlify credits. Your own saves still show instantly.)
    - moves are only polled while the Logistics tab is open
    - the held send nudge (/api/workflow-effect) only goes out while this browser has a Completed/Cancelled waiting;
-     the every minute server job covers everything else */
+     the server job (every 2 minutes, work hours) covers everything else */
 let sharedSince = '', movesSince = '', lastActivity = Date.now(), pollTimer = null;
 ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => window.addEventListener(t, () => {
   const wasIdle = Date.now() - lastActivity > 180000; lastActivity = Date.now();
@@ -6776,7 +6777,7 @@ let sharedSince = '', movesSince = '', lastActivity = Date.now(), pollTimer = nu
 }, { passive: true, capture: true }));
 function schedulePoll(ms) {
   clearTimeout(pollTimer);
-  pollTimer = setTimeout(async () => { await pollSharedState(); schedulePoll(Date.now() - lastActivity > 180000 ? 60000 : 15000); }, ms);
+  pollTimer = setTimeout(async () => { await pollSharedState(); schedulePoll(Date.now() - lastActivity > 180000 ? 60000 : 30000); }, ms);
 }
 async function pollSharedState() {
   if (document.hidden || sharedPollBusy || editingDispatch()) return;

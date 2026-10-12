@@ -1,5 +1,6 @@
 import { getConnectionString } from "@netlify/database";
 import postgres from "postgres";
+import { createHash } from "node:crypto";
 
 let client;
 
@@ -14,10 +15,30 @@ export function db() {
   return client;
 }
 
+// Schema setup, cheap on cold starts (saves Netlify compute):
+// every function used to run the whole create/alter list below on its first
+// call. Now one quick read checks the stored schema version and the full list
+// only runs when createSchema itself has changed. The version is a hash of
+// createSchema's own source, so editing it (new table, new column, new
+// migration) automatically triggers one full run on the next deploy -- no
+// version number to remember to bump.
+const SCHEMA_VERSION_KEY = 'schema:version';
+let schemaVersion;
+const currentSchemaVersion = () => schemaVersion ||= createHash('sha256').update(createSchema.toString()).digest('hex').slice(0, 16);
 let schemaReady;
 export function ensureSchema(sql) {
-  if (!schemaReady) schemaReady = createSchema(sql).catch(error => { schemaReady = undefined; throw error; });
+  if (!schemaReady) schemaReady = checkOrCreateSchema(sql).catch(error => { schemaReady = undefined; throw error; });
   return schemaReady;
+}
+async function checkOrCreateSchema(sql) {
+  try {
+    const [row] = await sql`select value from dispatch_settings where key = ${SCHEMA_VERSION_KEY}`;
+    const version = currentSchemaVersion();
+    if (row && (row.value === version || row.value === JSON.stringify(version))) return;
+  } catch { /* first run: dispatch_settings doesn't exist yet */ }
+  await createSchema(sql);
+  await sql`insert into dispatch_settings (key, value, updated_by) values (${SCHEMA_VERSION_KEY}, ${JSON.stringify(currentSchemaVersion())}::jsonb, 'deploy')
+    on conflict (key) do update set value = excluded.value, updated_by = excluded.updated_by, updated_at = now()`;
 }
 async function createSchema(sql) {
   await sql.begin(async sql => {
