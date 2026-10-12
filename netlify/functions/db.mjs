@@ -141,6 +141,22 @@ async function createSchema(sql) {
     await sql`update dispatch_crm_sync set pending = false, last_error = 'Acknowledged when 1.8 was deployed', updated_at = now() where pending = true`;
     await sql`insert into dispatch_settings (key, value, updated_by) values ('migration:ack-problems-1.8', 'true'::jsonb, 'deploy') on conflict (key) do nothing`;
   }
+  // KPI dashboard: one row per job per worked day, captured before Complete EOD
+  // Sheet (reset_dispatch) or Completed clears the day's times and crew.
+  await sql`create table if not exists job_day_log (
+    job_id text not null, report_date text not null, data jsonb not null default '{}'::jsonb,
+    source text not null default '', logged_at timestamptz not null default now(),
+    primary key (job_id, report_date)
+  )`;
+  await sql`create index if not exists job_day_log_date_idx on job_day_log (report_date)`;
+  // KPI dashboard: one row per logistics run (a move's day, closed by the
+  // driver-log Reset day or by Complete), captured before the schedule,
+  // driver and vehicles are cleared. Unschedule is not a run and isn't logged.
+  await sql`create table if not exists move_run_log (
+    move_id text not null, run_date text not null, movement_type text not null default '',
+    data jsonb not null default '{}'::jsonb, source text not null default '', logged_at timestamptz not null default now(),
+    primary key (move_id, run_date, movement_type)
+  )`;
   // Project Schedules for Contract (Demo) jobs: the sheet's inputs, shared by
   // every dispatcher, plus when it was last sent to Make as a PDF.
   await sql`create table if not exists project_schedules (

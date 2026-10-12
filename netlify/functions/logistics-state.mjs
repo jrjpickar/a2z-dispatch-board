@@ -1,6 +1,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { authorizeWrite, readPayload, json, errorResponse } from '../../lib/http.mjs';
 import { moveRecord, saveState } from '../../lib/store.mjs';
+import { sessionFromRequest } from '../../lib/session.mjs';
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405, { Allow: 'GET, POST' });
@@ -18,6 +19,9 @@ export default async function handler(request) {
       ]);
       return json({ states: rows.map(moveRecord), serverTime: new Date(now).toISOString(), partial: !!since });
     }
-    return json(await saveState(sql, 'move', await readPayload(request)));
+    const payload = await readPayload(request);
+    // Who closed a move (KPI history).
+    if (['complete', 'cancel'].includes(payload.action) && !payload.closedBy) { const session = sessionFromRequest(request); if (session) payload.closedBy = session.name; }
+    return json(await saveState(sql, 'move', payload));
   } catch (error) { return errorResponse(error); }
 }

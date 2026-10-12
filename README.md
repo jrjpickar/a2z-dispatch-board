@@ -1,4 +1,15 @@
-# A2Z Dispatch 1.8
+# A2Z Dispatch 1.9
+
+## KPI dashboard feed (1.9)
+
+Adds what the A2Z KPI dashboard needs. Dispatchers see no change.
+
+- **Job day log.** Complete EOD Sheet (and Completed) now saves that day's report date/times, crew and sent-home hours to a new `job_day_log` table before the board clears them. One row per job per day. Days worked since 1.8 are rebuilt from the job log payloads already kept on Make runs.
+- **Move run log.** A logistics move's Reset day (driver log) and Complete save the run (date, movement type, container size, driver, vehicles, loads, opportunity) to `move_run_log` before the schedule, driver and vehicles are cleared. Unschedule is not logged.
+- **Closed moves keep their history.** Complete/Cancel now also store `closedAt`, `completedAt`, `closedSchedule` (the date/time it was scheduled for), `closedDriverName`, `closedAssetIds` and `closedBy`.
+- **`GET /api/metrics-export`** (read only): jobs, moves, move runs, job days, board bookings (who booked what), EOD sheet totals, rosters, worker temperatures and Make run health. Needs header `x-metrics-key`.
+- **New env var `METRICS_EXPORT_KEY`** (Functions scope): a long random string (`openssl rand -hex 32`). Put the same value in the KPI dashboard's `DISPATCH_EXPORT_KEY`. Without it the feed answers 503 and nothing else changes.
+- Tables are created automatically on the first request after deploy. Tests: `test/metrics-export.test.mjs`.
 
 Read START-HERE.md for deployment and MAKE-SETUP.md for the two Make response changes.
 

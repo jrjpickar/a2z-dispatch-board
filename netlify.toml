@@ -133,3 +133,8 @@
   from = "/api/admin-dashboard"
   to = "/.netlify/functions/admin-dashboard"
   status = 200
+
+[[redirects]]
+  from = "/api/metrics-export"
+  to = "/.netlify/functions/metrics-export"
+  status = 200
