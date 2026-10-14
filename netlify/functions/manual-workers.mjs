@@ -1,6 +1,7 @@
 // Workers added by an admin from a GHL contact search.
 //   GET  /api/manual-workers -> { workers: [{ contactId, name, phone, email, labor, driver }] }
 //   POST /api/manual-workers { action: "add", contactId, labor, driver, fieldApp }   (admins only)
+//        Also posts one run to the labor_added webhook (sent in the background).
 //   POST /api/manual-workers { action: "remove", contactId }                          (admins only)
 //   POST /api/manual-workers { action: "hide" | "unhide", contactId?, name, phone, role? }   (admins only)
 //        Removes / restores any worker (crew, driver or both) on the board only.
@@ -21,6 +22,7 @@ import { requirePanel } from '../../lib/layout.mjs';
 import { getContact, updateContactNamePhone } from '../../lib/ghl.mjs';
 import { driverKeyFor } from '../../lib/driver-token.mjs';
 import { logActivity } from '../../lib/activity.mjs';
+import { queueEffectNow, sendHeldEffects } from '../../lib/effect-queue.mjs';
 
 const hiddenKey = ({ contactId, phone, name }) => {
   const id = String(contactId || '').trim();
@@ -31,7 +33,7 @@ const hiddenRows = sql => sql`select worker_key as "key", role, name, phone, con
 const rows = sql => sql`select contact_id as "contactId", name, phone, email, is_labor as labor, is_driver as driver, added_by as "addedBy", created_at as "createdAt"
   from dispatch_manual_workers order by name`;
 
-export default async function handler(request) {
+export default async function handler(request, context) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
     const sql = db(); await ensureSchema(sql);
@@ -82,21 +84,39 @@ export default async function handler(request) {
     const labor = body.labor !== false, driver = body.driver === true;
     if (!labor && !driver) throw new StateError('Choose Crew, Driver or both.');
     if (body.fieldApp !== false && !contact.phone) throw new StateError(`${contact.name} has no phone number in GHL. Add one there first (the Field App signs in by phone).`);
-    await sql`insert into dispatch_manual_workers (contact_id, name, phone, email, is_labor, is_driver, added_by)
-      values (${contact.id}, ${contact.name}, ${contact.phone}, ${contact.email}, ${labor}, ${driver}, ${session.name})
-      on conflict (contact_id) do update set name = excluded.name, phone = excluded.phone, email = excluded.email,
-        is_labor = excluded.is_labor, is_driver = excluded.is_driver`;
-    let fieldApp = null;
-    if (body.fieldApp !== false) {
-      const driverKey = driverKeyFor(contact);
-      [fieldApp] = await sql`insert into dispatch_driver_codes (driver_key, name, phone, updated_at) values (${driverKey}, ${contact.name}, ${contact.phone}, now())
-        on conflict (driver_key) do update set name = excluded.name, phone = excluded.phone, updated_at = now()
-        returning driver_key as "driverKey", name, phone`;
+    // The independent writes run together (they used to run one after another).
+    const [[saved], fieldAppRows] = await Promise.all([
+      sql`insert into dispatch_manual_workers (contact_id, name, phone, email, is_labor, is_driver, added_by)
+        values (${contact.id}, ${contact.name}, ${contact.phone}, ${contact.email}, ${labor}, ${driver}, ${session.name})
+        on conflict (contact_id) do update set name = excluded.name, phone = excluded.phone, email = excluded.email,
+          is_labor = excluded.is_labor, is_driver = excluded.is_driver
+        returning (xmax = 0) as "isNew"`,
+      body.fieldApp !== false
+        ? sql`insert into dispatch_driver_codes (driver_key, name, phone, updated_at) values (${driverKeyFor(contact)}, ${contact.name}, ${contact.phone}, now())
+          on conflict (driver_key) do update set name = excluded.name, phone = excluded.phone, updated_at = now()
+          returning driver_key as "driverKey", name, phone`
+        : Promise.resolve([]),
+      // Adding someone back from GHL also un-hides them if they'd been removed.
+      sql`delete from dispatch_hidden_workers where worker_key = ${hiddenKey({ contactId: contact.id })} or worker_key = ${driverKeyFor(contact)}`
+    ]);
+    const fieldApp = fieldAppRows[0] || null;
+    // Make: one run per add on the labor_added webhook. Queued first, then sent
+    // in the background so the admin isn't kept waiting on Make.
+    const payload = {
+      action: 'newWorker', contactId: contact.id, workerName: contact.name, firstName: contact.firstName, lastName: contact.lastName,
+      workerPhone: contact.phone, email: contact.email, tags: contact.tags, crew: labor, driver, roles: [labor ? 'Crew' : '', driver ? 'Driver' : ''].filter(Boolean).join('/'),
+      fieldApp: !!fieldApp, isNew: saved?.isNew !== false, addedBy: session.name, addedByUserId: session.uid, addedAt: new Date().toISOString()
+    };
+    const [effectId, workers, hidden] = await Promise.all([
+      queueEffectNow(sql, { kind: 'labor_added', payload, effectKey: contact.id }).catch(error => { console.error('Laborer added webhook not queued', error); return null; }),
+      rows(sql), hiddenRows(sql),
+      logActivity(sql, session, labor ? 'Added laborer from GHL' : 'Updated worker from GHL', contact.name, { contactId: contact.id, labor, driver, fieldApp: !!fieldApp })
+    ]);
+    if (effectId) {
+      const send = sendHeldEffects(sql, { ids: [effectId] }).catch(error => console.error('Laborer added webhook send failed', error));
+      if (context && typeof context.waitUntil === 'function') context.waitUntil(send);
     }
-    await logActivity(sql, session, labor ? 'Added laborer from GHL' : 'Updated worker from GHL', contact.name, { contactId: contact.id, labor, driver, fieldApp: !!fieldApp });
-    // Adding someone back from GHL also un-hides them if they'd been removed.
-    await sql`delete from dispatch_hidden_workers where worker_key = ${hiddenKey({ contactId: contact.id })} or worker_key = ${driverKeyFor(contact)}`;
-    return json({ ok: true, worker: contact, fieldApp, workers: await rows(sql), hidden: await hiddenRows(sql) });
+    return json({ ok: true, worker: contact, fieldApp, workers, hidden, webhookQueued: !!effectId });
   } catch (error) { return errorResponse(error); }
 }
 

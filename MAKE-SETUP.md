@@ -81,6 +81,14 @@ Complete EOD Sheet also posts one plain JSON run per worker with hours over 0 to
 
 In the scenario: Redetermine data structure on the webhook and submit one EOD sheet so Make learns the fields, then map `27.date`, `27.employeeName`, `27.hoursWorked` and `27.notes` as the blueprint already does. Add a Webhook response with body `{"ok":true}` right after the webhook (before the weekday router), or every run shows under Admin > Make / GHL problems.
 
+## New worker webhook (Admin > Workers > + Add from GHL)
+
+Adding (or updating) a worker from GHL posts one plain JSON run to `https://hook.us2.make.com/wk9leiggp4mlr2g5n1acq862y6my52ia` (override with `LABOR_ADDED_WEBHOOK` in Netlify). Fields: `action` (`"newWorker"`), `contactId`, `workerName`, `firstName`, `lastName`, `workerPhone`, `email`, `tags`, `crew` (true/false), `driver` (true/false), `roles` (`Crew`, `Driver` or `Crew/Driver`), `fieldApp` (true/false), `isNew` (false when the worker was already added and was just updated), `addedBy`, `addedByUserId`, `addedAt`, `eventId`. The board saves the worker first and sends this in the background, so the admin never waits on Make. End the scenario with the `{"ok":true}` Webhook response; a run Make doesn't confirm shows under Admin > Make / GHL problems with Retry.
+
+## Book Job: existing client (search by name)
+
+Book Job has a **Find client** search (GHL contacts by name). Picking one fills First/Last name, phone and (if empty) Job Address, and the create run also carries `clientContactId` (the GHL contact id), `existingClient: true` and `clientEmail`. If the name or phone is edited after picking, those are not sent. Map `clientContactId` in the create scenario to reuse that contact instead of searching/creating one.
+
 ## Job create: who booked it (1.8)
 
 The create-job payload now also has `bookedBy` and `bookedByUserId` (the signed-in dispatcher). `assignedUserId` / `assignedUserName` are always filled. Map them if you want them in GHL or Slack; nothing breaks if you don't.

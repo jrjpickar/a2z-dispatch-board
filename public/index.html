@@ -1453,6 +1453,12 @@
   .ghl-results button { display: block; width: 100%; text-align: left; background: transparent; color: var(--ink); padding: 0; font-size: 13px; }
   .ghl-results button small { display: block; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
   .ghl-results li.picked { background: var(--orange-tint-soft); }
+  .client-search .ghl-results { margin: 6px 0 0; }
+  .client-picked { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 6px 10px; font-size: 12px; background: var(--orange-tint-soft); border-left: 3px solid var(--orange); }
+  .client-picked[hidden] { display: none; }
+  .client-picked span { flex: 1; }
+  .client-picked-clear { background: none; color: var(--ink-soft); text-decoration: underline; padding: 0; font-size: 12px; }
+  body.dark-mode .client-picked { background: #34241d; }
   .ghl-picked { border: 1px solid var(--orange); background: var(--orange-tint-soft); padding: 12px; border-radius: var(--radius); margin-bottom: 12px; }
   .ghl-picked[hidden] { display: none; }
   .ghl-picked-name { font-weight: 700; }
@@ -1877,6 +1883,12 @@
     <button id="closeSheet">&times;</button>
   </div>
   <div class="sheet-body">
+    <div class="field client-search">
+      <label for="clientSearch">Find client <span class="label-optional">(search GHL by name, or type a new client below)</span></label>
+      <input type="search" id="clientSearch" placeholder="Search clients by name" autocomplete="off" maxlength="80">
+      <ul class="ghl-results" id="clientSearchResults" hidden></ul>
+      <div class="client-picked" id="clientPicked" hidden><span id="clientPickedText"></span><button type="button" class="client-picked-clear" id="clientPickedClear">Clear</button></div>
+    </div>
     <div class="field-row">
       <div class="field">
         <label for="clientFirstName">First Name</label>
@@ -2953,13 +2965,16 @@ async function loadDashboard() {
   render();
 }
 
+// The Make labor roster as last loaded, before GHL-added workers are merged in.
+let laborRosterRaw = null;
 async function loadLaborRoster() {
   document.getElementById('rosterList').innerHTML =
     `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
   try {
     const [data] = await Promise.all([fetchJsonStrict(CONFIG.LABOR_ROSTER_URL, 'Labor webhook'), loadManualWorkers()]);
     clearBackendError('Labor webhook');
-    dashboardData.labor = mergeManualWorkers(normalizeLabor(data), 'labor');
+    laborRosterRaw = normalizeLabor(data);
+    dashboardData.labor = mergeManualWorkers(laborRosterRaw, 'labor');
     loadWorkerTemperatures();
   } catch (err) {
     console.error("Labor roster webhook failed:", err);
@@ -4998,6 +5013,66 @@ document.querySelectorAll('.status-card.available, .status-card.booked').forEach
 });
 
 /* ---------- Book Job sheet ---------- */
+/* Client search: type a name, pick a GHL contact, and First/Last name, phone and
+   (if empty) Job Address fill in. Editing the name or phone afterwards drops the
+   link, so a changed client is never sent with the old contact id. */
+let clientPick = null, clientSearchTimer = null, clientSearchSeq = 0, clientResults = [];
+const clientBox = id => document.getElementById(id);
+function clearClientPick({ keepFields = false } = {}) {
+  clientPick = null; clientResults = [];
+  clientBox('clientSearch').value = '';
+  clientBox('clientSearchResults').hidden = true; clientBox('clientSearchResults').innerHTML = '';
+  clientBox('clientPicked').hidden = true;
+  if (!keepFields) ['clientFirstName', 'clientLastName'].forEach(id => { clientBox(id).value = ''; });
+}
+function currentClientPick() {
+  if (!clientPick) return null;
+  const same = clientBox('clientFirstName').value.trim() === clientPick.filled.firstName && clientBox('clientLastName').value.trim() === clientPick.filled.lastName
+    && clientBox('clientPhone').value.trim() === clientPick.filled.phone;
+  return same ? clientPick : null;
+}
+clientBox('clientSearch').addEventListener('input', e => {
+  clearTimeout(clientSearchTimer);
+  const q = e.target.value.trim(), list = clientBox('clientSearchResults');
+  if (q.length < 2) { list.hidden = true; list.innerHTML = ''; return; }
+  clientSearchTimer = setTimeout(async () => {
+    const seq = ++clientSearchSeq;
+    list.hidden = false; list.innerHTML = '<li class="ghl-hint">Searching GHL...</li>';
+    try {
+      const res = await fetchWithTimeout('/api/ghl-contacts?for=client&q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } }, 20000);
+      const data = await res.json().catch(() => ({}));
+      if (seq !== clientSearchSeq) return;
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      clientResults = data.contacts || [];
+      list.innerHTML = clientResults.length ? clientResults.map((c, i) => `<li><button type="button" data-index="${i}">${escapeAttr(c.name)}${c.companyName ? ' · ' + escapeAttr(c.companyName) : ''}<small>${escapeAttr([c.phone, c.address].filter(Boolean).join(' · ') || 'no phone or address')}</small></button></li>`).join('')
+        : '<li class="ghl-hint">No clients found. Type the new client in below.</li>';
+    } catch (err) { if (seq === clientSearchSeq) list.innerHTML = `<li class="ghl-hint">${escapeAttr(err.message)}</li>`; }
+  }, 300);
+});
+clientBox('clientSearch').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.stopPropagation(); clientBox('clientSearch').value = ''; clientBox('clientSearchResults').hidden = true; }
+  if (e.key === 'Enter' && clientResults.length === 1) { e.preventDefault(); clientBox('clientSearchResults').querySelector('button[data-index]')?.click(); }
+});
+clientBox('clientSearchResults').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-index]'); if (!btn) return;
+  const c = clientResults[Number(btn.dataset.index)]; if (!c) return;
+  const [first, ...rest] = String(c.name || '').split(' ');
+  const firstName = (c.firstName || first || '').trim(), lastName = (c.lastName || rest.join(' ') || '').trim();
+  clientBox('clientFirstName').value = firstName;
+  clientBox('clientLastName').value = lastName;
+  if (/^\+1\d{10}$/.test(c.phone || '')) clientBox('clientPhone').value = c.phone;
+  if (c.address && !clientBox('jobAddress').value.trim()) clientBox('jobAddress').value = c.address;
+  clientPick = { ...c, filled: { firstName, lastName, phone: clientBox('clientPhone').value.trim() } };
+  clientBox('clientSearch').value = '';
+  clientBox('clientSearchResults').hidden = true;
+  clientBox('clientPicked').hidden = false;
+  clientBox('clientPickedText').textContent = `Existing GHL client: ${c.name}${/^\+1\d{10}$/.test(c.phone || '') ? '' : ' (no usable phone in GHL, type it below)'}`;
+});
+clientBox('clientPickedClear').addEventListener('click', () => clearClientPick());
+// Changing the name or phone after picking: no longer the same GHL contact.
+['clientFirstName', 'clientLastName', 'clientPhone'].forEach(id => clientBox(id).addEventListener('input', () => {
+  if (clientPick && !currentClientPick()) { clientPick = null; clientBox('clientPicked').hidden = true; }
+}));
 const overlay = document.getElementById('overlay');
 const sheet = document.getElementById('bookSheet');
 let crewSize = 4;
@@ -5049,6 +5124,7 @@ function escapeAttr(v) {
 
 function openSheet() {
   bookingRequestId = null;
+  clearClientPick({ keepFields: true });
   // Each new booking starts on the signed-in user; changing it sticks for this booking only.
   delete document.getElementById('assignedUser').dataset.touched;
   prefillAssignedUser();
@@ -5136,6 +5212,10 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     assignedUserName: document.getElementById('assignedUser').value
       ? document.getElementById('assignedUser').selectedOptions[0].textContent : ''
   };
+  // Existing client picked from the search: send its GHL contact id so Make can
+  // use that contact instead of creating or matching a new one.
+  const pickedClient = currentClientPick();
+  if (pickedClient) Object.assign(payload, { clientContactId: pickedClient.id, existingClient: true, clientEmail: pickedClient.email || '' });
 
   if (!payload.assignedUserId) {
     showToast('Assigned User is required.', true);
@@ -5283,6 +5363,7 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     else if (addonFailures) showToast(`Job created, but ${addonFailures} logistics add-on(s) need attention.`, true);
     else if (addonRequests.length) showToast(`Job created with ${addonRequests.length} logistics add-on(s).`);
     else showToast(`Job created. ${payload.crewSize} crew slot(s) ready in GHL.`);
+    clearClientPick({ keepFields: true });
     closeSheetFn();
 
     await refreshAll();
@@ -8480,18 +8561,26 @@ async function manualWorkerApi(body) {
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
+// After an add / remove / restore the server already sent back the updated
+// lists, so the rosters already on this page are re-merged locally instead of
+// being fetched again from Make, and the Field App list reloads alongside.
+// (This used to re-download the labor roster, sometimes the driver roster, then
+// the Field App list, one after another, before the toast showed.)
 async function afterManualWorkersChange(data) {
   manualWorkers = data.workers || [];
   if (Array.isArray(data.hidden)) hiddenWorkers = data.hidden;
   manualWorkersLoaded = Promise.resolve();
   renderManualWorkerList();
-  await loadLaborRoster();
+  const waits = [loadFieldAppAccess()];
+  if (laborRosterRaw) { dashboardData.labor = mergeManualWorkers(laborRosterRaw, 'labor'); render(); loadWorkerTemperatures(); }
+  else waits.push(loadLaborRoster());
   if (adminDriverRoster) logisticsData.drivers = mergeManualWorkers(adminDriverRoster, 'driver');
   else if (logisticsLoaded) logisticsData.drivers = mergeManualWorkers(logisticsData.drivers.filter(d => !d.manual), 'driver');
-  else await ensureAdminDriverRoster(true);
+  else waits.push(ensureAdminDriverRoster(true));
   if (logisticsLoaded) { reconcileLogisticsResources(); renderLogistics(); }
   renderAdminLabor();
-  await loadFieldAppAccess();
+  await Promise.all(waits);
+  renderAdminLabor();
 }
 document.getElementById('saveGhlWorker').addEventListener('click', async () => {
   if (!ghlWorkerPick) return;
@@ -8501,8 +8590,8 @@ document.getElementById('saveGhlWorker').addEventListener('click', async () => {
   btn.disabled = true; const label = btn.textContent; btn.textContent = 'Saving...';
   try {
     const data = await manualWorkerApi({ action: 'add', contactId: ghlWorkerPick.id, labor, driver, fieldApp: document.getElementById('ghlWorkerFieldApp').checked });
-    await afterManualWorkersChange(data);
     showToast(`${data.worker.name} added${data.fieldApp ? ' and can sign in to the Field App' : ''}.`);
+    afterManualWorkersChange(data).catch(err => console.warn('Refresh after adding a worker failed:', err));
     ghlWorkerPick = null; document.getElementById('ghlWorkerPicked').hidden = true; btn.textContent = 'Add worker';
   } catch (err) { showToast(err.message, true); btn.disabled = false; btn.textContent = label; }
 });
