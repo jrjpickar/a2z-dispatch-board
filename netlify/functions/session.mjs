@@ -1,7 +1,7 @@
 // Dashboard sign-in (see lib/session.mjs).
 //   GET  /api/session                      -> { signedIn, user, isAdmin, needsAdminUnlock }
 //   POST /api/session { action: "ghl", encryptedData }   (GHL Custom Page REQUEST_USER_DATA)
-//   POST /api/session { action: "signin", source: "picker", userId, pin? }
+//   POST /api/session { action: "signin", source: "user_id", userId, pin? }  (outside GHL: the GHL user ID is the password)
 //   POST /api/session { action: "unlock", pin }     (admin PIN for this browser)
 //   POST /api/session { action: "signout" }
 import { db, ensureSchema } from './db.mjs';
@@ -9,8 +9,8 @@ import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http
 import { StateError } from '../../lib/state.mjs';
 import { storedPinMatches } from '../../lib/settings.mjs';
 import {
-  sessionFromRequest, sessionInfo, signSession, sessionCookie, clearSessionCookie, ghlUsers, matchUser,
-  isBootstrapAdmin, secretMatches, ghlUserFromContext
+  sessionFromRequest, sessionInfo, signSession, sessionCookie, clearSessionCookie, ghlUsers,
+  isBootstrapAdmin, secretMatches, ghlUserFromContext, userForId
 } from '../../lib/session.mjs';
 
 // Admin PIN: the Netlify env var, or the one a senior admin set on the Admin page.
@@ -39,9 +39,10 @@ export default async function handler(request) {
       let users;
       try { users = await ghlUsers({ fresh: true }); }
       catch { throw new StateError('Could not load the GHL user list to sign you in. Try again in a minute.', 502); }
-      user = matchUser(users, { userId: body.userId });
-      if (!user) throw new StateError('Pick your name from the list.', 401);
-      via = body.pin && (await pinOk(sql, body.pin)) ? 'pin' : 'picker';
+      // Password gate: the password is the user's own GHL user ID.
+      user = userForId(users, body.userId);
+      if (!user) { await new Promise(r => setTimeout(r, 800)); throw new StateError('That GHL user ID is not right.', 401); }
+      via = body.pin && (await pinOk(sql, body.pin)) ? 'pin' : 'user_id';
     } else throw new StateError('Unknown session action');
 
     // Keep the bootstrap admin (Jesse Pickar) on the admin list so it shows up there.

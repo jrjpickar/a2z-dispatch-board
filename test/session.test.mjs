@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { PGlite } from '@electric-sql/pglite';
 import { ensureSchema } from '../netlify/functions/db.mjs';
 import crypto from 'node:crypto';
-import { requireSenior, ghlUserFromContext, signSession, verifySession, sessionFromRequest, sessionInfo, requireAdmin, matchUser, isBootstrapAdmin, secretMatches, sessionCookie } from '../lib/session.mjs';
+import { requireSenior, ghlUserFromContext, signSession, verifySession, sessionFromRequest, sessionInfo, requireAdmin, matchUser, isBootstrapAdmin, secretMatches, sessionCookie, userForId } from '../lib/session.mjs';
 import { contactSummary } from '../lib/ghl.mjs';
 process.env.SESSION_SECRET = 'test-secret';
 const pg = new PGlite();
@@ -19,7 +19,7 @@ const sam = { id: 'uSamDispatch02', name: 'Sam Dispatcher', email: 'sam@a2zcs.ne
 const req = token => new Request('https://board.test/api/x', { headers: token ? { 'x-a2z-session': token } : {} });
 
 test('session tokens are signed, tamper-proof and read from header or cookie', () => {
-  const token = signSession(sam, 'picker');
+  const token = signSession(sam, 'user_id');
   assert.equal(verifySession(token).uid, sam.id);
   const [body, sig] = token.split('.');
   const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(body, 'base64url')), uid: jesse.id })).toString('base64url');
@@ -33,7 +33,7 @@ test('Jesse Pickar is a permanent admin, but only on a trusted sign-in', async (
   assert.ok(!isBootstrapAdmin(sam));
   const viaLink = await sessionInfo(sql, verifySession(signSession(jesse, 'ghl_sso')));
   assert.equal(viaLink.isAdmin, true);
-  const viaPicker = await sessionInfo(sql, verifySession(signSession(jesse, 'picker')));
+  const viaPicker = await sessionInfo(sql, verifySession(signSession(jesse, 'user_id')));
   assert.equal(viaPicker.isAdmin, false); assert.equal(viaPicker.needsAdminUnlock, true);
   await requireAdmin(req(signSession(jesse, 'pin')), sql);
 });
@@ -42,7 +42,7 @@ test('regular users are refused admin actions until added to the admin list', as
   await assert.rejects(requireAdmin(req(''), sql), e => e.status === 401);
   await sql`insert into dispatch_admins (user_id, name, email) values (${sam.id}, ${sam.name}, ${sam.email})`;
   await requireAdmin(req(signSession(sam, 'ghl_sso')), sql);
-  assert.equal((await sessionInfo(sql, verifySession(signSession(sam, 'picker')))).isAdmin, false);
+  assert.equal((await sessionInfo(sql, verifySession(signSession(sam, 'user_id')))).isAdmin, false);
 });
 test('sign-in matching and secrets', () => {
   const users = [jesse, sam];
@@ -127,4 +127,15 @@ test('worker phone edits are saved to GHL in +1 format', () => {
 test('the one-time 1.8 migration acknowledged old problems and is repeatable', async () => {
   const [row] = await sql`select 1 as ok from dispatch_settings where key = 'migration:ack-problems-1.8'`;
   assert.ok(row);
+});
+
+test('password gate: the GHL user ID is the password; old picker sessions are refused', () => {
+  assert.equal(verifySession(signSession(sam, 'picker')), null, 'name-only picker sessions no longer count');
+  assert.equal(verifySession(signSession(sam, 'user_id')).uid, sam.id);
+  const users = [jesse, sam];
+  assert.equal(userForId(users, sam.id).name, 'Sam Dispatcher');
+  assert.equal(userForId(users, '  ' + sam.id + ' ').name, 'Sam Dispatcher', 'stray spaces from copy and paste are ignored');
+  assert.equal(userForId(users, 'Sam Dispatcher'), null, 'a name is not a password');
+  assert.equal(userForId(users, sam.id.toLowerCase()), null, 'exact ID only');
+  assert.equal(userForId(users, ''), null);
 });

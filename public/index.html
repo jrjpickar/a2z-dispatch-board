@@ -573,6 +573,7 @@
   body.dark-mode .crew-assign-search { background: #1b1d20; color: #f1f3f4; -webkit-text-fill-color: #f1f3f4; border-color: #4a4f55; }
   .crew-assign-panel.include-booked .crew-assign-option.is-booked { display: flex; }
   .crew-assign-worker-name { flex: 1; min-width: 0; }
+  .crew-booked-badge.other-day { background: var(--grey-light); color: var(--ink-soft); }
   .crew-booked-badge {
     flex: none;
     padding: 2px 6px;
@@ -1218,6 +1219,14 @@
   .eod-draft-note[hidden] { display: none; }
   body.dark-mode .eod-draft-note { background: #2a2618; color: #f1f3f4; }
   .eod-reset-note { font-size: 12px; color: var(--ink-soft); margin-top: 14px; }
+  .eod-crew-note { font-size: 12px; color: var(--ink-soft); margin: 0 0 6px; }
+  .eod-crew-table { min-width: 0; }
+  .eod-crew-table col.c-hours { width: 130px; }
+  .eod-crew-table input.eod-hours { text-align: right; }
+  .eod-crew-table td.eod-crew-name small { display: block; font-size: 11px; color: var(--ink-soft); }
+  .eod-crew-table .eod-sent-home { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #efecfa; color: #5a4aa3; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .eod-crew-table td.eod-crew-empty { color: var(--ink-soft); font-style: italic; }
+  body.dark-mode .eod-crew-table .eod-sent-home { background: #2a2540; color: #c9c0f3; }
   body.dark-mode .eod-table input, body.dark-mode .eod-summary input { background: #2a2618 !important; }
   body.dark-mode .eod-summary { border-color: #f1f3f4; }
   body.dark-mode .eod-table td { border-color: #33373b; }
@@ -1417,7 +1426,9 @@
   .user-menu button:hover { background: var(--orange-tint-soft); }
   .user-menu button[hidden] { display: none; }
   .req-mark { color: var(--danger); font-weight: 700; }
-  .signin-backdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(20,21,23,.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .signin-backdrop { position: fixed; inset: 0; z-index: 1000; background: #1c1d1f; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .signin-card .field input { width: 100%; }
+  .admin-id { font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: none; color: inherit; padding: 0; text-decoration: underline dotted; cursor: copy; }
   .signin-backdrop[hidden] { display: none; }
   .signin-card { background: var(--card); color: var(--ink); width: 100%; max-width: 400px; padding: 22px; border-radius: var(--radius); border-top: 4px solid var(--orange); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
   .signin-card h2 { margin: 0 0 6px; font-size: 18px; }
@@ -1594,7 +1605,7 @@
 <div class="topbar">
   <div class="brand">
     <h1>A2Z <span class="tag">DISPATCH</span></h1>
-    <div class="whoami" id="whoami"><span class="whoami-text" id="whoamiText">Signing in through GHL…</span><span class="user-role" id="whoamiRole" hidden></span><button type="button" class="whoami-switch" id="switchUserBtn" hidden>Switch user</button></div>
+    <div class="whoami" id="whoami"><span class="whoami-text" id="whoamiText">Signing in through GHL…</span><span class="user-role" id="whoamiRole" hidden></span><button type="button" class="whoami-switch" id="switchUserBtn" hidden>Switch user</button><button type="button" class="whoami-switch" id="signinIdBtn" hidden title="Copy your GHL user ID. It is your password for opening the board outside GHL.">My sign-in ID</button></div>
   </div>
   <div class="date mono" id="todayDate"></div>
   <div class="actions">
@@ -1782,7 +1793,6 @@
       <div class="panel-head"><h2>Settings</h2></div>
       <div class="senior-form">
         <div class="field"><label for="setDefaultUser">Default Assigned User (Book Job)</label><select id="setDefaultUser"><option value="">Whoever is signed in</option></select></div>
-        <div class="field"><label for="setMarkup">Default markup % (EOD sheet)</label><input type="number" id="setMarkup" min="0" max="1000" step="0.1" inputmode="decimal" placeholder="Blank"></div>
         <div class="field"><label for="setPin">Admin PIN <span class="label-optional" id="pinStatus"></span></label><input type="password" id="setPin" autocomplete="new-password" maxlength="64" placeholder="Leave blank to keep"></div>
         <label class="senior-check"><input type="checkbox" id="clearPin"> Remove the admin PIN set here</label>
         <div class="senior-save"><span class="senior-updated" id="settingsUpdated"></span><button type="button" class="btn-primary" id="saveSettings">Save settings</button></div>
@@ -2149,13 +2159,21 @@
       <div class="field"><label for="eodJobName">Job Name</label><input type="text" id="eodJobName" maxlength="150" autocomplete="off"></div>
       <div class="field"><label for="eodDate">Date</label><input type="date" id="eodDate"></div>
     </div>
-    <p class="eod-legend">Highlighted boxes are yours to fill in. Line totals, subtotals and the price to the customer recalculate automatically. Your entries are saved as a draft on this device until you submit.</p>
+    <p class="eod-legend">Highlighted boxes are yours to fill in. Line totals and subtotals recalculate automatically. Your entries are saved as a draft on this device until you submit.</p>
     <p class="eod-draft-note" id="eodDraftNote" hidden></p>
     <div id="eodSections"></div>
+    <div class="eod-section eod-crew" id="eodCrewSection">
+      <h3>Crew hours</h3>
+      <p class="eod-crew-note">Each worker starts at the job's hours for the day minus 1 hour for lunch. Change any of them. Workers sent home show the hours picked when they were sent home. On submit each worker's hours go to the weekly hours sheet.</p>
+      <div class="eod-table-wrap"><table class="eod-table eod-crew-table">
+        <colgroup><col><col class="c-hours"></colgroup>
+        <thead><tr><th>Worker</th><th style="text-align:right">Hours worked</th></tr></thead>
+        <tbody id="eodCrewRows"></tbody>
+        <tfoot><tr class="eod-subtotal-row"><td>TOTAL CREW HOURS</td><td class="eod-subtotal" id="eodCrewTotal">0</td></tr></tfoot>
+      </table></div>
+    </div>
     <div class="eod-summary">
-      <span>Total job cost</span><span class="eod-sum-val" id="eodTotalCost">$0.00</span>
-      <label for="eodMarkup">Markup %</label><span class="eod-sum-val"><input type="number" id="eodMarkup" min="0" step="0.1" inputmode="decimal" placeholder="0"></span>
-      <span class="eod-grand">Total price to customer</span><span class="eod-sum-val eod-grand" id="eodTotalPrice">$0.00</span>
+      <span class="eod-grand">Total job cost</span><span class="eod-sum-val eod-grand" id="eodTotalCost">$0.00</span>
     </div>
     <p class="eod-reset-note">Submitting also resets the day: the schedule and crew are cleared. Job details stay as they are.</p>
     <datalist id="eodRateReference"></datalist>
@@ -2220,17 +2238,17 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Dashboard sign-in: automatic inside GHL (Custom Page REQUEST_USER_DATA, same as the dialer),
-     otherwise a one-time picker. Session lives in a signed cookie for 180 days. -->
+<!-- Dashboard sign-in: automatic inside GHL (Custom Page REQUEST_USER_DATA, same as the dialer).
+     Outside GHL it is a password gate: the password is your own GHL user ID.
+     Session lives in a signed cookie for 180 days. -->
 <div class="signin-backdrop" id="signinBackdrop" hidden>
   <div class="signin-card" role="dialog" aria-modal="true" aria-labelledby="signinTitle">
-    <h2 id="signinTitle">Who's using the board?</h2>
-    <p class="signin-note" id="signinNote">Pick your name once. This browser remembers you after that.</p>
-    <div class="field"><label for="signinUser">Your GHL user</label><select id="signinUser"><option value="">Loading GHL users...</option></select></div>
+    <h2 id="signinTitle">Sign in to the board</h2>
+    <p class="signin-note" id="signinNote">Outside GHL your password is your GHL user ID. Find it inside GHL with My sign-in ID (top left of the board), or ask a senior admin.</p>
+    <div class="field"><label for="signinPassword">Password (your GHL user ID)</label><input type="password" id="signinPassword" autocomplete="current-password" maxlength="80" spellcheck="false" autocapitalize="off"></div>
     <div class="field" id="signinPinField"><label for="signinPin">Admin PIN <span class="label-optional">(admins only; leave blank otherwise)</span></label><input type="password" id="signinPin" autocomplete="current-password" maxlength="64"></div>
     <p class="signin-error" id="signinError" hidden></p>
     <div class="signin-actions">
-      <button type="button" class="btn-ghost signin-skip" id="signinSkip" hidden>Continue without signing in</button>
       <button type="button" class="btn-primary" id="signinSubmit">Sign in</button>
     </div>
   </div>
@@ -2341,6 +2359,10 @@ const CONFIG = {
   // Worker sent home: workerName + hoursWorked, sent through /api/workflow-effect
   // with kind "worker_sent_home" (server posts to WORKER_SENT_HOME_WEBHOOK or this hook).
   WORKER_SENT_HOME_URL: "https://hook.us2.make.com/mo2wtttzdfhpl4liym6c8uw3pbq6mmth",
+  // Job hours: on Complete EOD Sheet, one run per worker { date, employeeName,
+  // hoursWorked, notes, ... } for the A2Z Weekly Hours sheets. Sent through
+  // /api/workflow-effect with kind "job_hours" (JOB_HOURS_WEBHOOK or this hook).
+  JOB_HOURS_URL: "https://hook.us2.make.com/swmlb2j1ef0k89fesawlizhmur714kqo",
   // Also handles Report End Time + Report End Date updates for existing jobs.
   // Expects POST body: { jobId, reportEndTime, reportEndDate }
   // Netlify is the sole dispatch-state authority.
@@ -3012,7 +3034,7 @@ function renderRoster() {
         <span class="worker-avatar${effectiveStatus === 'available' ? '' : ' is-booked'}" aria-hidden="true">${escapeAttr(workerInitials(w.name))}</span>
         <div>
           <div class="worker-name">${w.name}${tempTag(w)}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}</div>
-          <div class="worker-meta">${formatPhoneDisplay(w.phone)}${w.jobId ? ' · ' + w.jobId : ''}</div>
+          <div class="worker-meta">${formatPhoneDisplay(w.phone)}${w.jobId ? ' · ' + w.jobId : ''}${(() => { const later = effectiveStatus === 'available' ? workerOtherBookedDays(w, liveBookedRoster).filter(d => d > toLocalYMD(new Date())) : []; return later.length ? ' · next job ' + escapeAttr(shortDayLabel(later[0])) : ''; })()}</div>
         </div>
       </div>
       <span class="pill ${effectiveStatus === 'available' ? 'avail' : 'booked'}">${effectiveStatus}</span>
@@ -3135,29 +3157,61 @@ function isJobOpen(job) {
   return !/complete|cancel/.test(label);
 }
 
-// Scans every open job (not Completed/Cancelled), regardless of whether its
-// report window has started yet, and collects who's on it, so a worker
-// moves to "Booked" the moment they're assigned rather than only while the
-// job happens to be actively running right now. Matched by phone via the
-// crew-assignment override (the reliable source right now) and by name via
-// the backend crew fields too, in case those get wired up later.
-function getLiveBookedIdentifiers() {
+// The Pacific days a job holds its crew: report date through end date (a night
+// shift's next morning counts). An open job dated before today still holds its
+// crew today, the same way the board lists it under Today. No date = null.
+function jobBookedDays(job, todayStr) {
+  const start = getReportDate(job);
+  if (!start) return null;
+  let end = nightEndDate(start, getReportTime(job), getReportEndDate(job), getReportEndTime(job), getNightWork(job)) || start;
+  if (end < start) end = start;
+  if (todayStr && start <= todayStr && end < todayStr) end = todayStr;
+  return { start, end };
+}
+
+// Collects who's on open jobs (not Completed/Cancelled) so a worker shows
+// "Booked" the moment they're assigned. Booked is per day: with no options it
+// means booked TODAY (roster, Booked Today card). With { forJob } it means
+// booked on another job that shares a day with that job, so a worker on
+// today's job can still be scheduled for a job next week without Split day.
+// An open job with no date blocks every day, to stay safe.
+// Matched by phone via the crew-assignment override and by name via the
+// backend crew fields. Also returns, per worker, the other days they're on
+// (later) so the picker and roster can show it.
+function getLiveBookedIdentifiers({ forJob = null } = {}) {
+  const todayStr = toLocalYMD(new Date());
+  const target = forJob ? jobBookedDays(forJob, todayStr) : { start: todayStr, end: todayStr };
   const bookedPhones = new Set();
   const bookedNames = new Set();
+  const laterByPhone = new Map();
+  const laterByName = new Map();
+  const noteLater = (map, key, day) => {
+    if (!key || !day) return;
+    const list = map.get(key) || []; if (!list.includes(day)) list.push(day); map.set(key, list);
+  };
   (dashboardData.jobs || []).forEach(job => {
     if (!isJobOpen(job)) return;
     const jobId = job.id || '';
-    const overrideCrew = (window.jobCrewOverride && window.jobCrewOverride[jobId]) || [];
-    overrideCrew.forEach(c => {
+    if (forJob && jobId === forJob.id) return;
+    const days = jobBookedDays(job, todayStr);
+    const clash = !days || !target || (days.start <= target.end && days.end >= target.start);
+    const crew = [
+      ...((window.jobCrewOverride && window.jobCrewOverride[jobId]) || []),
+      ...getCrew(job)
+    ];
+    crew.forEach(c => {
       const p = normalizePhoneForMatch(c.phone);
-      if (p) bookedPhones.add(p);
-      if (c.name) bookedNames.add(String(c.name).toLowerCase().trim());
-    });
-    getCrew(job).forEach(c => {
-      if (c.name) bookedNames.add(String(c.name).toLowerCase().trim());
+      const n = c.name ? String(c.name).toLowerCase().trim() : '';
+      if (clash) {
+        if (p) bookedPhones.add(p);
+        if (n) bookedNames.add(n);
+      } else if (days.start >= todayStr) {
+        noteLater(laterByPhone, p, days.start);
+        noteLater(laterByName, n, days.start);
+      }
     });
   });
-  return { bookedPhones, bookedNames };
+  return { bookedPhones, bookedNames, laterByPhone, laterByName };
 }
 
 function getEffectiveLaborStatus(worker, liveBooked) {
@@ -3167,6 +3221,19 @@ function getEffectiveLaborStatus(worker, liveBooked) {
     return 'booked';
   }
   return 'available';
+}
+
+// Other days a worker is already booked (on jobs that don't clash), soonest first.
+function workerOtherBookedDays(worker, liveBooked) {
+  const days = new Set([
+    ...((liveBooked.laterByPhone && liveBooked.laterByPhone.get(normalizePhoneForMatch(worker.phone))) || []),
+    ...((liveBooked.laterByName && liveBooked.laterByName.get((worker.name || '').toLowerCase().trim())) || [])
+  ]);
+  return [...days].sort();
+}
+function shortDayLabel(ymd) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || ''); if (!m) return ymd || '';
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 // Pacific (not UTC, not the browser's zone) YYYY-MM-DD, matching the format
@@ -3362,11 +3429,7 @@ function renderJobsTable(allJobs) {
   const groups = { today: [], tomorrow: [], future: [], unscheduled: [] };
   jobs.forEach(j => groups[getJobDateBucket(j, todayStr, tomorrowStr)].push(j));
 
-  const liveBookedJobs = getLiveBookedIdentifiers();
-  const laborWithBookingStatus = (dashboardData.labor || []).map(w => ({
-    ...w,
-    effectiveStatus: getEffectiveLaborStatus(w, liveBookedJobs)
-  }));
+  const laborWithBookingStatus = dashboardData.labor || [];
 
   function normalizePhone(raw) {
     if (!raw) return '';
@@ -3414,7 +3477,7 @@ function renderJobsTable(allJobs) {
     `).join('');
 
     // Every roster worker not already assigned to THIS job is a candidate.
-    // Booked workers stay hidden until this job's split-day toggle is enabled.
+    // Workers booked on the same day stay hidden until Split day is on (see buildCrewPanel).
     const assignedNames = new Set([
       ...crew.map(c => c.name),
       ...overrideCrew.map(c => c.name)
@@ -3422,7 +3485,6 @@ function renderJobsTable(allJobs) {
     const assignableWorkers = laborWithBookingStatus.filter(w =>
       !assignedNames.has(String(w.name || '').toLowerCase().trim())
     );
-    const hasAvailableWorkers = assignableWorkers.some(w => w.effectiveStatus === 'available');
 
     const timesLocked = isJobTimeLocked(j) || closedOnBoard;
 
@@ -3688,11 +3750,11 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
    while it is open rebuilds it with the same search, Split day and ticks. */
 function crewPickerWorkers(jobId) {
   const job = (dashboardData.jobs || []).find(j => j.id === jobId) || {};
-  const live = getLiveBookedIdentifiers();
+  const live = getLiveBookedIdentifiers({ forJob: job });
   const assigned = new Set([...getCrew(job), ...((window.jobCrewOverride && window.jobCrewOverride[jobId]) || [])]
     .map(c => String(c.name || '').toLowerCase().trim()));
   return (dashboardData.labor || []).filter(w => !assigned.has(String(w.name || '').toLowerCase().trim()))
-    .map(w => ({ ...w, effectiveStatus: getEffectiveLaborStatus(w, live) }));
+    .map(w => ({ ...w, effectiveStatus: getEffectiveLaborStatus(w, live), otherDays: workerOtherBookedDays(w, live) }));
 }
 function crewPickerPhone(raw) {
   if (!raw) return '';
@@ -3711,19 +3773,20 @@ function buildCrewPanel(panel, jobId, keep = {}) {
   panel.classList.toggle('include-booked', !!keep.includeBooked);
   panel.classList.toggle('no-text', !!keep.noText);
   panel.innerHTML = `
-    <label class="split-day-control" title="Workers you tick go on this job and one other job, with one text. Also shows workers already booked elsewhere.">
+    <label class="split-day-control" title="Workers you tick go on this job and one other job, with one text. Also shows workers already booked on this job's day.">
       <span>Split day (two jobs) · Include booked</span>
       <span class="split-day-switch"><input type="checkbox" class="include-booked-toggle"${keep.includeBooked ? ' checked' : ''}><span class="split-day-slider"></span></span>
     </label>
     <input type="search" class="crew-assign-search" placeholder="Search workers..." autocomplete="off" aria-label="Search workers" value="${escapeAttr(keep.search || '')}">
-    <div class="split-day-empty">No available workers. Turn on Split day to include booked workers.</div>
+    <div class="split-day-empty">No one is free this day. Turn on Split day to include workers booked this day.</div>
     <div class="crew-assign-list">${workers.map(w => {
       const booked = w.effectiveStatus === 'booked';
       const hay = [w.name, w.phone, String(w.phone || '').replace(/\D/g, ''), workerTemperature(w)].join(' ').toLowerCase();
       return `<label class="crew-assign-option${booked ? ' is-booked' : ''}" data-search="${escapeAttr(hay)}">
         <input type="checkbox" class="crew-worker-select" value="${escapeAttr(crewPickerPhone(w.phone))}" data-name="${escapeAttr(w.name)}" data-id="${escapeAttr(w.id || '')}"${booked ? ' data-booked="1"' : ''}${checked.has(w.name) ? ' checked' : ''}>
         <span class="crew-assign-worker-name">${escapeAttr(w.name)}${tempTag(w)}</span>
-        ${booked ? '<span class="crew-booked-badge">booked</span>' : ''}
+        ${booked ? '<span class="crew-booked-badge" title="Already on another job this day">booked this day</span>'
+          : w.otherDays.length ? `<span class="crew-booked-badge other-day" title="Also booked ${escapeAttr(w.otherDays.map(shortDayLabel).join(', '))}">also ${escapeAttr(shortDayLabel(w.otherDays[0]))}${w.otherDays.length > 1 ? ' +' + (w.otherDays.length - 1) : ''}</span>` : ''}
       </label>`;
     }).join('')}</div>
     <div class="crew-assign-nomatch" hidden>No one matches.</div>
@@ -4245,6 +4308,11 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false } = {}) {
       catch (error) { problems.push(error.message); }
       try { await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log'); }
       catch (error) { problems.push(error.message); }
+      // Job hours: one run per worker with hours, for the weekly hours sheets.
+      for (const payload of buildJobHoursPayloads(job, eodSheet)) {
+        try { await runSideEffect(CONFIG.JOB_HOURS_URL, payload, `Hours for ${payload.employeeName}`, 'job_hours', 'hours-' + (String(payload.workerPhone).replace(/\D/g, '') || payload.contactId || payload.employeeName)); }
+        catch (error) { problems.push(error.message); }
+      }
     } else if (removedWorkers.length && !noText) {
       try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers, ...(unschedule ? { reason: 'unscheduled', unscheduled: true } : {}) }, 'Worker release notifications'); }
       catch (error) { problems.push(error.message); }
@@ -4394,6 +4462,95 @@ function renderEodSections() {
     </div>`).join('');
 }
 
+/* EOD crew hours: everyone on the job's crew, plus workers sent home from this
+   job on its date. Default hours = the job's hours for the day minus 1 hour for
+   lunch, editable. A worker sent home gets the hours picked when they were sent
+   home (newer than any draft edit). No pay rates are shown or sent. */
+let eodCrewList = [];
+const eodNameKey = name => String(name || '').trim().toLowerCase();
+const eodHoursLabel = h => String(Math.round((Number(h) || 0) * 100) / 100);
+const eodQuarter = h => Math.round(h * 4) / 4;
+function eodDefaultHours(job) {
+  const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+  const start = toMin(getReportTime(job)), end = toMin(getReportEndTime(job));
+  if (start === null || end === null) return '';
+  let minutes = end - start;
+  if (minutes <= 0) minutes += 24 * 60; // night shift: ends the next morning
+  return Math.max(0, eodQuarter(minutes / 60 - 1));
+}
+function eodCrewFor(job) {
+  const roster = dashboardData.labor || [];
+  const rosterFor = name => roster.find(w => eodNameKey(w.name) === eodNameKey(name)) || {};
+  const fallback = eodDefaultHours(job);
+  const rows = getCrew(job).filter(w => w && w.name).map(w => ({
+    workerName: w.name, contactId: w.id || rosterFor(w.name).id || '', workerPhone: w.phone || rosterFor(w.name).phone || '',
+    defaultHours: fallback, sentHome: false, sentHomeAt: 0
+  }));
+  const day = getReportDate(job);
+  const rec = dashboardData.sharedStateByJobId && dashboardData.sharedStateByJobId.get(job.id);
+  const sent = (rec && Array.isArray(rec.sentHome) ? rec.sentHome : []).filter(s => s && s.name && (!day || !s.reportDate || s.reportDate === day));
+  for (const s of sent) {
+    if (rows.some(r => eodNameKey(r.workerName) === eodNameKey(s.name))) continue; // back on the crew: crew wins
+    const at = Date.parse(s.at) || 0;
+    const existing = rows.find(r => r.sentHome && eodNameKey(r.workerName) === eodNameKey(s.name));
+    if (existing) { if (at >= existing.sentHomeAt) Object.assign(existing, { defaultHours: Number(s.hoursWorked) || 0, sentHomeAt: at }); continue; }
+    rows.push({ workerName: s.name, contactId: s.id || rosterFor(s.name).id || '', workerPhone: s.phone || rosterFor(s.name).phone || '',
+      defaultHours: Number(s.hoursWorked) || 0, sentHome: true, sentHomeAt: at });
+  }
+  return rows;
+}
+// draftCrew: { [name lower]: { hours, at } } from this browser's draft. A draft
+// edit wins unless the worker was sent home after it.
+function renderEodCrew(draftCrew) {
+  const body = document.getElementById('eodCrewRows');
+  if (!eodCrewList.length) { body.innerHTML = '<tr><td class="eod-crew-empty" colspan="2">No crew on this job today.</td></tr>'; return; }
+  body.innerHTML = eodCrewList.map((w, i) => {
+    const saved = draftCrew && draftCrew[eodNameKey(w.workerName)];
+    const useDraft = saved && saved.hours !== undefined && !(w.sentHome && w.sentHomeAt > (saved.at || 0));
+    const value = useDraft ? saved.hours : w.defaultHours;
+    return `<tr class="eod-crew-row" data-index="${i}">
+      <td class="eod-crew-name">${eodEsc(w.workerName)}${w.sentHome ? ' <span class="eod-sent-home">sent home</span>' : ''}</td>
+      <td><input type="number" class="eod-hours" min="0" max="24" step="0.25" inputmode="decimal" value="${eodEsc(value)}"${useDraft && saved.at ? ` data-edited-at="${saved.at}"` : ''} aria-label="Hours worked by ${eodEsc(w.workerName)}"></td>
+    </tr>`;
+  }).join('');
+}
+function collectEodCrew() {
+  return [...document.querySelectorAll('#eodCrewRows .eod-crew-row')].map(row => {
+    const w = eodCrewList[Number(row.dataset.index)];
+    const raw = row.querySelector('.eod-hours').value;
+    return { workerName: cleanEodText(w.workerName), contactId: w.contactId, workerPhone: w.workerPhone, sentHome: w.sentHome,
+      hoursWorked: raw === '' ? '' : eodQuarter(Math.max(0, parseFloat(raw) || 0)) };
+  });
+}
+function eodCrewDraft() {
+  const crew = {};
+  document.querySelectorAll('#eodCrewRows .eod-crew-row').forEach(row => {
+    const input = row.querySelector('.eod-hours');
+    if (!input.dataset.editedAt) return; // untouched: keep following the default / sent home value
+    crew[eodNameKey(eodCrewList[Number(row.dataset.index)].workerName)] = { hours: input.value, at: Number(input.dataset.editedAt) };
+  });
+  return crew;
+}
+// One job hours run per worker with hours over 0, shaped for the Weekly Hours
+// scenario: date (YYYY-MM-DD), employeeName, hoursWorked, notes. Extra fields
+// (dayOfWeek, weekStart, job, contact) are there if a route wants them.
+function buildJobHoursPayloads(job, sheet) {
+  const date = sheet.date;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
+  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  const dayOfWeek = d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '';
+  const weekStart = d ? addDaysYMD(date, -((d.getDay() + 6) % 7)) : '';
+  const notes = cleanEodText(sheet.jobName || [getClientName(job), job.name].filter(Boolean).join(' - ')).trim();
+  return (sheet.crewHours || []).filter(w => Number(w.hoursWorked) > 0).map((w, i, all) => ({
+    action: 'job_hours', jobId: job.id, opportunityId: job.id,
+    date, employeeName: w.workerName, hoursWorked: Number(w.hoursWorked), notes,
+    dayOfWeek, weekStart, sentHome: !!w.sentHome,
+    contactId: w.contactId || '', workerPhone: w.workerPhone || '',
+    jobName: sheet.jobName || '', jobAddress: job.name || '', clientName: getClientName(job),
+    workerIndex: i + 1, workerCount: all.length, submittedAt: sheet.submittedAt
+  }));
+}
+
 // Reads the form into the payload shape sent to Make. Every template line is
 // included (blank ones too) so row positions stay stable for mapping.
 function collectEodSheet() {
@@ -4407,8 +4564,8 @@ function collectEodSheet() {
     return { key: section.key, section: section.label, lines, subtotal: eodRound(lines.reduce((sum, l) => sum + l.lineTotal, 0)) };
   });
   const totalJobCost = eodRound(sections.reduce((sum, s) => sum + s.subtotal, 0));
-  const markupPercent = eodNum(document.getElementById('eodMarkup').value);
   const bySection = Object.fromEntries(sections.map(s => [s.key, s]));
+  const crewHours = collectEodCrew();
   return {
     jobName: cleanEodText(document.getElementById('eodJobName').value).trim(),
     date: document.getElementById('eodDate').value,
@@ -4419,19 +4576,19 @@ function collectEodSheet() {
     exteriorSubtotal: bySection.exterior.subtotal,
     gradingSubtotal: bySection.grading.subtotal,
     totalJobCost,
-    markupPercent,
-    totalPriceToCustomer: eodRound(totalJobCost * (1 + markupPercent / 100)),
-    ...eodSheetFields(sections, markupPercent)
+    crewHours,
+    totalCrewHours: eodRound(crewHours.reduce((sum, w) => sum + (Number(w.hoursWorked) || 0), 0)),
+    ...eodSheetFields(sections),
+    ...eodCrewFields(crewHours)
   };
 }
 
 // Flat fields for the Make -> Google Sheets values batchUpdate, named exactly
 // like its placeholders: INTERIOR_LABOR_DESC / _QTY / _RATE, ...,
 // INTERIOR_EQUIPMENT_1_DESC (repeated categories are numbered; a single one,
-// like Grading Equipment, isn't), plus MARKUP_PERCENT. Blank boxes send "" so
-// the sheet cell stays empty. MARKUP_PERCENT is sent as e.g. "20%" so
-// USER_ENTERED stores 0.2 in the % cell E38 (a bare 20 would mean 2000%).
-function eodSheetFields(sections, markupPercent) {
+// like Grading Equipment, isn't). Blank boxes send "" so the sheet cell stays
+// empty. There is no markup on the EOD sheet any more.
+function eodSheetFields(sections) {
   const fields = {};
   sections.forEach(section => {
     const counts = {};
@@ -4445,7 +4602,12 @@ function eodSheetFields(sections, markupPercent) {
       fields[`${key}_RATE`] = l.rate ? l.rate : '';
     });
   });
-  fields.MARKUP_PERCENT = markupPercent ? `${markupPercent}%` : '';
+  return fields;
+}
+// Flat crew hours for Make mapping: CREW_1_NAME, CREW_1_HOURS, ... (no pay rates).
+function eodCrewFields(crewHours) {
+  const fields = { CREW_COUNT: crewHours.length };
+  crewHours.forEach((w, i) => { fields[`CREW_${i + 1}_NAME`] = w.workerName; fields[`CREW_${i + 1}_HOURS`] = w.hoursWorked; });
   return fields;
 }
 
@@ -4457,7 +4619,7 @@ function recalcEodSheet() {
     el.querySelector('.eod-subtotal').textContent = eodMoney(section.subtotal);
   });
   document.getElementById('eodTotalCost').textContent = eodMoney(sheet.totalJobCost);
-  document.getElementById('eodTotalPrice').textContent = eodMoney(sheet.totalPriceToCustomer);
+  document.getElementById('eodCrewTotal').textContent = eodHoursLabel(sheet.totalCrewHours);
   return sheet;
 }
 
@@ -4471,6 +4633,7 @@ function openEodSheet(jobId, btn) {
   eodJobId = jobId; eodTriggerBtn = btn || null;
   renderEodSections();
   fillEodDefaults(job);
+  eodCrewList = eodCrewFor(job);
   const draft = readEodDraft(jobId);
   const note = document.getElementById('eodDraftNote');
   if (draft) {
@@ -4478,6 +4641,7 @@ function openEodSheet(jobId, btn) {
     note.textContent = `Draft restored from ${new Date(draft.savedAt).toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}.`;
     note.hidden = false;
   } else note.hidden = true;
+  renderEodCrew(draft && draft.crew);
   recalcEodSheet();
   eodOverlay.classList.add('open'); eodSheetEl.classList.add('open');
 }
@@ -4491,14 +4655,13 @@ function closeEodSheet() {
 function fillEodDefaults(job) {
   document.getElementById('eodJobName').value = cleanEodText([getClientName(job), job.name].filter(Boolean).join(' - '));
   document.getElementById('eodDate').value = (typeof getReportDate === 'function' && getReportDate(job)) || localIsoDate();
-  document.getElementById('eodMarkup').value = typeof boardDefaults !== 'undefined' && boardDefaults.defaultMarkupPercent !== '' ? boardDefaults.defaultMarkupPercent : '';
 }
 
 /* EOD drafts: one per job, kept in this browser's localStorage until the
    sheet is submitted (or "Clear sheet" is pressed). */
 const EOD_DRAFT_PREFIX = 'eodDraft:';
 function readEodDraft(jobId) {
-  try { const d = JSON.parse(localStorage.getItem(EOD_DRAFT_PREFIX + jobId) || 'null'); return d && d.lines ? d : null; }
+  try { const d = JSON.parse(localStorage.getItem(EOD_DRAFT_PREFIX + jobId) || 'null'); return d && (d.lines || d.crew) ? d : null; }
   catch { return null; }
 }
 function eodFormSnapshot() {
@@ -4507,12 +4670,12 @@ function eodFormSnapshot() {
     lines[section.key] = [...eodSheetEl.querySelectorAll(`.eod-section[data-section="${section.key}"] .eod-line`)]
       .map(row => [row.querySelector('.eod-desc').value, row.querySelector('.eod-qty').value, row.querySelector('.eod-rate').value]);
   });
-  return { jobName: document.getElementById('eodJobName').value, date: document.getElementById('eodDate').value, markup: document.getElementById('eodMarkup').value, lines };
+  return { jobName: document.getElementById('eodJobName').value, date: document.getElementById('eodDate').value, lines, crew: eodCrewDraft() };
 }
 function saveEodDraft() {
   if (!eodJobId) return;
   const snap = eodFormSnapshot();
-  const hasEntries = snap.markup || Object.values(snap.lines).some(rows => rows.some(r => r.some(Boolean)));
+  const hasEntries = Object.keys(snap.crew).length || Object.values(snap.lines).some(rows => rows.some(r => r.some(Boolean)));
   try {
     if (hasEntries) localStorage.setItem(EOD_DRAFT_PREFIX + eodJobId, JSON.stringify({ ...snap, savedAt: Date.now() }));
     else localStorage.removeItem(EOD_DRAFT_PREFIX + eodJobId);
@@ -4524,7 +4687,6 @@ function clearEodDraft(jobId) {
 function applyEodDraft(draft) {
   if (draft.jobName) document.getElementById('eodJobName').value = cleanEodText(draft.jobName);
   if (draft.date) document.getElementById('eodDate').value = draft.date;
-  document.getElementById('eodMarkup').value = draft.markup || '';
   EOD_SECTIONS.forEach(section => {
     const saved = (draft.lines || {})[section.key] || [];
     eodSheetEl.querySelectorAll(`.eod-section[data-section="${section.key}"] .eod-line`).forEach((row, i) => {
@@ -4549,7 +4711,7 @@ function scrubEodTextInput(input) {
 }
 // Number boxes: digits and one decimal point only (no e, +, - or negatives).
 eodSheetEl.addEventListener('keydown', e => {
-  if (e.target.matches('.eod-qty, .eod-rate, #eodMarkup') && ['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+  if (e.target.matches('.eod-qty, .eod-rate, .eod-hours') && ['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && eodSheetEl.classList.contains('open')) closeEodSheet();
@@ -4559,7 +4721,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveE
 
 eodSheetEl.addEventListener('input', e => {
   if (e.target.matches('.eod-desc, #eodJobName')) scrubEodTextInput(e.target);
-  if (e.target.matches('.eod-qty, .eod-rate, #eodMarkup') && e.target.value !== '' && Number(e.target.value) < 0) e.target.value = '';
+  if (e.target.matches('.eod-qty, .eod-rate, .eod-hours') && e.target.value !== '' && Number(e.target.value) < 0) e.target.value = '';
+  if (e.target.classList.contains('eod-hours')) e.target.dataset.editedAt = String(Date.now());
   if (e.target.classList.contains('eod-desc')) {
     const match = EOD_RATE_REFERENCE.find(([name]) => name === e.target.value);
     const rateInput = e.target.closest('tr').querySelector('.eod-rate');
@@ -4572,7 +4735,7 @@ document.getElementById('clearEodSheet').addEventListener('click', () => {
   const job = (dashboardData.jobs || []).find(j => (j.id || '') === eodJobId);
   if (!job || !confirm('Clear everything on this EOD sheet? This deletes the saved draft.')) return;
   clearEodDraft(eodJobId);
-  renderEodSections(); fillEodDefaults(job); recalcEodSheet();
+  renderEodSections(); fillEodDefaults(job); eodCrewList = eodCrewFor(job); renderEodCrew(null); recalcEodSheet();
   document.getElementById('eodDraftNote').hidden = true;
 });
 document.getElementById('closeEodSheet').addEventListener('click', closeEodSheet);
@@ -4583,6 +4746,8 @@ document.getElementById('submitEodSheet').addEventListener('click', async () => 
   const sheet = recalcEodSheet();
   if (!sheet.date) { showToast('Add the date for this EOD sheet.', true); return; }
   if (!sheet.lines.some(l => l.description || l.qty || l.rate)) { showToast('Fill in at least one line before submitting.', true); return; }
+  const badHours = sheet.crewHours.filter(w => w.hoursWorked === '' || !(w.hoursWorked >= 0 && w.hoursWorked <= 24) || Math.round(w.hoursWorked * 4) !== w.hoursWorked * 4);
+  if (badHours.length) { showToast(`Hours worked for ${badHours.map(w => w.workerName).join(', ')}: enter 0 to 24, in quarter hours (like 7.5 or 7.25).`, true); return; }
   const original = submitBtn.textContent;
   submitBtn.disabled = true; submitBtn.textContent = 'Submitting...';
   try {
@@ -7370,7 +7535,8 @@ psListEl.addEventListener('click', async e => {
 
 /* ---------- Signed-in user + admin tools (1.8) ----------
    Sign-in is automatic when the board is opened inside GHL as a Custom Page
-   (encrypted user context, same as the dialer). Otherwise a one-time picker.
+   (encrypted user context, same as the dialer). Otherwise a password gate
+   where the password is the user's own GHL user ID.
    The server decides who is an admin (admin list + Jesse Pickar); these
    controls only hide what the server would refuse anyway. */
 let currentSession = { signedIn: false, user: null, isAdmin: false, needsAdminUnlock: false };
@@ -7405,6 +7571,7 @@ function applySession(info) {
   } else { text.textContent = 'Not signed in'; role.hidden = true; }
   // Inside GHL the sign-in follows the GHL user; Switch user is only for the picker.
   document.getElementById('switchUserBtn').hidden = !currentSession.signedIn || currentSession.via === 'ghl_sso';
+  document.getElementById('signinIdBtn').hidden = !currentSession.signedIn;
   const adminTab = document.getElementById('adminViewTab');
   adminTab.hidden = !(currentSession.isAdmin || currentSession.needsAdminUnlock);
   if (adminTab.hidden && adminTab.classList.contains('active')) document.getElementById('laborViewTab').click();
@@ -7451,33 +7618,23 @@ async function initSession() {
   applySession({ signedIn: false });
   openSignin();
 }
-async function openSignin(message) {
+function openSignin(message) {
   const backdrop = document.getElementById('signinBackdrop');
-  const select = document.getElementById('signinUser');
   const err = document.getElementById('signinError');
   err.hidden = !message; err.textContent = message || '';
   document.getElementById('signinPin').value = '';
+  document.getElementById('signinPassword').value = '';
   backdrop.hidden = false;
-  try {
-    const users = await fetchSessionUsers();
-    select.innerHTML = '<option value="">Select your name</option>' + users.map(u => `<option value="${sessionEsc(u.id)}">${sessionEsc(u.name)}</option>`).join('');
-    if (currentSession.user) select.value = currentSession.user.id;
-    document.getElementById('signinSkip').hidden = true;
-  } catch {
-    select.innerHTML = '<option value="">GHL users unavailable</option>';
-    err.hidden = false; err.textContent = "Couldn't load GHL users. You can keep working without signing in and try again later.";
-    document.getElementById('signinSkip').hidden = false;
-  }
-  select.focus();
+  document.getElementById('signinPassword').focus();
 }
 document.getElementById('signinSubmit').addEventListener('click', async () => {
   const btn = document.getElementById('signinSubmit');
-  const userId = document.getElementById('signinUser').value;
   const err = document.getElementById('signinError');
-  if (!userId) { err.hidden = false; err.textContent = 'Pick your name first.'; return; }
+  const userId = document.getElementById('signinPassword').value.trim();
+  if (!userId) { err.hidden = false; err.textContent = 'Enter your password (your GHL user ID).'; document.getElementById('signinPassword').focus(); return; }
   btn.disabled = true; btn.textContent = 'Signing in...';
   try {
-    const info = await sessionPost({ action: 'signin', source: 'picker', userId, pin: document.getElementById('signinPin').value });
+    const info = await sessionPost({ action: 'signin', source: 'user_id', userId, pin: document.getElementById('signinPin').value });
     applySession(info);
     document.getElementById('signinBackdrop').hidden = true;
     showToast(`Signed in as ${info.user.name}.`);
@@ -7485,8 +7642,14 @@ document.getElementById('signinSubmit').addEventListener('click', async () => {
   } catch (e) { err.hidden = false; err.textContent = e.message; }
   finally { btn.disabled = false; btn.textContent = 'Sign in'; }
 });
-document.getElementById('signinUser').addEventListener('change', () => { document.getElementById('signinError').hidden = true; });
-document.getElementById('signinSkip').addEventListener('click', () => { document.getElementById('signinBackdrop').hidden = true; });
+['signinPassword', 'signinPin'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('signinSubmit').click(); }));
+document.getElementById('signinPassword').addEventListener('input', () => { document.getElementById('signinError').hidden = true; });
+// Your GHL user ID is your password outside GHL. Copy it (shown in the toast too).
+document.getElementById('signinIdBtn').addEventListener('click', async () => {
+  const id = currentSession.user?.id || ''; if (!id) return;
+  try { await navigator.clipboard.writeText(id); showToast(`Copied your sign-in ID: ${id}. Use it as the password to open the board outside GHL.`); }
+  catch { showToast(`Your sign-in ID: ${id}. Use it as the password to open the board outside GHL.`); }
+});
 document.getElementById('switchUserBtn').addEventListener('click', async () => {
   try { await sessionPost({ action: 'signout' }); } catch {}
   applySession({ signedIn: false });
@@ -7540,7 +7703,7 @@ function renderAdminUsers() {
   const people = senior ? [...(sessionGhlUsers || []).map(u => ({ userId: u.id, name: u.name, email: u.email })), ...admins.filter(a => !(sessionGhlUsers || []).some(u => u.id === a.userId))] : admins.map(a => ({ ...a }));
   document.getElementById('adminUserSearch').parentElement.hidden = !senior;
   document.getElementById('adminUsersNote').textContent = senior
-    ? 'You are a senior admin: tap Enroll or Revoke next to anyone in GHL. Admins can add and remove workers and manage Field App access.'
+    ? 'You are a senior admin: tap Enroll or Revoke next to anyone in GHL. Admins can add and remove workers and manage Field App access. Each person\'s sign-in ID is their password for opening the board outside GHL.'
     : 'Admins can add, edit and remove laborers and manage Field App access.';
   const q = document.getElementById('adminUserSearch').value.trim().toLowerCase();
   const shown = people.filter(p => !q || `${p.name} ${p.email}`.toLowerCase().includes(q))
@@ -7551,11 +7714,13 @@ function renderAdminUsers() {
     const admin = byId.get(p.userId), you = p.userId === currentSession.user?.id;
     const isSeniorRow = admin?.addedBy === 'bootstrap';
     const tags = `${admin ? `<span class="admin-pill">${isSeniorRow ? 'SENIOR ADMIN' : 'ADMIN'}</span>` : ''}${you ? '<span class="admin-pill you">YOU</span>' : ''}`;
+    // Senior admins see each person's GHL user ID (their password outside GHL); tap to copy.
+    const idTag = senior ? ` · sign-in ID <button type="button" class="admin-id" data-id="${sessionEsc(p.userId)}" title="Copy">${sessionEsc(p.userId)}</button>` : '';
     const detail = [p.email, isSeniorRow ? '' : admin?.addedBy ? 'enrolled by ' + admin.addedBy : ''].filter(Boolean).join(' · ');
     const action = isSeniorRow || !senior ? ''
       : admin ? `<button type="button" class="job-stage-btn cancel admin-toggle" data-action="remove" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}">Revoke</button>`
       : `<button type="button" class="job-stage-btn edit admin-toggle" data-action="add" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}">Enroll</button>`;
-    return `<li><div class="who">${sessionEsc(p.name)}${tags}<small>${sessionEsc(detail)}</small></div>${action}</li>`;
+    return `<li><div class="who">${sessionEsc(p.name)}${tags}<small>${sessionEsc(detail)}${idTag}</small></div>${action}</li>`;
   }).join('');
 }
 async function renderAdminView(force) {
@@ -7595,6 +7760,8 @@ function renderAdminLabor() {
 }
 document.getElementById('adminLaborSearch').addEventListener('input', renderAdminLabor);
 document.getElementById('adminUserList').addEventListener('click', async e => {
+  const idBtn = e.target.closest('.admin-id');
+  if (idBtn) { try { await navigator.clipboard.writeText(idBtn.dataset.id); showToast('Sign-in ID copied.'); } catch { showToast(idBtn.dataset.id); } return; }
   const btn = e.target.closest('.admin-toggle'); if (!btn) return;
   const { action, userId, name } = btn.dataset;
   const self = userId === currentSession.user?.id;
@@ -8049,7 +8216,6 @@ function renderSettings(st) {
   const select = document.getElementById('setDefaultUser');
   select.innerHTML = '<option value="">Whoever is signed in</option>' + (sessionGhlUsers || []).map(u => `<option value="${sessionEsc(u.id)}">${sessionEsc(u.name)}</option>`).join('');
   select.value = st.defaultAssignedUserId || '';
-  document.getElementById('setMarkup').value = st.defaultMarkupPercent === '' || st.defaultMarkupPercent == null ? '' : st.defaultMarkupPercent;
   document.getElementById('setPin').value = '';
   document.getElementById('clearPin').checked = false;
   document.getElementById('pinStatus').textContent = `(${st.adminPinSet ? 'set here' : 'not set here'}${st.envPinSet ? '; Netlify PIN also works' : ''})`;
@@ -8085,14 +8251,14 @@ document.getElementById('problemList').addEventListener('click', async e => {
 });
 document.getElementById('saveSettings').addEventListener('click', async () => {
   const btn = document.getElementById('saveSettings');
-  const body = { action: 'save_settings', defaultAssignedUserId: document.getElementById('setDefaultUser').value, defaultMarkupPercent: document.getElementById('setMarkup').value };
+  const body = { action: 'save_settings', defaultAssignedUserId: document.getElementById('setDefaultUser').value };
   const pin = document.getElementById('setPin').value;
   if (document.getElementById('clearPin').checked) body.clearAdminPin = true; else if (pin) body.adminPin = pin;
   btn.disabled = true; btn.textContent = 'Saving...';
   try {
     const data = await seniorApi('', body);
     renderSettings(data.settings);
-    boardDefaults = { ...boardDefaults, defaultAssignedUserId: data.settings.defaultAssignedUserId, defaultMarkupPercent: data.settings.defaultMarkupPercent };
+    boardDefaults = { ...boardDefaults, defaultAssignedUserId: data.settings.defaultAssignedUserId };
     delete document.getElementById('assignedUser').dataset.touched; prefillAssignedUser();
     showToast('Settings saved for everyone.');
     seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {});

@@ -59,15 +59,27 @@ The job **Complete EOD Sheet** button (formerly Reset Day) posts the Job Costing
 
 1. Open the worker scenario, click the Custom Webhook module, **Redetermine data structure**, then submit one EOD sheet from the board so Make relearns the fields.
 2. `file` is now a real binary file (the filled Job Costing Worksheet .xlsx). In Google Drive upload / email attachment / Slack file modules, map **`file`** directly (Make fills the file name and data). Replace any old `{{toBinary(file.data; "base64")}}` and `{{file.fileName}}` mappings; `fileName` is also sent as its own field.
-3. Flat fields keep their names and arrive as text: `action`, `jobId`, `opportunityId`, `jobName`, `jobAddress`, `clientName`, `date`, `submittedAt`, `interiorSubtotal`, `exteriorSubtotal`, `gradingSubtotal`, `totalJobCost`, `markupPercent`, `totalPriceToCustomer`, `nightWork` (`"true"`/`"false"`), `shiftType`, `fileName`, `eventId`, and every Google Sheets field below. Existing `{{2.INTERIOR_LABOR_DESC}}`-style mappings keep working after step 1.
-4. Lists arrive as JSON text: `lines`, `sections`, `crew`, `removedWorkers`. If a route uses them, wrap with `parseJSON` (e.g. an Iterator over `{{parseJSON(2.removedWorkers)}}`).
+3. Flat fields keep their names and arrive as text: `action`, `jobId`, `opportunityId`, `jobName`, `jobAddress`, `clientName`, `date`, `submittedAt`, `interiorSubtotal`, `exteriorSubtotal`, `gradingSubtotal`, `totalJobCost`, `totalCrewHours`, `CREW_COUNT`, `CREW_1_NAME` / `CREW_1_HOURS` (one pair per worker), `nightWork` (`"true"`/`"false"`), `shiftType`, `fileName`, `eventId`, and every Google Sheets field below. Existing `{{2.INTERIOR_LABOR_DESC}}`-style mappings keep working after step 1.
+4. Lists arrive as JSON text: `lines`, `sections`, `crew`, `crewHours`, `removedWorkers`. If a route uses them, wrap with `parseJSON` (e.g. an Iterator over `{{parseJSON(2.removedWorkers)}}`).
 5. Still end the route with the `{"ok":true}` Webhook response.
 
 Setting `EOD_SHEET_FORMAT=json` in Netlify temporarily restores the old JSON body (with `file.data` base64) while you switch the mapping over.
 
 Lines: all 19 template rows are sent, blanks included (`section`, `category`, `line`, `description`, `qty`, `rate`, `lineTotal`). Blank EOD sheets (no filled line or no job id) are never posted.
 
-Google Sheets fields (top level, named to match the values batchUpdate placeholders): `INTERIOR_LABOR_DESC/_QTY/_RATE`, `INTERIOR_HOTEL_*`, `INTERIOR_HAULING_*`, `INTERIOR_EQUIPMENT_1_*`, `INTERIOR_EQUIPMENT_2_*`, `INTERIOR_FUEL_*`, `INTERIOR_MISC_*`, `EXTERIOR_LABOR_*`, `EXTERIOR_HAULING_*`, `EXTERIOR_EQUIPMENT_1_*` to `_3_*`, `EXTERIOR_FUEL_*`, `EXTERIOR_MISC_*`, `GRADING_LABOR_*`, `GRADING_HAULING_*`, `GRADING_EQUIPMENT_*`, `GRADING_FUEL_*`, `GRADING_MISC_*`, and `MARKUP_PERCENT` (sent like `"20%"` so USER_ENTERED stores 0.2). Blank boxes arrive empty. Map them as `{{2.INTERIOR_LABOR_DESC}}` etc. (module 2 = the webhook).
+Google Sheets fields (top level, named to match the values batchUpdate placeholders): `INTERIOR_LABOR_DESC/_QTY/_RATE`, `INTERIOR_HOTEL_*`, `INTERIOR_HAULING_*`, `INTERIOR_EQUIPMENT_1_*`, `INTERIOR_EQUIPMENT_2_*`, `INTERIOR_FUEL_*`, `INTERIOR_MISC_*`, `EXTERIOR_LABOR_*`, `EXTERIOR_HAULING_*`, `EXTERIOR_EQUIPMENT_1_*` to `_3_*`, `EXTERIOR_FUEL_*`, `EXTERIOR_MISC_*`, `GRADING_LABOR_*`, `GRADING_HAULING_*`, `GRADING_EQUIPMENT_*`, `GRADING_FUEL_*`, `GRADING_MISC_*`. Blank boxes arrive empty. There is no markup any more (`MARKUP_PERCENT`, `markupPercent` and `totalPriceToCustomer` are gone; remove those mappings). Map them as `{{2.INTERIOR_LABOR_DESC}}` etc. (module 2 = the webhook).
+
+**Crew hours (no pay rates).** The EOD sheet lists every worker on the job plus anyone sent home from it that day. Each starts at the job's hours for the day minus 1 hour for lunch (07:00 to 15:30 = 7.5), and dispatch can change any of them. A worker sent home shows the hours picked on **Worker sent home**. They are in `crewHours` (`workerName`, `hoursWorked`, `sentHome`, `contactId`, `workerPhone`) and on the workbook under CREW HOURS, where Markup % and Total price to customer used to be.
+
+## Job hours webhook (new, on Complete EOD Sheet)
+
+Complete EOD Sheet also posts one plain JSON run per worker with hours over 0 to `https://hook.us2.make.com/swmlb2j1ef0k89fesawlizhmur714kqo` (override with `JOB_HOURS_WEBHOOK` in Netlify). Fields:
+
+- `date` (`YYYY-MM-DD`, the EOD sheet date, for `parseDate(27.date; "YYYY-MM-DD")`)
+- `employeeName`, `hoursWorked` (a number, like `7.5`), `notes` (the EOD Job Name, like `Client - 55 Elm St`)
+- also `action` (`"job_hours"`), `jobId`, `opportunityId`, `dayOfWeek` (like `Wednesday`), `weekStart` (that week's Monday, `YYYY-MM-DD`), `sentHome`, `contactId`, `workerPhone`, `jobName`, `jobAddress`, `clientName`, `workerIndex`, `workerCount`, `submittedAt`, `eventId`
+
+In the scenario: Redetermine data structure on the webhook and submit one EOD sheet so Make learns the fields, then map `27.date`, `27.employeeName`, `27.hoursWorked` and `27.notes` as the blueprint already does. Add a Webhook response with body `{"ok":true}` right after the webhook (before the weekday router), or every run shows under Admin > Make / GHL problems.
 
 ## Job create: who booked it (1.8)
 

@@ -6,7 +6,8 @@ const lines = Object.entries(layout).flatMap(([section, n]) => Array.from({ leng
 Object.assign(lines[0], { description: 'Skilled Labor <8 HR>', qty: 16, rate: 65 });
 Object.assign(lines[8], { description: 'Full Truck Load', qty: 2, rate: 375 });
 test('EOD sheet produces the filled Job Costing workbook as a base64 .xlsx', () => {
-  const file = eodWorkbookAttachment({ jobName: 'Acme - 123 Main', date: '2026-09-23', markupPercent: 20, lines });
+  const crewHours = [{ workerName: 'Ana Lopez', hoursWorked: 7.5 }, { workerName: 'Bob Ray', hoursWorked: 4, sentHome: true }];
+  const file = eodWorkbookAttachment({ jobName: 'Acme - 123 Main', date: '2026-09-23', lines, crewHours });
   assert.equal(file.mimeType, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   assert.match(file.fileName, /^EOD Sheet - Acme - 123 Main - 2026-09-23\.xlsx$/);
   const entries = readZip(Buffer.from(file.data, 'base64'));
@@ -19,8 +20,13 @@ test('EOD sheet produces the filled Job Costing workbook as a base64 .xlsx', () 
   assert.match(cell('E8'), /<f[^>]*>C8\*D8<\/f><v>1040<\/v>/);
   assert.match(cell('E20'), /<v>750<\/v>/);
   assert.match(cell('E37'), /<v>1790<\/v>/);
-  assert.match(cell('E38'), /<v>0.2<\/v>/);
-  assert.match(cell('E39'), /<v>2148<\/v>/);
+  // No markup: rows 38-39 are now the Crew hours block (hours only, no pay rates).
+  assert.doesNotMatch(sheet, /Markup|TOTAL PRICE|E37\*\(1\+E38\)/);
+  assert.match(cell('A39'), /CREW HOURS/);
+  assert.match(cell('A41'), /Ana Lopez/); assert.match(cell('E41'), /<v>7.5<\/v>/);
+  assert.match(cell('A42'), /Bob Ray \(sent home\)/); assert.match(cell('E42'), /<v>4<\/v>/);
+  assert.match(cell('A43'), /TOTAL CREW HOURS/); assert.match(cell('E43'), /<f>SUM\(E41:E42\)<\/f><v>11.5<\/v>/);
+  assert.match(sheet, /<mergeCell ref="A41:D41"\/>/); assert.doesNotMatch(sheet, /A38:D38/);
 });
 import { eodMultipart, assertEodPayload } from '../lib/eod-xlsx.mjs';
 test('EOD goes to Make as multipart with the workbook as binary and flat fields intact', async () => {
