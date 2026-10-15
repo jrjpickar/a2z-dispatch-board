@@ -48,7 +48,7 @@ const ymd = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angel
       } catch (error) { return route.fulfill({ status: 409, json: { error: error.message } }); }
     }
     if (u.pathname === '/api/workflow-effect') { if (req.method() === 'POST') effects.push(req.postDataJSON()); return reply(req.method() === 'POST' ? { ok: true } : { issues: [] }); }
-    if (u.pathname === '/api/logistics-reminder-now') { reminders.push(1); return reply({ ok: true, sent: true, summary: '2 of 2 moves for tomorrow need attention: 2 no driver.' }); }
+    if (u.pathname === '/api/logistics-reminder-now') { reminders.push(1); return reply({ ok: true, sent: true, summary: 'Logistics: 2 of 2 moves need attention. Labor: 1 of 3 labor jobs need attention.' }); }
     return reply({});
   });
   await page.goto('https://a2z.test/');
@@ -117,7 +117,7 @@ const ymd = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angel
   assert.match(dialogs.at(-1), /Joe Driver is already on another open move/);
   assert.equal(states.m3.driverName, 'Joe Driver'); assert.equal(states.m1.driverName, 'Joe Driver');
   await page.click('.logi-remind-now');
-  await page.waitForFunction(() => /Reminder sent/.test(document.getElementById('toast').innerText));
+  await page.waitForFunction(() => /Reminders sent/.test(document.getElementById('toast').innerText));
   assert.equal(reminders.length, 1);
   assert.deepEqual(errors, []);
   await browser.close();

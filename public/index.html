@@ -6260,7 +6260,7 @@ function renderLogisticsAttention(attn, watchedCount) {
   bar.hidden = false;
   bar.classList.toggle('all-good', !attn.any);
   const chip = (key, n, text) => n ? `<button type="button" class="logi-attn-filter${logisticsAttnFilter === key ? ' active' : ''}" data-filter="${key}">${n} ${text}</button>` : '';
-  const remind = currentSession.isAdmin ? '<button type="button" class="logi-remind-now" title="Send tomorrow\'s reminder to the Make webhook now">Send reminder now</button>' : '';
+  const remind = currentSession.isAdmin ? '<button type="button" class="logi-remind-now" title="Send tomorrow\'s logistics and labor reminders to the Make webhook now">Send reminders now</button>' : '';
   bar.innerHTML = attn.any
     ? `<b>Today and tomorrow: ${attn.any} ${attn.any === 1 ? 'move needs' : 'moves need'} attention</b>${chip('driver', attn.driver, 'no driver')}${chip('vehicle', attn.vehicle, 'no vehicle')}${chip('time', attn.time, 'no time')}${logisticsAttnFilter ? '<button type="button" class="logi-attn-clear">Show all</button>' : ''}${remind}`
     : `<b>Today and tomorrow are fully assigned.</b>${remind}`;
@@ -6360,9 +6360,9 @@ document.getElementById('logisticsAttention').addEventListener('click', async e 
       const res = await fetchWithTimeout('/api/logistics-reminder-now', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }, 40000);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      showToast(data.sent ? `Reminder sent. ${data.summary}` : data.reason === 'everything for tomorrow is ready' ? 'Nothing to send: tomorrow is fully assigned.' : `Reminder not confirmed by Make. ${data.summary || ''}`, !data.sent && data.reason !== 'everything for tomorrow is ready');
+      showToast(data.sent ? `Reminders sent. ${data.summary}` : data.reason === 'everything for tomorrow is ready' ? 'Nothing to send: tomorrow is fully assigned and crewed.' : `Reminders not confirmed by Make. ${data.summary || ''}`, !data.sent && data.reason !== 'everything for tomorrow is ready');
     } catch (err) { showToast(err.message, true); }
-    finally { now.disabled = false; now.textContent = 'Send reminder now'; }
+    finally { now.disabled = false; now.textContent = 'Send reminders now'; }
   }
 });
 document.getElementById('logisticsBulk').addEventListener('click', async e => {

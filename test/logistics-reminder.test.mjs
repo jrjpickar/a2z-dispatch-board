@@ -58,3 +58,29 @@ test('a vehicle on another open move needs allowShared (the board asks first)', 
   const ok = await saveState(sql, 'move', { moveId: 'v2', action: 'assign_asset', assetId: 'truck9', assetName: 'Truck 9', allowShared: true, expectedVersion: 1, requestId: 'request-share-0002' });
   assert.deepEqual(ok.state.assets, [{ assetId: 'truck9', assetName: 'Truck 9', shared: true }]);
 });
+
+test('labor reminder: same webhook, same payload fields, tomorrow\'s jobs with no crew, a short crew or no time', async () => {
+  const { runLaborReminder, laborReminderFor } = await import('../lib/logistics-reminder.mjs');
+  const job = (id, data, active = true) => sql`insert into job_shared_state (job_id, data, active, version) values (${id}, ${JSON.stringify(data)}, ${active}, 1)`;
+  const t = '2026-10-16';
+  await job('j1', { reportDate: t, reportTime: '07:00', reportEndDate: t, reportEndTime: '15:30', crewSize: 2, crew: [{ name: 'Ana' }, { name: 'Bob' }], jobAddress: '1 Full St' });
+  await job('j2', { reportDate: t, reportTime: '06:00', reportEndDate: t, reportEndTime: '14:00', crewSize: 4, crew: [{ name: 'Cara' }], jobAddress: '2 Short St', clientName: 'Acme' });
+  await job('j3', { reportDate: t, reportTime: '', crewSize: 2, crew: [], jobAddress: '3 Empty St' });
+  await job('j4', { reportDate: t, reportTime: '07:00', reportEndTime: '15:00', crew: [], status: 'completed' }, false);
+  const runs = [];
+  globalThis.fetch = async (url, init) => { assert.match(String(url), /cw5dsqfr8qsr5vb9hr1rehspyl6pa3v2/); runs.push(JSON.parse(init.body)); return Response.json({ ok: true }); };
+  const r = await runLaborReminder(sql, { now: new Date('2026-10-15T22:00:00Z'), boardUrl: 'https://board.test' });
+  assert.equal(r.sent, true);
+  const p = runs[0];
+  assert.equal(p.action, 'labor_reminder'); assert.equal(p.date, t); assert.equal(p.totalMoves, 3); assert.equal(p.readyMoves, 1); assert.equal(p.needsAttention, 2);
+  assert.equal(p.missingDriverCount, 1); assert.equal(p.missingVehicleCount, 1); assert.equal(p.missingTimeCount, 1);
+  assert.equal(p.summary, '2 of 3 labor jobs for Fri, Oct 16 need attention: 1 no crew, 1 short crew, 1 no time.');
+  assert.equal(p.movesText, '6:00 AM · Labor job (crew of 4) · 2 Short St · missing short crew (1 of 4)\nNo time · Labor job (crew of 2) · 3 Empty St · missing time, crew');
+  assert.equal(p.moves[0].driverName, 'Cara'); assert.equal(p.moves[0].vehicles, '1 of 4 crew');
+  // Identical field names to the logistics reminder.
+  const logisticsKeys = Object.keys(reminderFor([], t)).sort();
+  assert.deepEqual(Object.keys(laborReminderFor([], t)).sort(), logisticsKeys);
+  const lp = reminderFor([{ moveId: 'x', active: true, scheduledDate: t, scheduledTime: '07:00' }], t);
+  assert.deepEqual(Object.keys(p.moves[0]).sort(), Object.keys(lp.moves[0]).sort());
+  assert.equal((await runLaborReminder(sql, { now: new Date('2026-10-15T22:00:00Z') })).reason, 'already sent today');
+});
