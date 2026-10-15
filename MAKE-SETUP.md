@@ -85,6 +85,12 @@ In the scenario: Redetermine data structure on the webhook and submit one EOD sh
 
 Adding (or updating) a worker from GHL posts one plain JSON run to `https://hook.us2.make.com/wk9leiggp4mlr2g5n1acq862y6my52ia` (override with `LABOR_ADDED_WEBHOOK` in Netlify). Fields: `action` (`"newWorker"`), `contactId`, `workerName`, `firstName`, `lastName`, `workerPhone`, `email`, `tags`, `crew` (true/false), `driver` (true/false), `roles` (`Crew`, `Driver` or `Crew/Driver`), `fieldApp` (true/false), `isNew` (false when the worker was already added and was just updated), `addedBy`, `addedByUserId`, `addedAt`, `eventId`. The board saves the worker first and sends this in the background, so the admin never waits on Make. End the scenario with the `{"ok":true}` Webhook response; a run Make doesn't confirm shows under Admin > Make / GHL problems with Retry.
 
+## Logistics reminder webhook (3pm Pacific)
+
+Every day at 3pm Pacific (`LOGISTICS_REMINDER_HOUR` in Netlify changes the hour) the board checks **tomorrow's** open logistics moves. If any are missing a saved time, a driver or a vehicle, it posts one plain JSON run to `https://hook.us2.make.com/cw5dsqfr8qsr5vb9hr1rehspyl6pa3v2` (override with `LOGISTICS_REMINDER_WEBHOOK`). Once a day; nothing is sent when every move is ready. Admins can send it any time with **Send reminder now** on the Logistics page (`forced: true`).
+
+Fields: `action` (`"logistics_reminder"`), `date` (tomorrow, `YYYY-MM-DD`), `dayLabel` (like `Fri, Oct 16`), `totalMoves`, `readyMoves`, `needsAttention`, `missingDriverCount`, `missingVehicleCount`, `missingTimeCount`, `summary` (one sentence, ready for Slack), `movesText` (one line per move, ready for Slack), `moves` (array: `moveId`, `jobId`, `jobAddress`, `clientName`, `movementType`, `equipment`, `time`, `timeLabel`, `driverName`, `vehicles`, `missing`, `missingTime`, `missingDriver`, `missingVehicle`, `ready`), `boardUrl`, `forced`, `sentAt`, `jobId` (`logistics-<date>`), `eventId`. End the scenario with the `{"ok":true}` Webhook response.
+
 ## Book Job: existing client (search by name)
 
 Book Job has a **Find client** search (GHL contacts by name). Picking one fills First/Last name, phone and (if empty) Job Address, and the create run also carries `clientContactId` (the GHL contact id), `existingClient: true` and `clientEmail`. If the name or phone is edited after picking, those are not sent. Map `clientContactId` in the create scenario to reuse that contact instead of searching/creating one.

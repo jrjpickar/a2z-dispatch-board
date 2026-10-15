@@ -138,3 +138,8 @@
   from = "/api/metrics-export"
   to = "/.netlify/functions/metrics-export"
   status = 200
+
+[[redirects]]
+  from = "/api/logistics-reminder-now"
+  to = "/.netlify/functions/logistics-reminder-now"
+  status = 200

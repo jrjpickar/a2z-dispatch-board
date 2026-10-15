@@ -1454,6 +1454,29 @@
   .ghl-results button small { display: block; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
   .ghl-results li.picked { background: var(--orange-tint-soft); }
   .client-search .ghl-results { margin: 6px 0 0; }
+  /* Logistics: needs attention bar, bulk assign, suggestions */
+  .logi-attn { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 14px 10px; padding: 9px 12px; border-left: 4px solid var(--danger); background: #fbeae7; font-size: 13px; }
+  .logi-attn.all-good { border-left-color: #2e7d4f; background: #e7f4ec; }
+  .logi-attn[hidden], .logi-bulk[hidden] { display: none; }
+  .logi-attn b { margin-right: 4px; }
+  .logi-attn button { background: #fff; color: var(--danger); border: 1px solid var(--danger); border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+  .logi-attn button.active { background: var(--danger); color: #fff; }
+  .logi-attn .logi-attn-clear { color: var(--ink-soft); border-color: var(--border); }
+  .logi-attn .logi-remind-now { margin-left: auto; color: var(--ink-soft); border-color: var(--border); font-weight: 500; }
+  .logi-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 14px 10px; padding: 9px 12px; border: 1px solid var(--orange); background: var(--orange-tint-soft); font-size: 13px; }
+  .logi-bulk select { min-width: 170px; }
+  .logi-bulk small { flex-basis: 100%; color: var(--ink-soft); font-size: 11px; }
+  .logi-pick { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-soft); margin-bottom: 4px; cursor: pointer; }
+  .logi-missing { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .logi-missing span { font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .04em; text-transform: uppercase; color: var(--danger); border: 1px solid var(--danger); border-radius: 999px; padding: 1px 6px; }
+  #logisticsDispatchView table.logistics-table tr.needs-attn td:first-child { box-shadow: inset 4px 0 0 var(--danger); }
+  .logi-suggest { margin-top: 6px; display: block; width: 100%; text-align: left; background: #e9f2fb; color: #275c8e; border: 1px dashed #275c8e; border-radius: var(--radius); padding: 5px 8px; font-size: 12px; }
+  .logi-suggest:disabled { opacity: .55; cursor: not-allowed; }
+  .logi-suggest small { display: block; color: var(--ink-soft); font-size: 10px; }
+  body.dark-mode .logi-attn { background: #3a2422; } body.dark-mode .logi-attn.all-good { background: #1f3328; }
+  body.dark-mode .logi-attn button { background: transparent; }
+  body.dark-mode .logi-bulk { background: #34241d; }
+  body.dark-mode .logi-suggest { background: #1d2a38; color: #a9d5fa; border-color: #a9d5fa; }
   .client-picked { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 6px 10px; font-size: 12px; background: var(--orange-tint-soft); border-left: 3px solid var(--orange); }
   .client-picked[hidden] { display: none; }
   .client-picked span { flex: 1; }
@@ -1828,7 +1851,7 @@
   <div class="logistics-layout">
     <div class="panel logistics-drivers-panel"><div class="panel-head"><h2>Drivers</h2><span class="mono" id="logisticsDriverCount">0 TOTAL</span></div><ul class="logistics-resource-list" id="logisticsDrivers"></ul></div>
     <div class="panel logistics-assets-panel"><div class="panel-head"><h2>Assets</h2><span class="mono" id="logisticsAssetCount">0 TOTAL</span></div><div class="logistics-note">Drivers and assets stay independent so either can be reassigned.</div><ul class="logistics-resource-list" id="logisticsAssets"></ul></div>
-    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
+    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="logi-attn" id="logisticsAttention" hidden></div><div class="logi-bulk" id="logisticsBulk" hidden></div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
   </div>
 </div>
 
@@ -6098,7 +6121,9 @@ function renderLogistics() {
     const key = !date ? 'unscheduled' : (date <= todayStr ? 'today' : (date === tomorrowStr ? 'tomorrow' : 'future'));
     groups[key].push(m);
   });
-  const buildLogisticsRow = m => {
+  const suggestIndex = buildSuggestIndex(moves);
+  let lastLogisticsFlags = null;
+  const buildLogisticsRow = (m, groupKey) => {
     const sourceType = logisticsSourceType(m);
     const oppId = m.sourceOpportunityId || m.opportunityId || m.jobId || m.id || '';
     const sourceLabel = m.jobAddress || m.deliveryAddress || m.destinationAddress || m.address || m.name || m.sourceDisplayId || m.opportunityName || m.jobName || oppId || 'N/A';
@@ -6117,7 +6142,8 @@ function renderLogistics() {
     const date = (scheduleOverride && scheduleOverride.date) || m.scheduledDate || m.requestedDate || m.reportDate || m.date || (m.scheduledStart ? String(m.scheduledStart).slice(0,10) : '');
     const time = (scheduleOverride && scheduleOverride.time) || m.scheduledTime || m.requestedTime || m.reportTime || m.time || (m.scheduledStart && String(m.scheduledStart).includes('T') ? String(m.scheduledStart).split('T')[1].slice(0,5) : '');
     const backendScheduleLocked = ['scheduled', 'assigned', 'ready', 'en_route', 'en route', 'in_transit', 'in transit'].includes(String(m.status || '').toLowerCase()) && date && time;
-    const scheduleLocked = scheduleOverride?.locked === false ? false : Boolean((scheduleOverride && scheduleOverride.locked) || backendScheduleLocked || (m.scheduledDate && m.scheduledTime));
+    // A move booked with a date and time (Book Job add-on, Book Container) counts as saved: no re-save needed.
+    const scheduleLocked = scheduleOverride?.locked === false ? false : Boolean((scheduleOverride && scheduleOverride.locked) || backendScheduleLocked || (m.scheduledDate && m.scheduledTime) || (m.requestedDate && m.requestedTime));
     const scheduleCell = scheduleLocked
       ? `<div class="time-edit-wrap locked"><span>${escapeLogisticsHtml(date || 'N/A')}<br>${escapeLogisticsHtml(time || 'N/A')}</span><button type="button" class="time-unlock logistics-schedule-edit" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit</button></div>`
       : `<div class="time-edit-wrap"><input type="date" class="report-date-input mono logistics-date-input" value="${escapeLogisticsHtml(date)}"><input type="time" class="report-time-input mono logistics-time-input" value="${escapeLogisticsHtml(time)}"><button type="button" class="end-save logistics-schedule-lock" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Lock</button></div>`;
@@ -6140,14 +6166,24 @@ function renderLogistics() {
       const id = String(asset.id || asset.assetId || '');
       return id && list.findIndex(item => String(item.id || item.assetId || '') === id) === index;
     });
-    const availableDriverOptions = drivers.filter(d => d.status === 'available').map(d => `<option value="${escapeLogisticsHtml(logisticsDriverKey(d))}">${escapeLogisticsHtml(d.name)}${workerTemperature(d) ? ' · ' + escapeLogisticsHtml(workerTemperature(d)) : ''}</option>`).join('');
+    // Every driver not in maintenance. One already on another open move is labeled; assigning him asks first.
+    const availableDriverOptions = drivers.filter(d => d.name && !/maint|service/.test(String(d.status || '')) && d.name !== assignedDriverName)
+      .sort((a, b) => (a.status === 'available' ? 0 : 1) - (b.status === 'available' ? 0 : 1))
+      .map(d => { const busy = logisticsUsage('driver', d.name, moveKey).length; return `<option value="${escapeLogisticsHtml(logisticsDriverKey(d))}">${escapeLogisticsHtml(d.name)}${workerTemperature(d) ? ' · ' + escapeLogisticsHtml(workerTemperature(d)) : ''}${busy ? ` (on ${busy} other ${busy === 1 ? 'move' : 'moves'})` : ''}</option>`; }).join('');
+    (Array.isArray(m.assets) ? m.assets : []).forEach(a => {
+      const id = String(a.assetId || a.id || '');
+      if (id && !assignedAssets.some(x => String(x.id || x.assetId || '') === id)) assignedAssets.push({ id, name: a.assetName || (assets.find(x => String(x.id || x.assetId || '') === id) || {}).name || id });
+    });
     if ((m.assetId || m.lowboyId || (m.asset && m.asset.id)) && !assignedAssets.some(asset => String(asset.id || asset.assetId || '') === String(m.assetId || m.lowboyId || (m.asset && m.asset.id)))) assignedAssets.unshift({ id: m.assetId || m.lowboyId || (m.asset && m.asset.id), name: m.assetName || (m.asset && m.asset.name) || '' });
     const assignedAssetIds = new Set(assignedAssets.map(asset => String(asset.id || asset.assetId || '')));
     const assignedAssetDisplay = assignedAssets.map(asset => asset.name || asset.assetName || asset.id || asset.assetId).filter(Boolean).join(', ');
-    const availableAssets = assets.filter(a => String(a.status || 'available').toLowerCase() === 'available' && !assignedAssetIds.has(String(a.id || a.assetId || '')));
+    // Every vehicle not in maintenance and not already on this move. One on another open move is labeled; adding it asks first.
+    const availableAssets = assets.filter(a => !/maint|service/.test(String(a.status || '').toLowerCase()) && !assignedAssetIds.has(String(a.id || a.assetId || '')))
+      .sort((a, b) => logisticsUsage('vehicle', a.id || a.assetId, moveKey).length - logisticsUsage('vehicle', b.id || b.assetId, moveKey).length);
+    const assetBusyLabel = a => { const n = logisticsUsage('vehicle', a.id || a.assetId, moveKey).length; return n ? ` (on ${n} other ${n === 1 ? 'move' : 'moves'})` : ''; };
     const isDumpTruck = a => /dump\s*truck|\bsemi\b|peterb(?:ilt|uilt)/i.test([a.name, a.assetName, a.type, a.assetType, a.configuration].filter(Boolean).join(' '));
-    const availableAssetOptions = availableAssets.map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
-    const availableDumpTruckOptions = availableAssets.filter(isDumpTruck).map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}</option>`).join('');
+    const availableAssetOptions = availableAssets.map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}${assetBusyLabel(a)}</option>`).join('');
+    const availableDumpTruckOptions = availableAssets.filter(isDumpTruck).map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}${assetBusyLabel(a)}</option>`).join('');
     const driverEditing = Boolean(window.logisticsDriverEdit[moveKey]);
     const assetEditing = Boolean(window.logisticsAssetEdit[moveKey]);
     const removeDriver = (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
@@ -6160,18 +6196,33 @@ function renderLogistics() {
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
     const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
     const none = '<span class="logi-none">None yet</span>';
+    // Needs attention (today and tomorrow only): no saved time, no driver, no vehicle.
+    const watch = assignable && (groupKey === 'today' || groupKey === 'tomorrow');
+    const flags = { moveKey, group: groupKey, time: watch && !scheduleLocked, driver: watch && !(assignedDriverId || assignedDriverName), vehicle: watch && !assignedAssets.length };
+    flags.any = flags.time || flags.driver || flags.vehicle;
+    lastLogisticsFlags = flags;
+    const missingBadges = flags.any ? `<div class="logi-missing">${flags.time ? '<span>No time</span>' : ''}${flags.driver ? '<span>No driver</span>' : ''}${flags.vehicle ? '<span>No vehicle</span>' : ''}</div>` : '';
+    const pickBox = assignable ? `<label class="logi-pick"><input type="checkbox" class="logistics-select" data-move-id="${escapeLogisticsHtml(moveKey)}"${logisticsSelected.has(moveKey) ? ' checked' : ''}> Select</label>` : '';
+    // Use suggested: the driver and vehicle from the last move for this job or client, if they are free.
+    const needDriver = !(assignedDriverId || assignedDriverName), needVehicle = !assignedAssets.length;
+    const sug = assignable && (needDriver || needVehicle) ? suggestForMove(m, suggestIndex) : null;
+    const sugDriver = sug && needDriver ? drivers.find(d => !/maint|service/.test(String(d.status || '')) && d.name === sug.driverName) : null;
+    const sugAsset = sug && needVehicle ? availableAssets.find(a => sug.assetIds.includes(String(a.id || a.assetId || ''))) : null;
+    const suggestBtn = sugDriver || sugAsset
+      ? `<button type="button" class="logi-suggest" data-move-id="${escapeLogisticsHtml(moveKey)}" data-driver-key="${sugDriver ? escapeLogisticsHtml(logisticsDriverKey(sugDriver)) : ''}" data-asset-id="${sugAsset ? escapeLogisticsHtml(sugAsset.id || sugAsset.assetId) : ''}"${sugDriver && !scheduleLocked ? ' disabled title="Save the time first"' : ''}>Use suggested: ${escapeLogisticsHtml([sugDriver && sugDriver.name, sugAsset && (sugAsset.name || sugAsset.assetName || sugAsset.id)].filter(Boolean).join(' + '))}<small>${sugDriver && !scheduleLocked ? 'Save the time first' : 'From the last move ' + (sug.why === 'job' ? 'on this job' : 'for this client')}</small></button>`
+      : '';
     const moveName = prettyMovement(movement);
     const moveDetail = [m.containerSize || '', equipment].filter(Boolean).join(' · ');
-    return `<tr data-source="${sourceType}">`
-      + `<td data-label="Job"><span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType === 'demo' ? 'Job add on' : sourceType === 'container' ? 'Container job' : sourceType)}</span>`
+    return `<tr data-source="${sourceType}" data-move-key="${escapeLogisticsHtml(moveKey)}"${flags.any ? ' class="needs-attn"' : ''}>`
+      + `<td data-label="Job">${pickBox}<span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType === 'demo' ? 'Job add on' : sourceType === 'container' ? 'Container job' : sourceType)}</span>`
       + `<div class="logi-dest">${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}</div>`
       + `${contactName ? `<div class="logi-client">${escapeLogisticsHtml(contactName)}${contactSecondary ? ` · ${escapeLogisticsHtml(contactSecondary)}` : ''}</div>` : ''}`
-      + `<div class="logi-id mono">${escapeLogisticsHtml(m.moveId || m.id || '')}</div></td>`
+      + `<div class="logi-id mono">${escapeLogisticsHtml(m.moveId || m.id || '')}</div>${missingBadges}</td>`
       + `<td data-label="Move"><div class="logi-move">${escapeLogisticsHtml(moveName)}</div>${moveDetail ? `<div class="logi-detail">${escapeLogisticsHtml(moveDetail)}</div>` : ''}${notes ? `<div class="logi-note">${escapeLogisticsHtml(notes)}</div>` : ''}</td>`
       + `<td data-label="Value"><span class="logi-value">${escapeLogisticsHtml(standaloneValueDisplay === 'N/A' ? 'On the job' : standaloneValueDisplay)}</span></td>`
       + `<td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td>`
       + `<td data-label="Schedule" class="mono">${scheduleCell}</td>`
-      + `<td data-label="Driver & vehicle"><div class="logi-who"><span>Driver</span>${assignedDriverName ? escapeLogisticsHtml(assignedDriverName) : none}</div><div class="logi-who"><span>Vehicle</span>${assignedAssetDisplay ? escapeLogisticsHtml(assignedAssetDisplay) : none}</div></td>`
+      + `<td data-label="Driver & vehicle"><div class="logi-who"><span>Driver</span>${assignedDriverName ? escapeLogisticsHtml(assignedDriverName) : none}</div><div class="logi-who"><span>Vehicle</span>${assignedAssetDisplay ? escapeLogisticsHtml(assignedAssetDisplay) : none}</div>${suggestBtn}</td>`
       + `<td data-label="Status"><div class="status-line"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(String(status).replace(/_/g, ' '))}</span>${!terminal && (scheduleLocked || date || assignedDriverName || assignedAssets.length) ? `<button type="button" class="unschedule-btn logistics-unschedule" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" title="Clear this move's time, driver and vehicles. It moves to Unscheduled.">Unschedule</button>` : ''}</div>${actions}</td></tr>`;
   };
   const sectionDefs = [
@@ -6180,12 +6231,184 @@ function renderLogistics() {
     { key: 'future', label: 'Future' },
     { key: 'unscheduled', label: 'Unscheduled' }
   ];
+  const built = {};
+  sectionDefs.forEach(({ key }) => {
+    built[key] = groups[key].slice().sort((a, b) => String(a.scheduledTime || a.requestedTime || a.reportTime || '').localeCompare(String(b.scheduledTime || b.requestedTime || b.reportTime || '')))
+      .map(m => { lastLogisticsFlags = null; const html = buildLogisticsRow(m, key); return { html, flags: lastLogisticsFlags || {} }; });
+  });
+  const watched = [...built.today, ...built.tomorrow].map(r => r.flags);
+  const attn = { time: watched.filter(f => f.time).length, driver: watched.filter(f => f.driver).length, vehicle: watched.filter(f => f.vehicle).length, any: watched.filter(f => f.any).length };
+  if (logisticsAttnFilter && !attn[logisticsAttnFilter]) logisticsAttnFilter = '';
+  const shows = r => !logisticsAttnFilter || r.flags[logisticsAttnFilter];
   document.getElementById('logisticsMoves').innerHTML = visibleMoves.length ? sectionDefs.map(({ key, label }) => {
-    const groupMoves = groups[key].slice().sort((a, b) => String(a.scheduledTime || a.requestedTime || a.reportTime || '').localeCompare(String(b.scheduledTime || b.requestedTime || b.reportTime || '')));
-    return `<tr class="job-group-header-row job-group-${key}"><td colspan="7" class="job-group-header">${label} <span class="job-group-count">${groupMoves.length}</span></td></tr>` +
-      (groupMoves.length ? groupMoves.map(buildLogisticsRow).join('') : `<tr class="job-group-empty-row"><td colspan="7" class="job-group-empty">No moves</td></tr>`);
+    const rows = built[key].filter(shows);
+    return `<tr class="job-group-header-row job-group-${key}"><td colspan="7" class="job-group-header">${label} <span class="job-group-count">${rows.length}</span></td></tr>` +
+      (rows.length ? rows.map(r => r.html).join('') : `<tr class="job-group-empty-row"><td colspan="7" class="job-group-empty">${logisticsAttnFilter ? 'Nothing missing here' : 'No moves'}</td></tr>`);
   }).join('') : '<tr><td colspan="7" class="empty-state">No logistics moves returned for this view.</td></tr>';
+  renderLogisticsAttention(attn, watched.length);
+  const openKeys = new Set(Object.values(built).flat().map(r => r.flags.moveKey).filter(Boolean));
+  [...logisticsSelected].forEach(k => { if (!openKeys.has(k)) logisticsSelected.delete(k); });
+  renderLogisticsBulk();
 }
+
+/* ---------- Logistics helpers: attention bar, suggestions, bulk assign ---------- */
+let logisticsAttnFilter = '';
+const logisticsSelected = new Set();
+function renderLogisticsAttention(attn, watchedCount) {
+  const bar = document.getElementById('logisticsAttention');
+  if (!watchedCount) { bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.classList.toggle('all-good', !attn.any);
+  const chip = (key, n, text) => n ? `<button type="button" class="logi-attn-filter${logisticsAttnFilter === key ? ' active' : ''}" data-filter="${key}">${n} ${text}</button>` : '';
+  const remind = currentSession.isAdmin ? '<button type="button" class="logi-remind-now" title="Send tomorrow\'s reminder to the Make webhook now">Send reminder now</button>' : '';
+  bar.innerHTML = attn.any
+    ? `<b>Today and tomorrow: ${attn.any} ${attn.any === 1 ? 'move needs' : 'moves need'} attention</b>${chip('driver', attn.driver, 'no driver')}${chip('vehicle', attn.vehicle, 'no vehicle')}${chip('time', attn.time, 'no time')}${logisticsAttnFilter ? '<button type="button" class="logi-attn-clear">Show all</button>' : ''}${remind}`
+    : `<b>Today and tomorrow are fully assigned.</b>${remind}`;
+}
+// Past and current moves with a driver or vehicle, newest first, by job and by client.
+function buildSuggestIndex(moves) {
+  const byJob = new Map(), byClient = new Map();
+  const clientKey = m => String((m.contact && (m.contact.companyName || m.contact.name)) || m.companyName || m.clientName || '').trim().toLowerCase();
+  [...moves].sort((a, b) => String(b.closedAt || b.updatedAt || '').localeCompare(String(a.closedAt || a.updatedAt || ''))).forEach(m => {
+    const driverName = getLogisticsDriverName(m) || m.closedDriverName || '';
+    const assetIds = [...(Array.isArray(m.assets) ? m.assets.map(a => String(a.assetId || a.id || '')) : []), m.assetId ? String(m.assetId) : '', ...(m.closedAssetIds || []).map(String)].filter(Boolean);
+    if (!driverName && !assetIds.length) return;
+    const entry = { moveKey: String(m.moveId || m.id || ''), driverName, assetIds };
+    const job = String(m.sourceOpportunityId || m.opportunityId || '');
+    if (job) { if (!byJob.has(job)) byJob.set(job, []); byJob.get(job).push(entry); }
+    const client = clientKey(m);
+    if (client) { if (!byClient.has(client)) byClient.set(client, []); byClient.get(client).push(entry); }
+  });
+  return { byJob, byClient, clientKey };
+}
+function suggestForMove(m, index) {
+  const self = String(m.moveId || m.id || '');
+  const pick = (list, why) => { const hit = (list || []).find(e => e.moveKey !== self); return hit ? { ...hit, why } : null; };
+  return pick(index.byJob.get(String(m.sourceOpportunityId || m.opportunityId || '')), 'job') || pick(index.byClient.get(index.clientKey(m)), 'client');
+}
+/* Shared drivers and vehicles: a driver or vehicle can be on several open moves,
+   but the board asks first and lists the other moves (same day ones first). */
+const logisticsOpenMove = m => m.active !== false && !/complete|cancel|lost|abandon/i.test(String(m.status || ''));
+function logisticsUsage(kind, ref, excludeKey) {
+  const key = String(ref || ''); if (!key) return [];
+  return (logisticsData.moves || []).filter(m => logisticsOpenMove(m) && String(m.moveId || m.id || '') !== String(excludeKey || '')).filter(m => kind === 'driver'
+    ? getLogisticsDriverName(m) === key
+    : String(m.assetId || '') === key || (Array.isArray(m.assets) ? m.assets : []).some(a => String(a.assetId || a.id || '') === key));
+}
+function logisticsMoveLabel(m) {
+  const date = m.scheduledDate || m.requestedDate || '', time = m.scheduledTime || m.requestedTime || '';
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const day = d ? new Date(+d[1], +d[2] - 1, +d[3]).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'no date';
+  const t = /^(\d{1,2}):(\d{2})/.exec(time); const clock = t ? `${(+t[1]) % 12 || 12}:${t[2]} ${+t[1] < 12 ? 'AM' : 'PM'}` : 'no time';
+  return `${m.jobAddress || m.destinationAddress || m.clientName || m.moveId} (${day}, ${clock})`;
+}
+// Returns true to go ahead. others: the other open moves it is already on.
+function confirmSharedAssignment(kind, name, others, targets) {
+  if (!others.length) return true;
+  const sameDay = new Set(targets.map(t => t.scheduledDate || t.requestedDate || '').filter(Boolean));
+  const list = others.slice().sort((a, b) => (sameDay.has(b.scheduledDate || b.requestedDate) ? 1 : 0) - (sameDay.has(a.scheduledDate || a.requestedDate) ? 1 : 0))
+    .slice(0, 8).map(m => `  • ${logisticsMoveLabel(m)}${sameDay.has(m.scheduledDate || m.requestedDate) ? '  ← same day' : ''}`).join('\n');
+  const what = kind === 'driver' ? `${name} is already on ${others.length === 1 ? 'another open move' : others.length + ' other open moves'}` : `${name} is already on ${others.length === 1 ? 'another open move' : others.length + ' other open moves'}`;
+  const onto = targets.length === 1 ? `this move (${logisticsMoveLabel(targets[0])})` : `all ${targets.length} selected moves`;
+  return confirm(`${what}:\n${list}${others.length > 8 ? `\n  • and ${others.length - 8} more` : ''}\n\nPut ${kind === 'driver' ? 'him' : 'it'} on ${onto} too?`);
+}
+function logisticsMoveByKey(key) { return (logisticsData.moves || []).find(m => String(m.moveId || m.id || '') === String(key)) || findLogisticsMove(key) || null; }
+async function assignDriverToMove(move, driver) {
+  const jobId = move.sourceOpportunityId || move.opportunityId || move.jobId || move.id || '';
+  await persistLogisticsDriver({
+    action: 'assign_driver', bookingMode: 'driver_assignment', targetType: logisticsTargetType(move),
+    moveId: String(move.moveId || move.id || ''), jobId, opportunityId: jobId, sourceOpportunityId: move.sourceOpportunityId || jobId,
+    driverId: driver.id || '', driverName: driver.name, driverPhone: driver.phone || '', active: true
+  });
+}
+async function assignVehicleToMove(move, asset, { allowShared = false } = {}) {
+  const moveKey = String(move.moveId || move.id || move.sourceOpportunityId || move.opportunityId || '');
+  const payload = await persistLogisticsAsset('booked', move, asset, { allowShared });
+  window.logisticsAssetAssignments[moveKey] = [...cachedAssetsForMove(moveKey), { ...asset, ...payload, id: payload.assetId, status: 'assigned', booked: true, _pendingUntil: Date.now() + 10000 }];
+  persistLogisticsAssetAssignments();
+}
+function renderLogisticsBulk() {
+  const bar = document.getElementById('logisticsBulk');
+  const n = logisticsSelected.size;
+  if (!n) { bar.hidden = true; bar.innerHTML = ''; return; }
+  const keep = { driver: bar.querySelector('.logi-bulk-driver')?.value || '', asset: bar.querySelector('.logi-bulk-asset')?.value || '' };
+  const drivers = (logisticsData.drivers || []).filter(d => d.name && !/maint|service/.test(String(d.status || '')));
+  const assets = (logisticsData.assets || []).filter(a => !/maint|service/.test(String(a.status || '').toLowerCase()));
+  bar.hidden = false;
+  bar.innerHTML = `<b>${n} selected</b>
+    <select class="logi-bulk-driver" aria-label="Driver for the selected moves"><option value="">Driver (keep as is)</option>${drivers.map(d => `<option value="${escapeLogisticsHtml(logisticsDriverKey(d))}">${escapeLogisticsHtml(d.name)}${d.status === 'available' ? '' : ' (on another move)'}</option>`).join('')}</select>
+    <select class="logi-bulk-asset" aria-label="Vehicle"><option value="">Vehicle (keep as is)</option>${assets.map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId)}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}${logisticsUsage('vehicle', a.id || a.assetId).length ? ' (on another move)' : ''}</option>`).join('')}</select>
+    <button type="button" class="btn-primary logi-bulk-apply">Assign to ${n}</button>
+    <button type="button" class="btn-ghost logi-bulk-clear" style="color:var(--ink-soft);border-color:var(--border)">Clear</button>
+    <small>The driver goes on every selected move that has a saved time, and the vehicle on every selected move. If either is already on other moves, you'll be asked first.</small>`;
+  bar.querySelector('.logi-bulk-driver').value = keep.driver;
+  bar.querySelector('.logi-bulk-asset').value = keep.asset;
+}
+document.getElementById('logisticsMoves').addEventListener('change', e => {
+  const box = e.target.closest('.logistics-select'); if (!box) return;
+  if (box.checked) logisticsSelected.add(box.dataset.moveId); else logisticsSelected.delete(box.dataset.moveId);
+  renderLogisticsBulk();
+});
+document.getElementById('logisticsAttention').addEventListener('click', async e => {
+  const f = e.target.closest('.logi-attn-filter');
+  if (f) { logisticsAttnFilter = logisticsAttnFilter === f.dataset.filter ? '' : f.dataset.filter; renderLogistics(); document.getElementById('logisticsMoves').closest('.jobs-table-wrap').scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+  if (e.target.closest('.logi-attn-clear')) { logisticsAttnFilter = ''; renderLogistics(); return; }
+  const now = e.target.closest('.logi-remind-now');
+  if (now) {
+    now.disabled = true; now.textContent = 'Sending...';
+    try {
+      const res = await fetchWithTimeout('/api/logistics-reminder-now', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }, 40000);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      showToast(data.sent ? `Reminder sent. ${data.summary}` : data.reason === 'everything for tomorrow is ready' ? 'Nothing to send: tomorrow is fully assigned.' : `Reminder not confirmed by Make. ${data.summary || ''}`, !data.sent && data.reason !== 'everything for tomorrow is ready');
+    } catch (err) { showToast(err.message, true); }
+    finally { now.disabled = false; now.textContent = 'Send reminder now'; }
+  }
+});
+document.getElementById('logisticsBulk').addEventListener('click', async e => {
+  if (e.target.closest('.logi-bulk-clear')) { logisticsSelected.clear(); renderLogistics(); return; }
+  const apply = e.target.closest('.logi-bulk-apply'); if (!apply) return;
+  const bar = document.getElementById('logisticsBulk');
+  const driver = (logisticsData.drivers || []).find(d => logisticsDriverKey(d) === bar.querySelector('.logi-bulk-driver').value);
+  const asset = (logisticsData.assets || []).find(a => String(a.id || a.assetId || '') === bar.querySelector('.logi-bulk-asset').value);
+  if (!driver && !asset) return showToast('Pick a driver, a vehicle, or both.', true);
+  const timeOf = m => `${m.scheduledDate || m.requestedDate || ''} ${m.scheduledTime || m.requestedTime || ''}`;
+  const moves = [...logisticsSelected].map(logisticsMoveByKey).filter(Boolean).sort((a, b) => timeOf(a).localeCompare(timeOf(b)));
+  const selectedKeys = new Set(moves.map(m => String(m.moveId || m.id || '')));
+  const outside = list => list.filter(m => !selectedKeys.has(String(m.moveId || m.id || '')));
+  const driverOthers = driver ? outside(logisticsUsage('driver', driver.name)) : [];
+  const vehicleOthers = asset ? outside(logisticsUsage('vehicle', asset.id || asset.assetId)) : [];
+  // One prompt whenever this puts a driver or vehicle on more than one open move.
+  if ((driver || asset) && (moves.length > 1 || driverOthers.length || vehicleOthers.length)) {
+    const who = [driver && driver.name, asset && (asset.name || asset.assetName || asset.id)].filter(Boolean).join(' and ');
+    const also = [[driver && driver.name, driverOthers], [asset && (asset.name || asset.assetName || asset.id), vehicleOthers]].filter(([n, list]) => n && list.length)
+      .map(([n, list]) => `${n} is already on:\n${list.slice(0, 6).map(m => '  • ' + logisticsMoveLabel(m)).join('\n')}${list.length > 6 ? `\n  • and ${list.length - 6} more` : ''}`).join('\n\n');
+    const onto = moves.slice(0, 8).map(m => '  • ' + logisticsMoveLabel(m)).join('\n');
+    if (!confirm(`Put ${who} on ${moves.length === 1 ? 'this move' : `all ${moves.length} selected moves`}?\n${onto}${also ? '\n\n' + also : ''}`)) return;
+  }
+  apply.disabled = true; apply.textContent = 'Assigning...';
+  let drivers = 0, noTime = 0, failed = [], vehicles = 0;
+  for (const move of moves) {
+    const label = move.jobAddress || move.destinationAddress || move.moveId;
+    if (driver && getLogisticsDriverName(move) !== driver.name) {
+      const saved = (move.scheduledDate && move.scheduledTime) || (move.requestedDate && move.requestedTime);
+      if (!saved) noTime++;
+      else { try { await assignDriverToMove(move, driver); drivers++; } catch (err) { failed.push(`${label}: ${err.message}`); } }
+    }
+    const assetKey = String(asset ? asset.id || asset.assetId : '');
+    const hasThis = asset && ((Array.isArray(move.assets) ? move.assets : []).some(a => String(a.assetId || a.id || '') === assetKey) || String(move.assetId || '') === assetKey);
+    if (asset && !hasThis) {
+      // Shared on purpose once more than one move gets it (dispatch already said yes above).
+      const shared = vehicleOthers.length > 0 || vehicles > 0 || moves.length > 1;
+      try { await assignVehicleToMove(move, asset, { allowShared: shared }); vehicles++; } catch (err) { failed.push(`${label}: ${err.message}`); }
+    }
+  }
+  logisticsSelected.clear();
+  await loadLogistics();
+  const parts = [driver && drivers ? `${driver.name} on ${drivers} ${drivers === 1 ? 'move' : 'moves'}` : '', asset && vehicles ? `${asset.name || asset.assetName || asset.id} on ${vehicles} ${vehicles === 1 ? 'move' : 'moves'}` : '',
+    noTime ? `${noTime} skipped for the driver (save the time first)` : ''].filter(Boolean);
+  showToast(failed.length ? `Some moves failed: ${failed.join('; ')}` : `Assigned: ${parts.join('. ')}.`, !!failed.length);
+});
 
 async function loadLogistics() {
   document.getElementById('logisticsMoves').innerHTML = '<tr><td colspan="7" class="load-state"><div class="spinner"></div>Loading logistics...</td></tr>';
@@ -6388,7 +6611,7 @@ async function setContainerStage(jobId, action, button) {
   } finally { button.disabled = false; button.textContent = original; }
 }
 
-async function persistLogisticsAsset(action, move, asset) {
+async function persistLogisticsAsset(action, move, asset, { allowShared = false } = {}) {
   const jobId = move.sourceOpportunityId || move.opportunityId || move.jobId || move.id || '';
   // Make updates the asset shared database by its outer record key. Some trucks
   // use a friendly unit name as that key instead of their nested assetId.
@@ -6409,7 +6632,7 @@ async function persistLogisticsAsset(action, move, asset) {
     requestedDate: move.scheduledDate || move.requestedDate || move.reportDate || move.date || '',
     requestedTime: move.scheduledTime || move.requestedTime || move.reportTime || move.time || ''
   };
-  await commitState(CONFIG.LOGISTICS_STATE_URL, { ...logisticsIdentity(move), ...payload, action: action === 'booked' ? 'assign_asset' : 'release_asset' });
+  await commitState(CONFIG.LOGISTICS_STATE_URL, { ...logisticsIdentity(move), ...payload, action: action === 'booked' ? 'assign_asset' : 'release_asset', ...(allowShared ? { allowShared: true } : {}) });
   return payload;
 }
 
@@ -6611,6 +6834,24 @@ function buildDriverLogRows(driverName, currentMove) {
 }
 
 document.getElementById('logisticsMoves').addEventListener('click', event => {
+  const suggest = event.target.closest('.logi-suggest');
+  if (suggest) {
+    const move = logisticsMoveByKey(suggest.dataset.moveId); if (!move) return;
+    const driver = suggest.dataset.driverKey ? (logisticsData.drivers || []).find(d => logisticsDriverKey(d) === suggest.dataset.driverKey) : null;
+    const asset = suggest.dataset.assetId ? (logisticsData.assets || []).find(a => String(a.id || a.assetId || '') === suggest.dataset.assetId) : null;
+    if (driver && !confirmSharedAssignment('driver', driver.name, logisticsUsage('driver', driver.name, suggest.dataset.moveId), [move])) return;
+    const vehicleOthers = asset ? logisticsUsage('vehicle', asset.id || asset.assetId, suggest.dataset.moveId) : [];
+    if (asset && !confirmSharedAssignment('vehicle', asset.name || asset.assetName || asset.id, vehicleOthers, [move])) return;
+    suggest.disabled = true; suggest.firstChild.textContent = 'Assigning...';
+    (async () => {
+      const done = [];
+      if (driver) { await assignDriverToMove(move, driver); done.push(driver.name); }
+      if (asset) { await assignVehicleToMove(move, asset, { allowShared: vehicleOthers.length > 0 }); done.push(asset.name || asset.assetName || asset.id); }
+      showToast(`${done.join(' and ')} assigned.`);
+      await loadLogistics();
+    })().catch(err => { console.error('Suggested assignment failed:', err); showToast(err.message, true); loadLogistics(); });
+    return;
+  }
   const editDriverButton = event.target.closest('.logistics-edit-driver');
   if (editDriverButton) { window.logisticsDriverEdit[editDriverButton.dataset.moveId] = true; renderLogistics(); return; }
   const doneDriverButton = event.target.closest('.logistics-done-driver');
@@ -6646,8 +6887,10 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
     const moveKey = String(move.moveId || move.id || move.sourceOpportunityId || move.opportunityId || assignAssetButton.dataset.id);
     const existingAssets = cachedAssetsForMove(moveKey);
     if (existingAssets.some(item => String(item.assetId || item.id || '') === String(asset.id || asset.assetId || ''))) return showToast('That vehicle is already assigned to this move.', true);
+    const vehicleOthers = logisticsUsage('vehicle', asset.id || asset.assetId, moveKey);
+    if (!confirmSharedAssignment('vehicle', asset.name || asset.assetName || asset.id, vehicleOthers, [move])) return;
     assignAssetButton.disabled = true; assignAssetButton.textContent = 'Assigning...';
-    persistLogisticsAsset('booked', move, asset)
+    persistLogisticsAsset('booked', move, asset, { allowShared: vehicleOthers.length > 0 })
       .then(payload => {
         window.logisticsAssetAssignments[moveKey] = [...existingAssets, { ...asset, ...payload, id: payload.assetId, status: 'assigned', booked: true, _pendingUntil: Date.now() + 10000 }];
         delete window.logisticsAssetEdit[moveKey];
@@ -6715,6 +6958,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
     if (!driver) return showToast('Select an available driver.', true);
     const move = (logisticsData.moves || []).find(m => String(m.moveId || m.id || '') === String(assignButton.dataset.moveId)) || {};
     const jobId = assignButton.dataset.id;
+    if (!confirmSharedAssignment('driver', driver.name, logisticsUsage('driver', driver.name, assignButton.dataset.moveId), [move])) return;
     const payload = {
       action: 'assign_driver', bookingMode: 'driver_assignment',
       targetType: logisticsTargetType(move),
