@@ -84,3 +84,14 @@ test('labor reminder: same webhook, same payload fields, tomorrow\'s jobs with n
   assert.deepEqual(Object.keys(p.moves[0]).sort(), Object.keys(lp.moves[0]).sort());
   assert.equal((await runLaborReminder(sql, { now: new Date('2026-10-15T22:00:00Z') })).reason, 'already sent today');
 });
+
+test('set_loads: whole number, dated, allowed after the move closes', () => {
+  const open = { data: { moveId: 'L1', active: true, status: 'scheduled', scheduledDate: '2026-10-16' } };
+  const a = mutateMove(open, { action: 'set_loads', truckLoads: 3, truckLoadsBy: 'Jesse' }).data;
+  assert.equal(a.truckLoads, 3); assert.equal(a.truckLoadsDate, '2026-10-16'); assert.equal(a.truckLoadsBy, 'Jesse');
+  assert.throws(() => mutateMove(open, { action: 'set_loads', truckLoads: 2.5 }), /whole number/);
+  assert.throws(() => mutateMove(open, { action: 'set_loads', truckLoads: -1 }), /whole number/);
+  const closed = { data: { moveId: 'L1', active: false, status: 'completed' } };
+  assert.equal(mutateMove(closed, { action: 'set_loads', truckLoads: 4, truckLoadsDate: '2026-10-15' }).data.truckLoadsDate, '2026-10-15');
+  assert.equal(mutateMove({ data: { ...a } }, { action: 'reset_dispatch' }).data.truckLoads, 3, 'kept on reset; the date tells which day it was');
+});

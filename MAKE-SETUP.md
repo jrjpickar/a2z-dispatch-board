@@ -93,6 +93,14 @@ Fields: `action` (`"logistics_reminder"`), `date` (tomorrow, `YYYY-MM-DD`), `day
 
 **Labor reminder (same webhook, same fields).** Right after the logistics run, a second run goes to the same webhook for **tomorrow's labor jobs** with the exact same field names, `action: "labor_reminder"`. For a labor job: `missingDriverCount` / `missingDriver` = no crew, `missingVehicleCount` / `missingVehicle` = crew short of its crew size, `missingTimeCount` / `missingTime` = no start or end time; in `moves[]`, `driverName` is the crew's names and `vehicles` is like `1 of 4 crew`. `summary` and `movesText` read naturally (e.g. `2 of 3 labor jobs for Fri, Oct 16 need attention: 1 no crew, 1 short crew, 1 no time.`), so the same Slack mapping works for both; route on `action` if you want them in different channels. Also once a day, only when something is missing (`LABOR_REMINDER_WEBHOOK` overrides the URL).
 
+## Truck loads (driver log webhook)
+
+Each Logistics move has a **Loads** box next to Driver and Vehicle. Saving it stores the number of truck loads for that day on the move.
+
+- **Standalone containers:** saving posts JSON to the driver log webhook `https://hook.us2.make.com/tp2wwcdltmjyi1gsrc9mhywksiygqouo` with `action: "loadCount"`, `loadCount` (number), `moveId`, `jobId`, `opportunityId`, `sourceOpportunityId`, `date`, `driverName`, `vehicles`, `jobAddress`, `clientName`, `containerSize`, `movementType`, `enteredBy`, `enteredAt`, `eventId`.
+- **Contract job add-ons:** no webhook. The job's **Complete EOD Sheet** adds up that day's loads on its moves and fills the first empty Hauling line with "Full Truck Load (excludes dump fees)", qty = loads, $375 a load (never overwriting a line already filled). The EOD payload also carries `truckLoads` and `truckLoadMoves`.
+- **Reset Day on a Logistics move** now always posts the day's log to the same webhook with `action: "jobLog"` (was `reset_dispatch`, and only when a driver was on it) plus `loadCount` for that day. Every other field is the same as before (`date`, `employee`, `hours`, `signature`, `lunch`, `rows`, addresses, driver, vehicle). Route on `action` in Make: `jobLog`, `loadCount`, and `complete` (the Completed driver log, unchanged).
+
 ## Book Job: existing client (search by name)
 
 Book Job has a **Find client** search (GHL contacts by name). Picking one fills First/Last name, phone and (if empty) Job Address, and the create run also carries `clientContactId` (the GHL contact id), `existingClient: true` and `clientEmail`. If the name or phone is edited after picking, those are not sent. Map `clientContactId` in the create scenario to reuse that contact instead of searching/creating one.

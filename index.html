@@ -1470,6 +1470,10 @@
   .logi-missing { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
   .logi-missing span { font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .04em; text-transform: uppercase; color: var(--danger); border: 1px solid var(--danger); border-radius: 999px; padding: 1px 6px; }
   #logisticsDispatchView table.logistics-table tr.needs-attn td:first-child { box-shadow: inset 4px 0 0 var(--danger); }
+  .logi-loads { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; }
+  .logi-loads span { font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); }
+  .logi-loads input { width: 64px; padding: 4px 6px; text-align: right; }
+  .logi-loads small { color: var(--ink-soft); font-size: 10px; }
   .logi-suggest { margin-top: 6px; display: block; width: 100%; text-align: left; background: #e9f2fb; color: #275c8e; border: 1px dashed #275c8e; border-radius: var(--radius); padding: 5px 8px; font-size: 12px; }
   .logi-suggest:disabled { opacity: .55; cursor: not-allowed; }
   .logi-suggest small { display: block; color: var(--ink-soft); font-size: 10px; }
@@ -2196,6 +2200,7 @@
     </div>
     <p class="eod-legend">Highlighted boxes are yours to fill in. Line totals and subtotals recalculate automatically. Your entries are saved as a draft on this device until you submit.</p>
     <p class="eod-draft-note" id="eodDraftNote" hidden></p>
+    <p class="eod-draft-note" id="eodLoadsNote" hidden></p>
     <div id="eodSections"></div>
     <div class="eod-section eod-crew" id="eodCrewSection">
       <h3>Crew hours</h3>
@@ -4500,6 +4505,38 @@ function renderEodSections() {
     </div>`).join('');
 }
 
+/* Contract jobs: truck loads saved on this job's Logistics moves for the EOD
+   date feed the daily cost. The total goes into the first empty Hauling line as
+   "Full Truck Load (excludes dump fees)" at the reference rate (only if that line
+   is still blank, so a draft or a dispatcher's own entry is never overwritten). */
+let eodTruckLoads = { total: 0, moves: [] };
+async function fillEodTruckLoads(job) {
+  const jobId = job.id, note = document.getElementById('eodLoadsNote');
+  let moves = logisticsLoaded ? logisticsData.moves : null;
+  if (!moves) {
+    try { moves = ((await fetchJsonStrict(CONFIG.LOGISTICS_STATE_URL, 'Logistics state')).states) || []; }
+    catch (err) { console.warn('Truck loads could not load for the EOD sheet:', err); return; }
+  }
+  if (eodJobId !== jobId) return; // sheet closed or switched jobs meanwhile
+  const date = document.getElementById('eodDate').value;
+  const dayOf = m => m.truckLoadsDate || m.scheduledDate || m.requestedDate || (m.closedSchedule && m.closedSchedule.date) || '';
+  const mine = (moves || []).filter(m => String(m.sourceOpportunityId || '') === String(jobId) && Number(m.truckLoads) > 0 && (!date || dayOf(m) === date));
+  const total = mine.reduce((sum, m) => sum + Number(m.truckLoads), 0);
+  eodTruckLoads = { total, moves: mine.map(m => ({ moveId: String(m.moveId || ''), loads: Number(m.truckLoads), vehicles: (Array.isArray(m.assets) ? m.assets.map(a => a.assetName || a.assetId) : [m.assetName]).filter(Boolean).join(', '), driverName: getLogisticsDriverName(m) || m.closedDriverName || '' })) };
+  if (!total) return;
+  const [refName, refRate] = EOD_RATE_REFERENCE.find(([name]) => name.startsWith('Full Truck Load')) || ['Full Truck Load (excludes dump fees)', 375];
+  const row = [...eodSheetEl.querySelectorAll('.eod-line[data-category="Hauling"]')].find(r => !r.querySelector('.eod-desc').value && !r.querySelector('.eod-qty').value && !r.querySelector('.eod-rate').value);
+  const detail = eodTruckLoads.moves.map(m => `${m.loads} on ${m.vehicles || 'a truck'}`).join(', ');
+  const already = [...eodSheetEl.querySelectorAll('.eod-line[data-category="Hauling"] .eod-desc')].some(i => i.value === refName);
+  if (row && !already) {
+    row.querySelector('.eod-desc').value = refName; row.querySelector('.eod-qty').value = total; row.querySelector('.eod-rate').value = refRate;
+    const section = row.closest('.eod-section').querySelector('h3').textContent;
+    note.textContent = `Truck loads from Logistics: ${total} (${detail}). Filled into ${section} Hauling at $${refRate} a load. Change it if needed.`;
+    recalcEodSheet(); saveEodDraft();
+  } else note.textContent = `Truck loads from Logistics: ${total} (${detail}).${already ? '' : ' Every Hauling line is already filled, so nothing was added.'}`;
+  note.hidden = false;
+}
+
 /* EOD crew hours: everyone on the job's crew, plus workers sent home from this
    job on its date. Default hours = the job's hours for the day minus 1 hour for
    lunch, editable. A worker sent home gets the hours picked when they were sent
@@ -4617,7 +4654,9 @@ function collectEodSheet() {
     crewHours,
     totalCrewHours: eodRound(crewHours.reduce((sum, w) => sum + (Number(w.hoursWorked) || 0), 0)),
     ...eodSheetFields(sections),
-    ...eodCrewFields(crewHours)
+    ...eodCrewFields(crewHours),
+    truckLoads: eodTruckLoads.total,
+    truckLoadMoves: eodTruckLoads.moves
   };
 }
 
@@ -4680,6 +4719,9 @@ function openEodSheet(jobId, btn) {
     note.hidden = false;
   } else note.hidden = true;
   renderEodCrew(draft && draft.crew);
+  eodTruckLoads = { total: 0, moves: [] };
+  document.getElementById('eodLoadsNote').hidden = true;
+  if (!isHourlyJob(job) || job.sourceType === 'demo') fillEodTruckLoads(job);
   recalcEodSheet();
   eodOverlay.classList.add('open'); eodSheetEl.classList.add('open');
 }
@@ -6212,6 +6254,11 @@ function renderLogistics() {
       ? `<button type="button" class="logi-suggest" data-move-id="${escapeLogisticsHtml(moveKey)}" data-driver-key="${sugDriver ? escapeLogisticsHtml(logisticsDriverKey(sugDriver)) : ''}" data-asset-id="${sugAsset ? escapeLogisticsHtml(sugAsset.id || sugAsset.assetId) : ''}"${sugDriver && !scheduleLocked ? ' disabled title="Save the time first"' : ''}>Use suggested: ${escapeLogisticsHtml([sugDriver && sugDriver.name, sugAsset && (sugAsset.name || sugAsset.assetName || sugAsset.id)].filter(Boolean).join(' + '))}<small>${sugDriver && !scheduleLocked ? 'Save the time first' : 'From the last move ' + (sug.why === 'job' ? 'on this job' : 'for this client')}</small></button>`
       : '';
     const moveName = prettyMovement(movement);
+    // Truck loads hauled on this move. Contract job add-ons feed the job's EOD sheet;
+    // standalone containers also post action "loadCount" to the driver log webhook.
+    // Only this day's loads show (after Reset Day the next day starts blank).
+    const loadsValue = m.truckLoads === undefined || m.truckLoads === null || m.truckLoads === '' || (m.truckLoadsDate && m.truckLoadsDate !== date) ? '' : String(m.truckLoads);
+    const loadsControl = assignable ? `<div class="logi-loads"><span>Loads</span><input type="number" class="logistics-loads-input" min="0" max="200" step="1" inputmode="numeric" value="${escapeLogisticsHtml(loadsValue)}" aria-label="Truck loads on this move"><button type="button" class="job-stage-btn edit logistics-loads-save" data-move-id="${escapeLogisticsHtml(moveKey)}">Save</button>${loadsValue !== '' ? `<small>saved${m.truckLoadsBy ? ' by ' + escapeLogisticsHtml(m.truckLoadsBy) : ''}</small>` : ''}</div>` : '';
     const moveDetail = [m.containerSize || '', equipment].filter(Boolean).join(' · ');
     return `<tr data-source="${sourceType}" data-move-key="${escapeLogisticsHtml(moveKey)}"${flags.any ? ' class="needs-attn"' : ''}>`
       + `<td data-label="Job">${pickBox}<span class="logistics-source ${sourceType}">${escapeLogisticsHtml(sourceType === 'demo' ? 'Job add on' : sourceType === 'container' ? 'Container job' : sourceType)}</span>`
@@ -6222,7 +6269,7 @@ function renderLogistics() {
       + `<td data-label="Value"><span class="logi-value">${escapeLogisticsHtml(standaloneValueDisplay === 'N/A' ? 'On the job' : standaloneValueDisplay)}</span></td>`
       + `<td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td>`
       + `<td data-label="Schedule" class="mono">${scheduleCell}</td>`
-      + `<td data-label="Driver & vehicle"><div class="logi-who"><span>Driver</span>${assignedDriverName ? escapeLogisticsHtml(assignedDriverName) : none}</div><div class="logi-who"><span>Vehicle</span>${assignedAssetDisplay ? escapeLogisticsHtml(assignedAssetDisplay) : none}</div>${suggestBtn}</td>`
+      + `<td data-label="Driver & vehicle"><div class="logi-who"><span>Driver</span>${assignedDriverName ? escapeLogisticsHtml(assignedDriverName) : none}</div><div class="logi-who"><span>Vehicle</span>${assignedAssetDisplay ? escapeLogisticsHtml(assignedAssetDisplay) : none}</div>${loadsControl}${suggestBtn}</td>`
       + `<td data-label="Status"><div class="status-line"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(String(status).replace(/_/g, ' '))}</span>${!terminal && (scheduleLocked || date || assignedDriverName || assignedAssets.length) ? `<button type="button" class="unschedule-btn logistics-unschedule" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" title="Clear this move's time, driver and vehicles. It moves to Unscheduled.">Unschedule</button>` : ''}</div>${actions}</td></tr>`;
   };
   const sectionDefs = [
@@ -6311,6 +6358,33 @@ function confirmSharedAssignment(kind, name, others, targets) {
   const what = kind === 'driver' ? `${name} is already on ${others.length === 1 ? 'another open move' : others.length + ' other open moves'}` : `${name} is already on ${others.length === 1 ? 'another open move' : others.length + ' other open moves'}`;
   const onto = targets.length === 1 ? `this move (${logisticsMoveLabel(targets[0])})` : `all ${targets.length} selected moves`;
   return confirm(`${what}:\n${list}${others.length > 8 ? `\n  • and ${others.length - 8} more` : ''}\n\nPut ${kind === 'driver' ? 'him' : 'it'} on ${onto} too?`);
+}
+async function saveTruckLoads(button) {
+  const move = logisticsMoveByKey(button.dataset.moveId); if (!move) return;
+  const raw = button.closest('.logi-loads').querySelector('.logistics-loads-input').value.trim();
+  const loads = Number(raw);
+  if (raw === '' || !Number.isInteger(loads) || loads < 0 || loads > 200) return showToast('Enter the number of loads (a whole number, 0 to 200).', true);
+  const moveId = String(move.moveId || move.id || '');
+  const jobId = move.sourceOpportunityId || move.opportunityId || move.jobId || moveId;
+  const override = window.logisticsScheduleOverride[moveId];
+  const loadsDate = (override && override.date) || move.scheduledDate || move.requestedDate || toLocalYMD(new Date());
+  button.disabled = true; button.textContent = 'Saving...';
+  try {
+    await commitState(CONFIG.LOGISTICS_STATE_URL, { ...logisticsIdentity(move), action: 'set_loads', moveId, truckLoads: loads, truckLoadsDate: loadsDate });
+    if (logisticsTargetType(move) === 'standalone') {
+      const assets = (Array.isArray(move.assets) ? move.assets : []).map(a => a.assetName || a.assetId).filter(Boolean);
+      runSideEffect(CONFIG.DRIVER_LOG_URL, {
+        action: 'loadCount', moveId, jobId, opportunityId: jobId, sourceOpportunityId: jobId, loadCount: loads,
+        date: loadsDate,
+        driverName: getLogisticsDriverName(move) || move.closedDriverName || '', vehicles: assets.join(', ') || move.assetName || '',
+        jobAddress: move.jobAddress || move.destinationAddress || '', clientName: move.companyName || move.clientName || (move.contact && (move.contact.companyName || move.contact.name)) || '',
+        containerSize: move.containerSize || '', movementType: move.movementType || '', enteredBy: currentSession.user?.name || '', enteredAt: new Date().toISOString()
+      }, 'Load count', 'driver_log');
+    }
+    showToast(`${loads} ${loads === 1 ? 'load' : 'loads'} saved.`);
+    renderLogistics();
+  } catch (err) { showToast(err.message, true); }
+  finally { button.disabled = false; button.textContent = 'Save'; }
 }
 function logisticsMoveByKey(key) { return (logisticsData.moves || []).find(m => String(m.moveId || m.id || '') === String(key)) || findLogisticsMove(key) || null; }
 async function assignDriverToMove(move, driver) {
@@ -6685,6 +6759,8 @@ async function resetLogisticsDay(jobId, button) {
   const lunch = row?.querySelector('.logistics-lunch')?.value || '';
   const logDate = move.scheduledDate || move.requestedDate || move.reportDate || move.date || '';
   const moveKey = String(move.moveId || move.id || jobId);
+  // Loads saved for this day (read now: the move record is updated in place after the reset saves).
+  const dayLoads = Number(move.truckLoads) > 0 && (!move.truckLoadsDate || !logDate || move.truckLoadsDate === logDate) ? Number(move.truckLoads) : 0;
   const payload = {
     action: 'reset_dispatch',
     targetType: logisticsTargetType(move),
@@ -6717,8 +6793,10 @@ async function resetLogisticsDay(jobId, button) {
     await commitState(CONFIG.LOGISTICS_STATE_URL, { ...payload, ...logisticsIdentity(move), action: 'reset_dispatch' });
     delete window.logisticsScheduleOverride[moveKey];
     delete window.logisticsBreakSchedule[moveKey];
+    // Reset Day always posts the day's log to the driver log webhook as action "jobLog"
+    // (with the truck loads saved on the move). Same fields as before otherwise.
+    await runSideEffect(CONFIG.DRIVER_LOG_URL, { ...payload, action: 'jobLog', loadCount: dayLoads }, 'Job log');
     if (driverName) {
-      await runSideEffect(CONFIG.DRIVER_LOG_URL, payload, 'Driver log');
       await runSideEffect(CONFIG.DRIVER_ASSIGNMENT_URL, { ...payload, action: 'remove_driver', bookingMode: 'driver_assignment' }, 'Driver release notifications');
     }
     showToast('Logistics day reset. Opportunity and move details preserved.');
@@ -6834,6 +6912,8 @@ function buildDriverLogRows(driverName, currentMove) {
 }
 
 document.getElementById('logisticsMoves').addEventListener('click', event => {
+  const loadsSave = event.target.closest('.logistics-loads-save');
+  if (loadsSave) { saveTruckLoads(loadsSave); return; }
   const suggest = event.target.closest('.logi-suggest');
   if (suggest) {
     const move = logisticsMoveByKey(suggest.dataset.moveId); if (!move) return;
