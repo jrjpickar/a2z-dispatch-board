@@ -4151,10 +4151,24 @@ function toE164(raw) {
   if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
   return digits ? '+' + digits : '';
 }
-function buildJobLogPayload(job, action) {
+function jobWeekFields(date) {
+  const d = new Date(String(date || '') + 'T12:00:00Z');
+  if (Number.isNaN(d.getTime())) return { weekStart: '', weekEnd: '', weekRange: '' };
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  const format = value => `${String(value.getUTCMonth() + 1).padStart(2, '0')}/${String(value.getUTCDate()).padStart(2, '0')}`;
+  const weekStart = format(d);
+  d.setUTCDate(d.getUTCDate() + 6);
+  const weekEnd = format(d);
+  return { weekStart, weekEnd, weekRange: `${weekStart}-${weekEnd}` };
+}
+function jobDayOfWeek(date) {
+  const d = new Date(String(date || '') + 'T12:00:00Z');
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase();
+}
+function buildJobLogPayload(job, action, date) {
   const value = Number(getOpportunityValue(job));
   return {
-    jobId: job.id || '', action,
+    jobId: job.id || '', action, ...jobWeekFields(date || getReportDate(job) || localIsoDate()), ...(date ? { date } : {}), dayOfWeek: jobDayOfWeek(date || getReportDate(job) || localIsoDate()),
     jobAddress: job.name || '', clientName: getClientName(job), clientPhone: toE164(getClientPhone(job)),
     scopeOfWork: getScopeOfWork(job) || '', toolsRequired: getToolsRequired(job) || '',
     monetaryValue: Number.isFinite(value) ? value : 0,
@@ -4205,6 +4219,11 @@ document.addEventListener('keydown', e => {
 });
 
 async function setJobStage(jobId, action, btn) {
+  if (action === 'complete' && !(getSharedState({ id: jobId })?.eodSubmittedDates || []).includes(localIsoDate())) {
+    openEodSheet(jobId, btn, true);
+    showToast('Complete today’s EOD sheet before marking this job completed.');
+    return;
+  }
   if (!jobId || !['complete', 'cancel'].includes(action)) return;
   // The 5 second hold on the button is the confirmation (see holdDone).
   btn.disabled = true;
@@ -4399,7 +4418,7 @@ function unscheduleFlow({ what, body, bodyNoText }) {
   });
 }
 
-async function resetJobDay(jobId, btn, eodSheet, { unschedule = false } = {}) {
+async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completing = false } = {}) {
   const job = dashboardData.jobs.find(j => j.id === jobId);
   if (!job) return false;
   const crewBeforeReset = getCrew(job);
@@ -4413,16 +4432,17 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false } = {}) {
   } else if (!eodSheet && !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return false;
   const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
   // Job log snapshot, taken BEFORE the reset clears the schedule and crew.
-  const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet') : null;
+  const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet', eodSheet.date) : null;
   btn.disabled = true;
   try {
-    await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reset_dispatch', jobId });
+    if (eodSheet) await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'begin_eod', jobId, date: eodSheet.date });
+    if (!eodSheet) await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reset_dispatch', jobId });
     const problems = [];
     if (eodSheet) {
       // EOD flow sends the eod_sheet event plus the job log -- no separate
       // "remove" call. The crew being released rides along in removedWorkers so
       // Make can handle any release notifications inside the eod_sheet route.
-      const sheetPayload = { ...eodSheet, action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day', crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
+      const sheetPayload = { ...eodSheet, ...jobWeekFields(eodSheet.date), dayOfWeek: jobDayOfWeek(eodSheet.date), action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day', crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
       try { await runSideEffect(CONFIG.EOD_SHEET_URL, sanitizeEodPayload(sheetPayload), 'EOD sheet', 'eod_sheet'); }
       catch (error) { problems.push(error.message); }
       try { await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log'); }
@@ -4435,6 +4455,11 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false } = {}) {
     } else if (removedWorkers.length && !noText) {
       try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers, ...(unschedule ? { reason: 'unscheduled', unscheduled: true } : {}) }, 'Worker release notifications'); }
       catch (error) { problems.push(error.message); }
+    }
+    if (eodSheet) {
+      if (problems.length) { showToast(problems.join(' '), true); return false; }
+      await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'record_eod', jobId, date: eodSheet.date });
+      if (!completing) await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reset_dispatch', jobId });
     }
     render();
     // The reset is saved either way, so the sheet closes; an unconfirmed
@@ -4550,6 +4575,7 @@ const EOD_RATE_REFERENCE = [
 ];
 const eodOverlay = document.getElementById('eodOverlay');
 const eodSheetEl = document.getElementById('eodSheet');
+let eodCompleting = false;
 let eodJobId = '';
 let eodTriggerBtn = null;
 const eodMoney = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
@@ -4689,13 +4715,13 @@ function buildJobHoursPayloads(job, sheet) {
   const date = sheet.date;
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
   const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
-  const dayOfWeek = d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '';
-  const weekStart = d ? addDaysYMD(date, -((d.getDay() + 6) % 7)) : '';
+  const dayOfWeek = d ? d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() : '';
+  const week = jobWeekFields(date);
   const notes = cleanEodText(sheet.jobName || [getClientName(job), job.name].filter(Boolean).join(' - ')).trim();
   return (sheet.crewHours || []).filter(w => Number(w.hoursWorked) > 0).map((w, i, all) => ({
     action: 'job_hours', jobId: job.id, opportunityId: job.id,
     date, employeeName: w.workerName, hoursWorked: Number(w.hoursWorked), notes,
-    dayOfWeek, weekStart, sentHome: !!w.sentHome,
+    dayOfWeek, ...week, sentHome: !!w.sentHome,
     contactId: w.contactId || '', workerPhone: w.workerPhone || '',
     jobName: sheet.jobName || '', jobAddress: job.name || '', clientName: getClientName(job),
     workerIndex: i + 1, workerCount: all.length, submittedAt: sheet.submittedAt
@@ -4780,7 +4806,8 @@ function localIsoDate(d = new Date()) {
   return toLocalYMD(d);
 }
 
-function openEodSheet(jobId, btn) {
+function openEodSheet(jobId, btn, completing = false) {
+  eodCompleting = completing;
   const job = (dashboardData.jobs || []).find(j => (j.id || '') === jobId);
   if (!job) { showToast("Couldn't find that job. Try refreshing.", true); return; }
   eodJobId = jobId; eodTriggerBtn = btn || null;
@@ -4794,6 +4821,10 @@ function openEodSheet(jobId, btn) {
     note.textContent = `Draft restored from ${new Date(draft.savedAt).toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}.`;
     note.hidden = false;
   } else note.hidden = true;
+  if (completing) document.getElementById('eodDate').value = localIsoDate();
+  document.getElementById('eodDate').disabled = completing;
+  document.getElementById('submitEodSheet').textContent = completing ? 'Submit EOD & Complete Job' : 'Submit EOD Sheet';
+  eodSheetEl.querySelector('.eod-reset-note').textContent = completing ? 'Submit today’s EOD sheet to mark this job completed.' : 'Submitting also resets the day: the schedule and crew are cleared. Job details stay as they are.';
   renderEodCrew(draft && draft.crew);
   eodTruckLoads = { total: 0, moves: [] };
   document.getElementById('eodLoadsNote').hidden = true;
@@ -4805,7 +4836,7 @@ function closeEodSheet() {
   // Closing (X, Close, clicking outside, Esc) never loses work: save first.
   if (eodJobId) saveEodDraft();
   eodOverlay.classList.remove('open'); eodSheetEl.classList.remove('open');
-  eodJobId = ''; eodTriggerBtn = null;
+  eodJobId = ''; eodTriggerBtn = null; eodCompleting = false;
 }
 
 function fillEodDefaults(job) {
@@ -4908,8 +4939,13 @@ document.getElementById('submitEodSheet').addEventListener('click', async () => 
   submitBtn.disabled = true; submitBtn.textContent = 'Submitting...';
   try {
     const jobId = eodJobId;
-    const result = await resetJobDay(jobId, eodTriggerBtn || submitBtn, sheet);
-    if (result) { clearEodDraft(jobId); eodJobId = ''; closeEodSheet(); }
+    const completing = eodCompleting, trigger = eodTriggerBtn || submitBtn;
+    if (completing && sheet.date !== localIsoDate()) { showToast('The date changed. Reopen the EOD sheet for today.', true); return; }
+    const result = await resetJobDay(jobId, trigger, sheet, { completing });
+    if (result) {
+      clearEodDraft(jobId); eodJobId = ''; closeEodSheet();
+      if (completing) await setJobStage(jobId, 'complete', trigger);
+    }
   } finally { submitBtn.disabled = false; submitBtn.textContent = original; }
 });
 
@@ -7388,17 +7424,20 @@ async function retryCrm(jobId) {
 // Make / GHL problems list, where it can be retried).
 const MAKE_CONFIRM_WAIT_MS = 45000;
 function runSideEffect(url, payload, label, kindOverride, effectKey) {
+  const requireConfirmation = payload.action === 'eod_sheet' || kindOverride === 'job_hours';
   // State is already committed. Never reapply it to retry a notification.
   const kinds = { [CONFIG.MOVE_WORKER_URL]: 'workers', [CONFIG.DRIVER_ASSIGNMENT_URL]: 'drivers', [CONFIG.EDIT_JOB_DETAILS_URL]: 'job_details', [CONFIG.CREATE_JOB_URL]: 'job_stage', [CONFIG.LOGISTICS_CREATE_URL]: 'container', [CONFIG.DRIVER_LOG_URL]: 'driver_log' };
-  const requestId = lastCommittedRequests.get(String(payload.moveId || payload.jobId || payload.opportunityId || ''));
+  const requestId = requireConfirmation ? getSharedState({ id: payload.jobId })?.eodRequests?.[payload.date || payload.reportDate] : lastCommittedRequests.get(String(payload.moveId || payload.jobId || payload.opportunityId || ''));
   const started = Date.now();
-  (async () => {
+  const sending = (async () => {
     // kindOverride lets two effects share one webhook URL (EOD sheet + worker release).
     const response = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId, kind: kindOverride || kinds[url], payload, ...(effectKey ? { effectKey } : {}) }) }, MAKE_CONFIRM_WAIT_MS + 10000);
     const text = await response.text();
     let result = {}; try { result = JSON.parse(text); } catch {}
     if (!response.ok || result.ok !== true) throw new Error(result.error || `HTTP ${response.status}`);
-  })().catch(error => {
+  })();
+  if (requireConfirmation) return sending;
+  sending.catch(error => {
     console.warn(`${label} not confirmed:`, error);
     const wait = Math.max(0, MAKE_CONFIRM_WAIT_MS - (Date.now() - started));
     setTimeout(() => showToast(`${label} didn't go through: Make didn't confirm within 45 seconds. Check Make's history; senior admins can retry it from Admin > Make / GHL problems.`, true), wait);

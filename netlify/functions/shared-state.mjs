@@ -28,6 +28,11 @@ export default async function handler(request) {
       return json({ sharedState: rows.map(jobRecord), pendingSync, serverTime: new Date(now).toISOString(), partial: !!since });
     }
     const payload = await readPayload(request);
+    if (payload.action === 'complete') {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+      const part = type => parts.find(p => p.type === type).value;
+      payload.requiredEodDate = `${part('year')}-${part('month')}-${part('day')}`;
+    }
     // Change order link/unlink: link also moves the opportunity to the Change Order pipeline in GHL.
     if (payload.action === 'link_change_order') return json(await linkChangeOrder(sql, payload, sessionFromRequest(request)));
     if (payload.action === 'unlink_change_order') return json(await unlinkChangeOrder(sql, payload, sessionFromRequest(request)));
