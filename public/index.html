@@ -1691,7 +1691,14 @@ body.dark-mode .lane-empty{background:var(--card);color:var(--ink-soft)}
 body.dark-mode #laborDispatchView textarea,body.dark-mode #logisticsDispatchView textarea{background:#191b1e!important;color:#f1f3f4!important;border:1px solid #4a4f54!important}
 body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispatchView .time-unlock{background:#303439!important;color:#f1f3f4!important;border-color:#62686e!important}
 </style>
-</head>
+<style>
+.board-display-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--card);color:var(--ink)}
+.day-controls,.zoom-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.day-controls label{display:flex;align-items:center;gap:8px;font-size:12px;margin-left:8px}
+.board-display-controls button,.board-display-controls input{background:var(--card);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font:600 12px system-ui;cursor:pointer}
+.board-display-controls button[aria-pressed=true]{background:var(--orange);color:white;border-color:var(--orange)}
+.board-display-controls button:disabled{opacity:.4;cursor:default}.zoom-controls output{min-width:44px;text-align:center;font:600 12px system-ui}
+.board-display-controls button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+</style></head>
 <body>
 
 <div class="topbar">
@@ -3503,7 +3510,7 @@ function renderJobsTable(allJobs) {
   const table = document.getElementById('jobsTable');
   const openJobs = (allJobs || []).filter(j => !isClosedOnBoard(j));
   const query = (document.getElementById('jobSearch')?.value || '').trim();
-  const jobs = openJobs.filter(j => jobMatchesSearch(j, query));
+  const jobs = openJobs.filter(j => jobMatchesSearch(j, query) && (!boardDayFilters.labor || getReportDate(j) === boardDayFilters.labor));
   const countEl = document.getElementById('jobSearchCount');
   if (countEl) countEl.textContent = query ? `${jobs.length} of ${openJobs.length}` : '';
 
@@ -6218,7 +6225,7 @@ function renderLogistics() {
   // The Logistics board is an active-work queue. Terminal records stay in
   // GHL/shared database history but should disappear from this operational view.
   const isTerminalMove = move => /complete|completed|cancel|cancelled|lost|abandon/i.test(String(move.status || move.stageName || move.pipelineStageName || ''));
-  const visibleMoves = moves.filter(m => m.active !== false && !isTerminalMove(m) && (filter === 'all' || logisticsSourceType(m) === filter));
+  const visibleMoves = moves.filter(m => m.active !== false && !isTerminalMove(m) && (filter === 'all' || logisticsSourceType(m) === filter) && (!boardDayFilters.logistics || logisticsDay(m) === boardDayFilters.logistics));
   const logisticsDate = m => {
     const moveKey = String(m.moveId || m.id || m.sourceOpportunityId || m.opportunityId || '');
     const override = window.logisticsScheduleOverride[moveKey];
@@ -9020,6 +9027,20 @@ document.getElementById('manualWorkerList').addEventListener('click', async e =>
 });
 
 
+const boardDayFilters = {labor:'',logistics:''};
+function logisticsDay(m){const key=String(m.moveId || m.id || m.sourceOpportunityId || m.opportunityId || '');return window.logisticsScheduleOverride[key]?.date || m.scheduledDate || m.requestedDate || m.reportDate || m.date || (m.scheduledStart ? String(m.scheduledStart).slice(0,10) : '');}
+function installBoardViewControls(kind,bodyId){
+ const body=document.getElementById(bodyId),wrap=body.closest('.jobs-table-wrap');
+ const toolbar=document.createElement('div');toolbar.className='board-display-controls';
+ toolbar.innerHTML='<div class="day-controls"><button type="button" data-day="all" aria-pressed="true">All days</button><button type="button" data-day="today">Today</button><button type="button" data-day="tomorrow">Tomorrow</button><label>View day <input type="date" aria-label="'+kind+' view day"></label><button type="button" data-step="-1" aria-label="Previous day">‹</button><button type="button" data-step="1" aria-label="Next day">›</button></div><div class="zoom-controls" role="group" aria-label="'+kind+' board zoom"><button type="button" data-zoom="-1" aria-label="Zoom out">−</button><output aria-live="polite">100%</output><button type="button" data-zoom="1" aria-label="Zoom in">+</button><button type="button" data-reset>Reset</button></div>';
+ wrap.before(toolbar);
+ let zoom=Number(localStorage.getItem('a2zZoom-'+kind)) || 100;zoom=Math.min(140,Math.max(60,zoom));
+ const updateZoom=()=>{wrap.style.zoom=zoom+'%';toolbar.querySelector('output').textContent=zoom+'%';toolbar.querySelector('[data-zoom="-1"]').disabled=zoom<=60;toolbar.querySelector('[data-zoom="1"]').disabled=zoom>=140;localStorage.setItem('a2zZoom-'+kind,String(zoom));};
+ const redraw=()=>{const day=boardDayFilters[kind];toolbar.querySelector('input').value=day;toolbar.querySelectorAll('[data-day]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.day==='all'?!day:day===addDaysYMD(toLocalYMD(new Date()),b.dataset.day==='today'?0:1))));if(kind==='labor')renderJobs(dashboardData.jobs);else renderLogistics();};
+ toolbar.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-zoom')){zoom=Math.min(140,Math.max(60,zoom+Number(b.dataset.zoom)*10));updateZoom();}else if(b.hasAttribute('data-reset')){zoom=100;updateZoom();}else if(b.dataset.day){boardDayFilters[kind]=b.dataset.day==='all'?'':addDaysYMD(toLocalYMD(new Date()),b.dataset.day==='today'?0:1);redraw();}else if(b.dataset.step){boardDayFilters[kind]=addDaysYMD(boardDayFilters[kind] || toLocalYMD(new Date()),Number(b.dataset.step));redraw();}});
+ toolbar.querySelector('input').addEventListener('change',e=>{boardDayFilters[kind]=e.target.value;redraw();});updateZoom();
+}
+installBoardViewControls('labor','jobsBody');installBoardViewControls('logistics','logisticsMoves');
 let logisticsSplit = localStorage.getItem('a2zLogisticsSplit') !== 'false';
 function applyLogisticsSplit(){
  const body=document.getElementById('logisticsMoves'),table=body.closest('table');
