@@ -1,3 +1,4 @@
+import { validateLogisticsBooking } from '../../lib/logistics-booking.mjs';
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { createDispatch } from '../../lib/create.mjs';
@@ -6,6 +7,8 @@ export default async function handler(request) {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     authorizeWrite(request);
     const payload = await readPayload(request);
+    Object.assign(payload, validateLogisticsBooking(payload));
+    if (payload.documents) payload.documents = payload.documents.map(doc => ({ ...doc, url: new URL(doc.url, request.url).href }));
     Object.assign(payload, { targetType: 'standalone', bookingMode: 'standalone', jobType: 'container', sourceType: 'container' });
     const sql = db(); await ensureSchema(sql);
     return json(await createDispatch(sql, 'move', payload));

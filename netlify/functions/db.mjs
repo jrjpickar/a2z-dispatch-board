@@ -43,6 +43,7 @@ async function checkOrCreateSchema(sql) {
 async function createSchema(sql) {
   await sql.begin(async sql => {
   await sql`select pg_advisory_xact_lock(824291001)`;
+  await sql`create table if not exists logistics_documents (id text primary key, name text not null, mime_type text not null, content_base64 text not null, created_at timestamptz not null default now())`;
   await sql`
     create table if not exists job_shared_state (
       job_id text primary key,

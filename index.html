@@ -6348,7 +6348,7 @@ function renderLogistics() {
     const assetAssignment = assignable ? (assignedAssets.length && !assetEditing ? `<div class="assignment-lock"><span class="assignment-lock-copy"><span class="assignment-lock-label">Vehicle locked</span><span class="assignment-lock-value">${escapeLogisticsHtml(assignedAssetDisplay)}</span></span><button type="button" class="job-stage-btn edit logistics-edit-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit Vehicle</button></div>` : assetEditor) : '';
     const targetType = logisticsTargetType(m);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
-    const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>Reset Day</button></div>`;
+    const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>EOD Sheet</button></div>`;
     const none = '<span class="logi-none">None yet</span>';
     // Needs attention (today and tomorrow only): no saved time, no driver, no vehicle.
     const watch = assignable && (groupKey === 'today' || groupKey === 'tomorrow');
@@ -6859,18 +6859,108 @@ async function unscheduleLogisticsMove(jobId, button) {
   } finally { button.disabled = false; button.textContent = original; }
 }
 
-async function resetLogisticsDay(jobId, button) {
+
+// Shared booking, editing and daily EOD fields for Logistics.
+const logisticsDocumentSelections = new Map();
+const logisticsUploadedFiles = new WeakMap();
+function logisticsBookingFields(prefix) {
+  return `<div class="field"><label for="${prefix}ClientContact">Client contact</label><input id="${prefix}ClientContact" type="text" placeholder="Contact name, phone and/or email"></div>
+    <div class="field"><label for="${prefix}PredictedEndDate">Predicted end date</label><input id="${prefix}PredictedEndDate" type="date"></div>
+    <div class="field"><label for="${prefix}Scope">Full scope of work per proposal</label><textarea id="${prefix}Scope" maxlength="10000"></textarea></div>
+    <div class="field-row"><div class="field"><label for="${prefix}ScheduledDays">Scheduled days</label><input id="${prefix}ScheduledDays" type="text" placeholder="e.g. Monday–Friday"></div><div class="field"><label for="${prefix}ScheduledHours">Scheduled hours</label><input id="${prefix}ScheduledHours" type="text" placeholder="e.g. 7 AM–3 PM, 8 hours/day"></div></div>
+    <div class="field"><label for="${prefix}OverweightTons">Overweight (tons)</label><input id="${prefix}OverweightTons" type="number" min="0" step="0.01" value="0" inputmode="decimal"></div>
+    <div class="field"><label for="${prefix}Documents">Attach all job related documents here</label><input id="${prefix}Documents" type="file" multiple><small>Up to 20 documents, 3 MB each.</small><div id="${prefix}DocumentList"></div></div>`;
+}
+for (const prefix of ['container', 'editContainer']) {
+  document.getElementById(prefix + 'Notes').closest('.field').insertAdjacentHTML('beforebegin', logisticsBookingFields(prefix));
+  document.querySelector(`label[for="${prefix}Notes"]`).textContent = 'Notes';
+  document.querySelector(`label[for="${prefix}Date"]`).textContent = 'Start date';
+  document.querySelector(`label[for="${prefix}Time"]`).textContent = 'Start time';
+}
+document.body.insertAdjacentHTML('beforeend', `<div class="overlay" id="logisticsEodOverlay"></div>
+  <div class="sheet" id="logisticsEodSheet"><div class="sheet-head"><h2>Logistics EOD Sheet</h2><button id="closeLogisticsEod">&times;</button></div>
+  <div class="sheet-body"><p id="logisticsEodName"></p><div class="field"><label for="logisticsEodDate">EOD date</label><input type="date" id="logisticsEodDate"></div>
+  <div class="field-row"><div class="field"><label for="logisticsEodStartDate">Start date</label><input type="date" id="logisticsEodStartDate"></div><div class="field"><label for="logisticsEodStartTime">Start time</label><input type="time" id="logisticsEodStartTime"></div></div>
+  ${logisticsBookingFields('logisticsEod')}<div class="field"><label for="logisticsEodNotes">Notes</label><textarea id="logisticsEodNotes"></textarea></div>
+  <p>Submitting sends the day's logistics log and clears the schedule, driver and vehicles. Booking details and documents are kept.</p></div>
+  <div class="sheet-foot"><button class="btn-ghost" id="cancelLogisticsEod">Cancel</button><button class="btn-primary" id="submitLogisticsEod">Submit EOD Sheet</button></div></div>`);
+function fillLogisticsBookingFields(prefix, move = {}) {
+  const fields = { ClientContact: move.clientContact || [move.clientName || move.contact?.name, move.clientPhone || move.contact?.phone].filter(Boolean).join(' · '), PredictedEndDate: move.predictedEndDate || move.reportEndDate || '', Scope: move.scopeOfWork || '', ScheduledDays: move.scheduledDays || '', ScheduledHours: move.scheduledHours || '', OverweightTons: move.overweightTons ?? 0 };
+  for (const [key, value] of Object.entries(fields)) document.getElementById(prefix + key).value = value;
+  document.getElementById(prefix + 'Documents').value = '';
+  const docs = (move.documents || []).map(doc => ({ ...doc }));
+  logisticsDocumentSelections.set(prefix, docs);
+  document.getElementById(prefix + 'DocumentList').innerHTML = docs.map(doc => `<div><a href="/.netlify/functions/logistics-documents?id=${encodeURIComponent(doc.id)}" target="_blank" rel="noopener">${escapeLogisticsHtml(doc.name)}</a></div>`).join('');
+}
+async function readLogisticsBookingFields(prefix) {
+  const value = key => document.getElementById(prefix + key).value.trim();
+  const overweightTons = Number(value('OverweightTons'));
+  if (!Number.isFinite(overweightTons) || overweightTons < 0) throw new Error('Overweight tons must be zero or greater.');
+  const documents = [...(logisticsDocumentSelections.get(prefix) || [])];
+  const files = [...document.getElementById(prefix + 'Documents').files];
+  if (documents.length + files.length > 20) throw new Error('Attach up to 20 documents.');
+  if (files.some(file => !file.size || file.size > 3 * 1024 * 1024)) throw new Error('Each document must be nonempty and 3 MB or smaller.');
+  for (const file of files) {
+    let doc = logisticsUploadedFiles.get(file);
+    if (!doc) {
+      const form = new FormData(); form.append('file', file);
+      const response = await fetch('/.netlify/functions/logistics-documents', { method: 'POST', body: form });
+      const result = await response.json();
+      if (!response.ok || !result.document) throw new Error(result.error || 'Document upload failed.');
+      doc = result.document; logisticsUploadedFiles.set(file, doc);
+    }
+    documents.push(doc);
+  }
+  return { clientContact: value('ClientContact'), predictedEndDate: value('PredictedEndDate'), scopeOfWork: value('Scope'), scheduledDays: value('ScheduledDays'), scheduledHours: value('ScheduledHours'), overweightTons, documents: documents.map(doc => ({ ...doc, url: new URL(`/.netlify/functions/logistics-documents?id=${encodeURIComponent(doc.id)}`, window.location.origin).href })) };
+}
+let logisticsEodMoveId = '', logisticsEodTrigger = null, logisticsEodSubmitting = false;
+function closeLogisticsEod() {
+  if (logisticsEodSubmitting) return;
+  document.getElementById('logisticsEodOverlay').classList.remove('open');
+  document.getElementById('logisticsEodSheet').classList.remove('open');
+  logisticsEodMoveId = ''; logisticsEodTrigger = null;
+}
+function openLogisticsEod(jobId, button) {
+  const move = findLogisticsMove(button?.dataset.moveId || jobId);
+  if (!move) return showToast('Logistics move could not be found.', true);
+  logisticsEodMoveId = String(move.moveId || move.id); logisticsEodTrigger = button;
+  document.getElementById('logisticsEodName').textContent = move.jobAddress || move.destinationAddress || move.name || 'Logistics move';
+  document.getElementById('logisticsEodDate').value = move.scheduledDate || move.requestedDate || move.reportDate || localIsoDate();
+  document.getElementById('logisticsEodStartDate').value = move.scheduledDate || move.requestedDate || move.reportDate || '';
+  document.getElementById('logisticsEodStartTime').value = move.scheduledTime || move.requestedTime || move.reportTime || '';
+  document.getElementById('logisticsEodNotes').value = move.notes || '';
+  fillLogisticsBookingFields('logisticsEod', move);
+  document.getElementById('logisticsEodOverlay').classList.add('open'); document.getElementById('logisticsEodSheet').classList.add('open');
+}
+for (const id of ['closeLogisticsEod', 'cancelLogisticsEod', 'logisticsEodOverlay']) document.getElementById(id).addEventListener('click', closeLogisticsEod);
+document.getElementById('submitLogisticsEod').addEventListener('click', async () => {
+  const button = document.getElementById('submitLogisticsEod');
+  if (logisticsEodSubmitting) return;
+  const date = document.getElementById('logisticsEodDate').value;
+  if (!date) return showToast('Add the EOD date.', true);
+  logisticsEodSubmitting = true; button.disabled = true; button.textContent = 'Submitting...';
+  try {
+    const fields = await readLogisticsBookingFields('logisticsEod');
+    const sheet = { ...fields, date, reportDate: document.getElementById('logisticsEodStartDate').value, reportTime: document.getElementById('logisticsEodStartTime').value, reportEndDate: fields.predictedEndDate, notes: document.getElementById('logisticsEodNotes').value.trim(), eodSheet: true };
+    const result = await resetLogisticsDay(logisticsEodMoveId, logisticsEodTrigger || button, sheet);
+    if (result) { logisticsEodSubmitting = false; closeLogisticsEod(); }
+  } catch (error) { showToast(error.message, true); }
+  finally { logisticsEodSubmitting = false; button.disabled = false; button.textContent = 'Submit EOD Sheet'; }
+});
+
+async function resetLogisticsDay(jobId, button, eodSheet) {
   const requestedMoveId = button && button.dataset ? button.dataset.moveId : '';
   const move = (logisticsData.moves || []).find(item => requestedMoveId && String(item.moveId || item.id || '') === String(requestedMoveId)) || findLogisticsMove(jobId);
   if (!move) return showToast('Logistics move could not be found.', true);
-  if (!confirm("Reset this move's schedule and driver? The GHL Opportunity and move details will be kept.")) return;
+  if (!eodSheet) { openLogisticsEod(jobId, button); return false; }
+  jobId = move.sourceOpportunityId || move.opportunityId || move.jobId || jobId;
   const original = button.textContent;
-  button.disabled = true; button.textContent = 'Resetting...';
+  button.disabled = true; button.textContent = 'Submitting...';
   const row = button.closest('tr');
   const driverName = getLogisticsDriverName(move);
   const driver = (logisticsData.drivers || []).find(item => item.name === driverName) || {};
   const lunch = row?.querySelector('.logistics-lunch')?.value || '';
-  const logDate = move.scheduledDate || move.requestedDate || move.reportDate || move.date || '';
+  const logDate = eodSheet.date || move.scheduledDate || move.requestedDate || move.reportDate || move.date || '';
   const moveKey = String(move.moveId || move.id || jobId);
   // Loads saved for this day (read now: the move record is updated in place after the reset saves).
   const dayLoads = Number(move.truckLoads) > 0 && (!move.truckLoadsDate || !logDate || move.truckLoadsDate === logDate) ? Number(move.truckLoads) : 0;
@@ -6900,7 +6990,8 @@ async function resetLogisticsDay(jobId, button) {
     hours: driver.hours || move.hours || '',
     signature: driverName,
     lunch,
-    rows: buildDriverLogRows(driverName, move)
+    rows: buildDriverLogRows(driverName, move),
+    ...eodSheet, dayOfWeek: jobDayOfWeek(logDate), ...jobWeekFields(logDate)
   };
   try {
     await commitState(CONFIG.LOGISTICS_STATE_URL, { ...payload, ...logisticsIdentity(move), action: 'reset_dispatch' });
@@ -6912,11 +7003,13 @@ async function resetLogisticsDay(jobId, button) {
     if (driverName) {
       await runSideEffect(CONFIG.DRIVER_ASSIGNMENT_URL, { ...payload, action: 'remove_driver', bookingMode: 'driver_assignment' }, 'Driver release notifications');
     }
-    showToast('Logistics day reset. Opportunity and move details preserved.');
+    showToast('Logistics EOD sheet submitted. Schedule, driver and vehicles cleared.');
     await loadLogistics();
+    return true;
   } catch (err) {
     console.error('Logistics daily reset failed:', err);
-    showToast(err && err.name === 'AbortError' ? 'No response from the Logistics reset webhook after 20s.' : 'Could not reset the Logistics day.', true);
+    showToast(err && err.name === 'AbortError' ? 'No response from the Logistics reset webhook after 20s.' : 'Could not submit the Logistics EOD sheet.', true);
+    return false;
   } finally { button.disabled = false; button.textContent = original; }
 }
 
@@ -6948,7 +7041,8 @@ function openEditContainerSheetFn(jobId) {
   document.getElementById('editContainerValue').value = move.monetaryValue == null ? '' : move.monetaryValue;
   document.getElementById('editContainerPaymentTermsField').hidden = logisticsTargetType(move) === 'job_addon';
   document.getElementById('editContainerPaymentTerms').value = move.paymentTerms || '';
-  document.getElementById('editContainerNotes').value = move.notes || move.scopeOfWork || '';
+  document.getElementById('editContainerNotes').value = move.notes || '';
+  fillLogisticsBookingFields('editContainer', move);
   editContainerOverlay.classList.add('open'); editContainerSheet.classList.add('open');
 }
 document.getElementById('closeEditContainerSheet').addEventListener('click', closeEditContainerSheetFn);
@@ -6970,6 +7064,10 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
   const containerSize = document.getElementById('editContainerSize').value;
   const movementType = document.getElementById('editContainerMovementType').value;
   if (!firstName || !lastName || !jobAddress || !reportDate || !reportTime) return showToast('Client, destination, date, and time are required.', true);
+  let bookingFields;
+  button.disabled = true;
+  try { bookingFields = await readLogisticsBookingFields('editContainer'); }
+  catch (error) { button.disabled = false; showToast(error.message, true); return; }
   const payload = {
     ...(!isAddon ? { paymentTerms: document.getElementById('editContainerPaymentTerms').value } : {}),
     action: isAddon ? 'update_addon' : 'update_job', jobId: parentJobId, opportunityId: parentJobId, sourceOpportunityId: parentJobId, moveId,
@@ -6978,9 +7076,9 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
     clientPhone: document.getElementById('editContainerPhone').value.trim(),
     jobAddress, deliveryAddress: jobAddress, destinationAddress: jobAddress, pickupAddress: move.pickupAddress || move.pickup || 'A2Z Yard',
     reportDate, reportTime, requestedDate: reportDate, requestedTime: reportTime,
-    reportEndDate: reportDate, reportEndTime: move.reportEndTime || '',
+    reportEndDate: bookingFields.predictedEndDate, reportEndTime: move.reportEndTime || '',
     monetaryValue: document.getElementById('editContainerValue').value === '' ? null : parseFloat(document.getElementById('editContainerValue').value),
-    scopeOfWork: document.getElementById('editContainerNotes').value.trim(), notes: document.getElementById('editContainerNotes').value.trim(),
+    ...bookingFields, notes: document.getElementById('editContainerNotes').value.trim(),
     toolsRequired: [`${containerSize} Container`], containerSize, movementType, equipment: `${containerSize} Container`,
     stops: buildStopsPayload(editContainerStopsEditor, { address: jobAddress, type: 'delivery' })
   };
@@ -7171,7 +7269,7 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
   const button = event.target.closest('.logistics-action');
   if (!button) return;
   if (button.dataset.action === 'edit') openEditContainerSheetFn(button.dataset.moveId || button.dataset.id);
-  else if (button.dataset.action === 'reset') resetLogisticsDay(button.dataset.id, button);
+  else if (button.dataset.action === 'reset') openLogisticsEod(button.dataset.id, button);
   else setContainerStage(button.dataset.id, button.dataset.action, button);
 });
 
@@ -7190,6 +7288,7 @@ const containerOverlay = document.getElementById('containerOverlay');
 const containerSheet = document.getElementById('containerSheet');
 function closeContainerSheetFn() { containerOverlay.classList.remove('open'); containerSheet.classList.remove('open'); }
 function openContainerSheetFn() {
+  fillLogisticsBookingFields('container');
   if (!document.getElementById('containerDate').value) document.getElementById('containerDate').value = toLocalYMD(new Date());
   containerStopsEditor.render([]);
   containerOverlay.classList.add('open'); containerSheet.classList.add('open');
@@ -7219,6 +7318,10 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
     showToast('Client, delivery address, date, and time are required.', true);
     return;
   }
+  let bookingFields;
+  submitBtn.disabled = true;
+  try { bookingFields = await readLogisticsBookingFields('container'); }
+  catch (error) { submitBtn.disabled = false; showToast(error.message, true); return; }
   const payload = {
     action: 'create',
     bookingMode: 'standalone',
@@ -7236,12 +7339,12 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
     pickupAddress: 'A2Z Yard',
     reportDate,
     reportTime,
-    reportEndDate: reportDate,
+    reportEndDate: bookingFields.predictedEndDate,
     reportEndTime: '',
     movementType,
     containerSize,
     equipment: `${containerSize} Container`,
-    scopeOfWork: notes,
+    ...bookingFields,
     toolsRequired: [`${containerSize} Container`],
     monetaryValue: document.getElementById('containerValue').value === '' ? null : parseFloat(document.getElementById('containerValue').value),
     notes,
