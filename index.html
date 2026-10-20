@@ -1632,13 +1632,49 @@
   .field-app-actions { white-space: nowrap; }
   #editWorkerSheet .ghl-hint { font-size: 12px; color: var(--ink-soft); }
 </style>
-</head>
+
+<style>
+.sandbox-banner{padding:10px 24px;background:#fff1d2;color:#6c4812;font:600 12px system-ui;display:flex;justify-content:space-between;gap:16px}
+.board-view-toggle{display:flex;gap:4px;padding:4px;background:var(--grey-light);border-radius:9px;margin-left:auto}
+.board-view-toggle button{border:0;padding:9px 14px;background:transparent;color:var(--ink-soft);border-radius:6px;font:600 12px system-ui;cursor:pointer}
+.board-view-toggle button[aria-pressed=true]{background:var(--orange);color:white}
+#jobsTable.split-board{display:block!important;min-width:0!important;width:100%!important}
+#jobsTable.split-board>thead{display:none}
+#jobsTable.split-board>#jobsBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;padding:18px;background:var(--grey-light)}
+.split-lane{display:block;min-width:0}.split-lane>td{display:block!important;padding:0!important;border:0!important;background:transparent!important}
+.lane-title{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;padding:15px 16px;border-top:4px solid var(--orange);background:var(--white,#fff);border-radius:8px;color:var(--ink);font:700 17px system-ui}
+.split-lane.contract .lane-title{border-top-color:#527667}.lane-title small{font:600 12px system-ui;color:var(--ink-soft)}
+.lane-table,.lane-table tbody{display:block;width:100%;min-width:0!important}
+#jobsTable.split-board tr[data-job-row]{display:grid;grid-template-columns:1fr 1fr;background:var(--white,#fff);border:1px solid var(--grey-mid,#ddd);border-radius:9px;overflow:hidden;margin-bottom:14px}
+#jobsTable.split-board tr[data-job-row]>td{display:block!important;width:auto!important;min-width:0!important;padding:11px 14px!important;border:0!important;border-bottom:1px solid var(--grey-light)!important;overflow-wrap:anywhere}
+#jobsTable.split-board tr[data-job-row]>td:before{content:attr(data-label);display:block;font:600 10px system-ui;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin-bottom:7px}
+#jobsTable.split-board tr[data-job-row]>td:nth-child(4),#jobsTable.split-board tr[data-job-row]>td:nth-child(7),#jobsTable.split-board tr[data-job-row]>td:nth-child(8),#jobsTable.split-board tr[data-job-row]>td:nth-child(9){grid-column:1/-1}
+#jobsTable.split-board .crew-assign-wrap{min-width:0!important}#jobsTable.split-board .lane-empty{padding:32px 15px;text-align:center;color:var(--ink-soft)}
+@media(max-width:1000px){#jobsTable.split-board>#jobsBody{grid-template-columns:1fr}.jobs-panel-head{flex-wrap:wrap}.board-view-toggle{margin-left:0}}
+</style><style>
+.schedule-time-color{padding:9px 10px;border-radius:7px;border-left:4px solid transparent}
+.schedule-time-color.today{background:#fee2e2!important;color:#991b1b!important;border-color:#dc2626}
+.schedule-time-color.tomorrow{background:#fef3c7!important;color:#854d0e!important;border-color:#eab308}
+.schedule-time-color.future{background:#dcfce7!important;color:#166534!important;border-color:#16a34a}
+.schedule-time-color .time-locked-display{color:inherit!important}
+.time-color-legend{display:flex;gap:16px;padding:10px 20px;font-size:12px;color:var(--ink-soft);flex-wrap:wrap}
+.time-color-legend span{display:inline-flex;align-items:center;gap:6px}
+.time-color-legend i{width:9px;height:9px;display:inline-block;border-radius:50%}
+</style><style>
+#logisticsDispatchView table.logi-split{display:block;min-width:0!important;width:100%}
+.logi-split>thead{display:none}.logi-split>#logisticsMoves{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;padding:18px;background:var(--grey-light)}
+.logi-split .lane-table tr[data-move-key]{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--grey-mid,#ddd);border-radius:9px;overflow:hidden;background:var(--white,#fff);margin-bottom:14px}
+#logisticsDispatchView .logi-split .lane-table tr[data-move-key]>td{display:block;width:auto!important;min-width:0!important;max-width:none!important;padding:12px 14px;white-space:normal;border:0;border-bottom:1px solid var(--grey-light);overflow-wrap:anywhere}
+.logi-split .lane-table tr[data-move-key]>td:before{content:attr(data-label);display:block;font:600 10px system-ui;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin-bottom:7px}
+.logi-split .lane-table tr[data-move-key]>td:nth-child(1),.logi-split .lane-table tr[data-move-key]>td:nth-child(4),.logi-split .lane-table tr[data-move-key]>td:nth-child(5),.logi-split .lane-table tr[data-move-key]>td:nth-child(6),.logi-split .lane-table tr[data-move-key]>td:nth-child(7){grid-column:1/-1}
+@media(max-width:1000px){.logi-split>#logisticsMoves{grid-template-columns:1fr}}
+</style></head>
 <body>
 
 <div class="topbar">
   <div class="brand">
     <h1>A2Z <span class="tag">DISPATCH</span></h1>
-    <div class="whoami" id="whoami"><span class="whoami-text" id="whoamiText">Signing in through GHL…</span><span class="user-role" id="whoamiRole" hidden></span><button type="button" class="whoami-switch" id="switchUserBtn" hidden>Switch user</button><button type="button" class="whoami-switch" id="signinIdBtn" hidden title="Copy your GHL user ID. It is your password for opening the board outside GHL.">My sign-in ID</button></div>
+    <div class="whoami" id="whoami"><span class="whoami-text" id="whoamiText">Signing in through GHL...</span><span class="user-role" id="whoamiRole" hidden></span><button type="button" class="whoami-switch" id="switchUserBtn" hidden>Switch user</button><button type="button" class="whoami-switch" id="signinIdBtn" hidden title="Copy your GHL user ID. It is your password for opening the board outside GHL.">My sign-in ID</button></div>
   </div>
   <div class="date mono" id="todayDate"></div>
   <div class="actions">
@@ -1693,12 +1729,13 @@
   <!-- Jobs scheduled -->
   <div class="panel">
     <div class="panel-head jobs-panel-head">
-      <h2>Jobs Scheduled</h2>
+      <h2>Jobs Scheduled</h2><div class="board-view-toggle" role="group" aria-label="Board layout"><button type="button" id="splitViewBtn" aria-pressed="true">Split view</button><button type="button" id="combinedViewBtn" aria-pressed="false">Current view</button></div>
       <div class="jobs-search-wrap">
         <input type="search" id="jobSearch" class="jobs-search" placeholder="Search address, client, crew or job ID" autocomplete="off" aria-label="Search jobs">
         <span class="jobs-search-count mono" id="jobSearchCount"></span>
       </div>
     </div>
+    <div class="time-color-legend" aria-label="Schedule date colors"><span><i style="background:#dc2626"></i>Today</span><span><i style="background:#eab308"></i>Tomorrow</span><span><i style="background:#16a34a"></i>Future</span></div>
     <div class="jobs-table-wrap">
       <table class="jobs" id="jobsTable">
         <thead>
@@ -1855,7 +1892,7 @@
   <div class="logistics-layout">
     <div class="panel logistics-drivers-panel"><div class="panel-head"><h2>Drivers</h2><span class="mono" id="logisticsDriverCount">0 TOTAL</span></div><ul class="logistics-resource-list" id="logisticsDrivers"></ul></div>
     <div class="panel logistics-assets-panel"><div class="panel-head"><h2>Assets</h2><span class="mono" id="logisticsAssetCount">0 TOTAL</span></div><div class="logistics-note">Drivers and assets stay independent so either can be reassigned.</div><ul class="logistics-resource-list" id="logisticsAssets"></ul></div>
-    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="logi-attn" id="logisticsAttention" hidden></div><div class="logi-bulk" id="logisticsBulk" hidden></div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
+    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="board-view-toggle" role="group" aria-label="Logistics layout"><button id="logiSplitBtn" aria-pressed="true">Split view</button><button id="logiCombinedBtn" aria-pressed="false">Current view</button></div><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="logi-attn" id="logisticsAttention" hidden></div><div class="logi-bulk" id="logisticsBulk" hidden></div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
   </div>
 </div>
 
@@ -3333,6 +3370,7 @@ function renderJobs(allJobs) {
   const pickerState = openCrewPickerState();
   const timeEdits = openTimeEditsState();
   renderJobsTable(allJobs);
+  applyBoardSplit(allJobs);
   restoreTimeEdits(timeEdits);
   restoreCrewPicker(pickerState);
   enhanceQuarterTimes(document.getElementById('jobsBody'));
@@ -3429,6 +3467,13 @@ document.getElementById('jobsBody').addEventListener('focusout', e => {
     renderJobs(dashboardData.jobs || []);
   }, 0);
 });
+function scheduleDateTone(date) {
+  const today = toLocalYMD(new Date());
+  if (date === today) return 'today';
+  if (date === addDaysYMD(today, 1)) return 'tomorrow';
+  if (date && date > today) return 'future';
+  return 'neutral';
+}
 function renderJobsTable(allJobs) {
   const body = document.getElementById('jobsBody');
   const emptyState = document.getElementById('jobsEmpty');
@@ -3540,6 +3585,7 @@ function renderJobsTable(allJobs) {
         // Building it for every row on every refresh was most of the board's lag.
         ? `<div class="crew-assign-wrap" data-job-id="${jobId}">
              <button type="button" class="crew-assign-toggle">+ Assign crew</button>
+             <div class="crew-size-summary" style="margin-top:7px;font-size:12px;color:var(--ink-soft)">Crew size: <strong>${escapeAttr(getSharedState(j)?.crewSize ?? j.crewSize ?? '—')}</strong> · ${crew.length + overrideCrew.length} assigned</div>
              <div class="crew-assign-panel"></div>
            </div>`
         : `<span class="crew-chip empty-slot">no one available</span>`);
@@ -3596,8 +3642,8 @@ function renderJobsTable(allJobs) {
         <td data-label="Client">${client}</td>
         <td data-label="Value">${valueCell}</td>
         <td data-label="Address">${address}${coNote}</td>
-        <td data-label="Report time">${reportCell}</td>
-        <td data-label="End date/time">${endCell}</td>
+        <td data-label="Report time"><div class="schedule-time-color ${scheduleDateTone(reportDateVal)}">${reportCell}</div></td>
+        <td data-label="End date/time"><div class="schedule-time-color ${scheduleDateTone(endDateVal)}">${endCell}</div></td>
         <td data-label="Crew"><div class="crew-chip-row">${backendCrewChips}${overrideChips}${assignChecklist}${(!crew.length && !overrideCrew.length && job_associationsMissing(j)) ? '<span class="crew-chip empty-slot">crew not linked yet</span>' : ''}</div></td>
         <td data-label="Scope of work" class="scope-cell">${buildScopeCell(j, jobId, terminalLocally || closedOnBoard)}</td>
         <td data-label="Status">
@@ -6268,7 +6314,7 @@ function renderLogistics() {
       + `<td data-label="Move"><div class="logi-move">${escapeLogisticsHtml(moveName)}</div>${moveDetail ? `<div class="logi-detail">${escapeLogisticsHtml(moveDetail)}</div>` : ''}${notes ? `<div class="logi-note">${escapeLogisticsHtml(notes)}</div>` : ''}</td>`
       + `<td data-label="Value"><span class="logi-value">${escapeLogisticsHtml(standaloneValueDisplay === 'N/A' ? 'On the job' : standaloneValueDisplay)}</span></td>`
       + `<td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td>`
-      + `<td data-label="Schedule" class="mono">${scheduleCell}</td>`
+      + `<td data-label="Schedule" class="mono"><div class="schedule-time-color ${scheduleDateTone(date)}">${scheduleCell}</div></td>`
       + `<td data-label="Driver & vehicle"><div class="logi-who"><span>Driver</span>${assignedDriverName ? escapeLogisticsHtml(assignedDriverName) : none}</div><div class="logi-who"><span>Vehicle</span>${assignedAssetDisplay ? escapeLogisticsHtml(assignedAssetDisplay) : none}</div>${loadsControl}${suggestBtn}</td>`
       + `<td data-label="Status"><div class="status-line"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(String(status).replace(/_/g, ' '))}</span>${!terminal && (scheduleLocked || date || assignedDriverName || assignedAssets.length) ? `<button type="button" class="unschedule-btn logistics-unschedule" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" title="Clear this move's time, driver and vehicles. It moves to Unscheduled.">Unschedule</button>` : ''}</div>${actions}</td></tr>`;
   };
@@ -6292,6 +6338,7 @@ function renderLogistics() {
     return `<tr class="job-group-header-row job-group-${key}"><td colspan="7" class="job-group-header">${label} <span class="job-group-count">${rows.length}</span></td></tr>` +
       (rows.length ? rows.map(r => r.html).join('') : `<tr class="job-group-empty-row"><td colspan="7" class="job-group-empty">${logisticsAttnFilter ? 'Nothing missing here' : 'No moves'}</td></tr>`);
   }).join('') : '<tr><td colspan="7" class="empty-state">No logistics moves returned for this view.</td></tr>';
+  applyLogisticsSplit();
   renderLogisticsAttention(attn, watched.length);
   const openKeys = new Set(Object.values(built).flat().map(r => r.flags.moveKey).filter(Boolean));
   [...logisticsSelected].forEach(k => { if (!openKeys.has(k)) logisticsSelected.delete(k); });
@@ -8949,6 +8996,55 @@ document.getElementById('manualWorkerList').addEventListener('click', async e =>
   catch (err) { showToast(err.message, true); btn.disabled = false; }
 });
 
+
+let logisticsSplit = localStorage.getItem('a2zLogisticsSplit') !== 'false';
+function applyLogisticsSplit(){
+ const body=document.getElementById('logisticsMoves'),table=body.closest('table');
+ table.classList.toggle('logi-split',logisticsSplit);
+ document.getElementById('logiSplitBtn').setAttribute('aria-pressed',String(logisticsSplit));
+ document.getElementById('logiCombinedBtn').setAttribute('aria-pressed',String(!logisticsSplit));
+ if(!logisticsSplit)return;
+ const rows=[...body.querySelectorAll('tr[data-move-key]')];
+ const lanes=['Job add-ons','Standalone jobs'].map((title,i)=>{
+  const lane=document.createElement('tr');lane.className='split-lane '+(i?'contract':'');
+  lane.innerHTML='<td colspan="7"><h3 class="lane-title">'+title+'<small></small></h3><table class="lane-table"><tbody></tbody></table></td>';return lane;
+ });
+ rows.forEach(row=>{const move=logisticsMoveByKey(row.dataset.moveKey);lanes[logisticsTargetType(move)==='standalone'?1:0].querySelector('tbody').append(row)});
+ lanes.forEach(lane=>{const n=lane.querySelectorAll('[data-move-key]').length;lane.querySelector('small').textContent=n+' move'+(n===1?'':'s');if(!n)lane.querySelector('tbody').innerHTML='<tr><td class="lane-empty">No matching moves in this lane.</td></tr>'});
+ body.replaceChildren(...lanes);
+}
+function setLogisticsSplit(split){logisticsSplit=split;localStorage.setItem('a2zLogisticsSplit',String(split));renderLogistics()}
+document.getElementById('logiSplitBtn').onclick=()=>setLogisticsSplit(true);
+document.getElementById('logiCombinedBtn').onclick=()=>setLogisticsSplit(false);
+let boardSplit = localStorage.getItem('a2zBoardSplit') !== 'false';
+function applyBoardSplit(allJobs) {
+ const table=document.getElementById('jobsTable'), body=document.getElementById('jobsBody');
+ table.classList.toggle('split-board',boardSplit);
+ document.getElementById('splitViewBtn').setAttribute('aria-pressed',String(boardSplit));
+ document.getElementById('combinedViewBtn').setAttribute('aria-pressed',String(!boardSplit));
+ if(!boardSplit)return;
+ const rows=[...body.querySelectorAll('tr[data-job-row]')];
+ const labels=['Job ID','Client','Value','Address','Report time','End date / time','Crew','Scope of work','Status'];
+ const lanes=['hourly','contract'].map((type)=>{
+  const lane=document.createElement('tr'); lane.className='split-lane '+type;
+  lane.innerHTML='<td colspan="9"><h3 class="lane-title">'+(type==='hourly'?'Hourly work':'Contract work')+'<small></small></h3><table class="lane-table"><tbody></tbody></table></td>';
+  return lane;
+ });
+ rows.forEach(row=>{
+  const job=allJobs.find(j=>j.id===row.dataset.jobRow);
+  [...row.children].forEach((td,i)=>td.dataset.label=labels[i]);
+  lanes[isHourlyJob(job)?0:1].querySelector('tbody').append(row);
+ });
+ lanes.forEach(lane=>{
+  const n=lane.querySelectorAll('[data-job-row]').length;
+  lane.querySelector('small').textContent=n+' job'+(n===1?'':'s');
+  if(!n)lane.querySelector('tbody').innerHTML='<tr><td class="lane-empty">No matching jobs in this lane.</td></tr>';
+ });
+ body.replaceChildren(...lanes);
+}
+function setBoardView(split){boardSplit=split;localStorage.setItem('a2zBoardSplit',String(split));renderJobs(dashboardData.jobs);}
+document.getElementById('splitViewBtn').onclick=()=>setBoardView(true);
+document.getElementById('combinedViewBtn').onclick=()=>setBoardView(false);
 /* ---------- Init ---------- */
 enhanceQuarterTimes(document);
 initSession();
