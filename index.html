@@ -1668,7 +1668,30 @@
 .logi-split .lane-table tr[data-move-key]>td:before{content:attr(data-label);display:block;font:600 10px system-ui;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin-bottom:7px}
 .logi-split .lane-table tr[data-move-key]>td:nth-child(1),.logi-split .lane-table tr[data-move-key]>td:nth-child(4),.logi-split .lane-table tr[data-move-key]>td:nth-child(5),.logi-split .lane-table tr[data-move-key]>td:nth-child(6),.logi-split .lane-table tr[data-move-key]>td:nth-child(7){grid-column:1/-1}
 @media(max-width:1000px){.logi-split>#logisticsMoves{grid-template-columns:1fr}}
-</style></head>
+</style>
+<style id="split-theme-polish">
+/* Keep dispatch rows steady as the pointer moves across them. */
+body #laborDispatchView table.jobs tr[data-job-row]:hover>td,
+body #logisticsDispatchView table.logistics-table tr[data-move-key]:hover>td{background:var(--card)!important}
+body #laborDispatchView table.jobs tr[data-job-row]:hover>td:first-child{box-shadow:none!important}
+body .lane-title{background:var(--card);color:var(--ink)}
+body #jobsTable.split-board tr[data-job-row],
+body #logisticsDispatchView .logi-split tr[data-move-key]{background:var(--card);border-color:var(--border)}
+body #jobsTable.split-board tr[data-job-row]>td,
+body #logisticsDispatchView .logi-split tr[data-move-key]>td{background:transparent!important;max-width:none!important;white-space:normal!important;border-color:var(--border)!important}
+body #jobsTable.split-board tr[data-job-row]>td>*{max-width:100%!important}
+body.dark-mode .schedule-time-color.today{background:#47262b!important;color:#ffb4b4!important;border-color:#f87171}
+body.dark-mode .schedule-time-color.tomorrow{background:#41371e!important;color:#fde68a!important;border-color:#facc15}
+body.dark-mode .schedule-time-color.future{background:#1d3b2b!important;color:#a7f3c0!important;border-color:#4ade80}
+body.dark-mode .board-view-toggle{background:#17191b}
+body.dark-mode .board-view-toggle button{color:#c8cdd2}
+body.dark-mode .board-view-toggle button[aria-pressed=true]{background:var(--orange);color:#fff}
+body.dark-mode .sandbox-banner{background:#3d321c;color:#f5dda5}
+body.dark-mode .lane-empty{background:var(--card);color:var(--ink-soft)}
+body.dark-mode #laborDispatchView textarea,body.dark-mode #logisticsDispatchView textarea{background:#191b1e!important;color:#f1f3f4!important;border:1px solid #4a4f54!important}
+body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispatchView .time-unlock{background:#303439!important;color:#f1f3f4!important;border-color:#62686e!important}
+</style>
+</head>
 <body>
 
 <div class="topbar">
