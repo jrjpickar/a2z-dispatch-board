@@ -1,4 +1,4 @@
-// Optional browser QA: EOD crew hours (default = day's hours minus 1 h lunch, editable,
+// Optional browser QA: EOD crew hours (default = 8 h for every worker, editable,
 // sent home value carried in), no markup, one job_hours run per worker, and the
 // password gate outside GHL.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -79,20 +79,20 @@ const { pathToFileURL } = require('node:url');
   assert.equal(await page.locator('#eodMarkup').count(), 0, 'markup section is gone');
   assert.doesNotMatch(await page.locator('#eodSheet').innerText(), /markup|price to customer/i);
   const rows = () => page.evaluate(() => [...document.querySelectorAll('#eodCrewRows .eod-crew-row')].map(r => [r.querySelector('.eod-crew-name').textContent.replace(/\s+/g, ' ').trim(), r.querySelector('.eod-hours').value]));
-  // 07:00 to 15:30 is 8.5 h, minus 1 h lunch = 7.5.
-  assert.deepEqual(await rows(), [['Bob Ray', '7.5'], ['Cara Diaz', '7.5'], ['Ana Lopez sent home', '4']]);
+  // Everyone starts at 8 h, whatever the job's times (07:00 to 15:30 here).
+  assert.deepEqual(await rows(), [['Bob Ray', '8'], ['Cara Diaz', '8'], ['Ana Lopez sent home', '4']]);
   assert.doesNotMatch(await page.locator('#eodCrewSection').innerText(), /\$|rate/i, 'no pay rates in crew hours');
-  assert.equal(await page.locator('#eodCrewTotal').innerText(), '19');
+  assert.equal(await page.locator('#eodCrewTotal').innerText(), '20');
   const hours = page.locator('#eodCrewRows .eod-crew-row').nth(0).locator('.eod-hours');
   await hours.fill('6.25');
-  assert.equal(await page.locator('#eodCrewTotal').innerText(), '17.75');
+  assert.equal(await page.locator('#eodCrewTotal').innerText(), '18.25');
   // Draft keeps the edit across close and reopen.
   await page.click('#cancelEodSheet');
   await page.locator('.job-stage-btn.reset[data-job-id="job00000001"]').click();
-  assert.deepEqual((await rows()).map(r => r[1]), ['6.25', '7.5', '4']);
+  assert.deepEqual((await rows()).map(r => r[1]), ['6.25', '8', '4']);
   const line = page.locator('.eod-section[data-section="interior"] .eod-line').first();
   await line.locator('.eod-desc').fill('Skilled Labor');
-  await line.locator('.eod-qty').fill('17.75');
+  await line.locator('.eod-qty').fill('18.25');
   await line.locator('.eod-rate').fill('65');
   await page.locator('#eodCrewSection').scrollIntoViewIfNeeded();
   await page.screenshot({ path: process.env.SHOT_DIR ? path.join(process.env.SHOT_DIR, 'eod-hours.png') : '/dev/null', fullPage: false }).catch(() => {});
@@ -101,14 +101,14 @@ const { pathToFileURL } = require('node:url');
   await page.waitForTimeout(500);
   const eod = effects.find(e => e.kind === 'eod_sheet').payload;
   assert.ok(!('markupPercent' in eod) && !('MARKUP_PERCENT' in eod) && !('totalPriceToCustomer' in eod));
-  assert.deepEqual(eod.crewHours.map(w => [w.workerName, w.hoursWorked, w.sentHome]), [['Bob Ray', 6.25, false], ['Cara Diaz', 7.5, false], ['Ana Lopez', 4, true]]);
-  assert.equal(eod.totalCrewHours, 17.75); assert.equal(eod.CREW_3_NAME, 'Ana Lopez'); assert.equal(eod.CREW_3_HOURS, 4);
+  assert.deepEqual(eod.crewHours.map(w => [w.workerName, w.hoursWorked, w.sentHome]), [['Bob Ray', 6.25, false], ['Cara Diaz', 8, false], ['Ana Lopez', 4, true]]);
+  assert.equal(eod.totalCrewHours, 18.25); assert.equal(eod.CREW_3_NAME, 'Ana Lopez'); assert.equal(eod.CREW_3_HOURS, 4);
   const hoursRuns = effects.filter(e => e.kind === 'job_hours');
   assert.equal(hoursRuns.length, 3, 'one job hours run per worker');
   assert.equal(new Set(hoursRuns.map(e => e.effectKey)).size, 3);
   const bob = hoursRuns.find(e => e.payload.employeeName === 'Bob Ray').payload;
   assert.equal(bob.date, day); assert.equal(bob.hoursWorked, 6.25); assert.equal(bob.notes, 'Client - 55 Elm St'); assert.equal(bob.action, 'job_hours');
-  assert.equal(bob.dayOfWeek, new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }));
+  assert.equal(bob.dayOfWeek, new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase());
   assert.ok(effects.some(e => e.kind === 'job_log'));
   assert.deepEqual(rec.crew, [], 'day reset');
   assert.deepEqual(errors, []);

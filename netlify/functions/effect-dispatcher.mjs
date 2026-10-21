@@ -1,8 +1,9 @@
 // Safety net for held sends (undo window on Completed/Cancelled): sends anything
 // whose window is over, even if no board is open anywhere.
 //
-// Runs every 2 minutes during work hours only, to save Netlify credits (it used
-// to run every minute, 24/7: ~43,800 runs a month, now ~15,300). The board
+// Runs every 5 minutes during work hours only, to save Netlify credits (it used
+// to run every minute, 24/7: ~43,800 runs a month, then every 2 minutes ~15,300,
+// now ~6,100). The board
 // itself already sends at the end of the countdown, on Send now, and when the
 // tab closes, so this only matters if a board vanishes mid-countdown. Outside
 // these hours such a send goes out the next time any board with a waiting
@@ -18,4 +19,4 @@ export default async function handler() {
   if (result.claimed.length) console.log('Held sends', JSON.stringify(result));
   return new Response(null, { status: 204 });
 }
-export const config = { schedule: '*/2 0-4,12-23 * * *' };
+export const config = { schedule: '*/5 0-4,12-23 * * *' };

@@ -2,6 +2,8 @@
   publish = "public"
   functions = "netlify/functions"
   command = "npm run build"
+  # Skip the deploy when a push only touches docs, tests or blueprints (saves credits).
+  ignore = "bash scripts/netlify-ignore.sh"
 
 [[redirects]]
   from = "/api/dashboard-data"

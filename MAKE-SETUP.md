@@ -69,7 +69,7 @@ Lines: all 19 template rows are sent, blanks included (`section`, `category`, `l
 
 Google Sheets fields (top level, named to match the values batchUpdate placeholders): `INTERIOR_LABOR_DESC/_QTY/_RATE`, `INTERIOR_HOTEL_*`, `INTERIOR_HAULING_*`, `INTERIOR_EQUIPMENT_1_*`, `INTERIOR_EQUIPMENT_2_*`, `INTERIOR_FUEL_*`, `INTERIOR_MISC_*`, `EXTERIOR_LABOR_*`, `EXTERIOR_HAULING_*`, `EXTERIOR_EQUIPMENT_1_*` to `_3_*`, `EXTERIOR_FUEL_*`, `EXTERIOR_MISC_*`, `GRADING_LABOR_*`, `GRADING_HAULING_*`, `GRADING_EQUIPMENT_*`, `GRADING_FUEL_*`, `GRADING_MISC_*`. Blank boxes arrive empty. There is no markup any more (`MARKUP_PERCENT`, `markupPercent` and `totalPriceToCustomer` are gone; remove those mappings). Map them as `{{2.INTERIOR_LABOR_DESC}}` etc. (module 2 = the webhook).
 
-**Crew hours (no pay rates).** The EOD sheet lists every worker on the job plus anyone sent home from it that day. Each starts at the job's hours for the day minus 1 hour for lunch (07:00 to 15:30 = 7.5), and dispatch can change any of them. A worker sent home shows the hours picked on **Worker sent home**. They are in `crewHours` (`workerName`, `hoursWorked`, `sentHome`, `contactId`, `workerPhone`) and on the workbook under CREW HOURS, where Markup % and Total price to customer used to be.
+**Crew hours (no pay rates).** The EOD sheet lists every worker on the job plus anyone sent home from it that day. Each starts at 8 hours, and dispatch can change any of them. A worker sent home shows the hours picked on **Worker sent home**. They are in `crewHours` (`workerName`, `hoursWorked`, `sentHome`, `contactId`, `workerPhone`) and on the workbook under CREW HOURS, where Markup % and Total price to customer used to be.
 
 ## Job hours webhook (new, on Complete EOD Sheet)
 

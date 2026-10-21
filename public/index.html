@@ -1634,20 +1634,20 @@
 </style>
 
 <style>
-.sandbox-banner{padding:10px 24px;background:#fff1d2;color:#6c4812;font:600 12px system-ui;display:flex;justify-content:space-between;gap:16px}
+.sandbox-banner{padding:10px 24px;background:#fff1d2;color:#6c4812;font:600 12px 'Inter',system-ui,sans-serif;display:flex;justify-content:space-between;gap:16px}
 .board-view-toggle{display:flex;gap:4px;padding:4px;background:var(--grey-light);border-radius:9px;margin-left:auto}
-.board-view-toggle button{border:0;padding:9px 14px;background:transparent;color:var(--ink-soft);border-radius:6px;font:600 12px system-ui;cursor:pointer}
+.board-view-toggle button{border:0;padding:9px 14px;background:transparent;color:var(--ink-soft);border-radius:6px;font:600 12px 'Inter',system-ui,sans-serif;cursor:pointer}
 .board-view-toggle button[aria-pressed=true]{background:var(--orange);color:white}
 #jobsTable.split-board{display:block!important;min-width:0!important;width:100%!important}
 #jobsTable.split-board>thead{display:none}
 #jobsTable.split-board>#jobsBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;padding:18px;background:var(--grey-light)}
 .split-lane{display:block;min-width:0}.split-lane>td{display:block!important;padding:0!important;border:0!important;background:transparent!important}
-.lane-title{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;padding:15px 16px;border-top:4px solid var(--orange);background:var(--white,#fff);border-radius:8px;color:var(--ink);font:700 17px system-ui}
-.split-lane.contract .lane-title{border-top-color:#527667}.lane-title small{font:600 12px system-ui;color:var(--ink-soft)}
+.lane-title{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;padding:15px 16px;border-top:4px solid var(--orange);background:var(--white,#fff);border-radius:8px;color:var(--ink);font:700 17px 'Inter',system-ui,sans-serif}
+.split-lane.contract .lane-title{border-top-color:#527667}.lane-title small{font:600 12px 'Inter',system-ui,sans-serif;color:var(--ink-soft)}
 .lane-table,.lane-table tbody{display:block;width:100%;min-width:0!important}
 #jobsTable.split-board tr[data-job-row]{display:grid;grid-template-columns:1fr 1fr;background:var(--white,#fff);border:1px solid var(--grey-mid,#ddd);border-radius:9px;overflow:hidden;margin-bottom:14px}
 #jobsTable.split-board tr[data-job-row]>td{display:block!important;width:auto!important;min-width:0!important;padding:11px 14px!important;border:0!important;border-bottom:1px solid var(--grey-light)!important;overflow-wrap:anywhere}
-#jobsTable.split-board tr[data-job-row]>td:before{content:attr(data-label);display:block;font:600 10px system-ui;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin-bottom:7px}
+#jobsTable.split-board tr[data-job-row]>td:before{content:attr(data-label);display:block;font:600 10px 'Inter',system-ui,sans-serif;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin-bottom:7px}
 #jobsTable.split-board tr[data-job-row]>td:nth-child(4),#jobsTable.split-board tr[data-job-row]>td:nth-child(7),#jobsTable.split-board tr[data-job-row]>td:nth-child(8),#jobsTable.split-board tr[data-job-row]>td:nth-child(9){grid-column:1/-1}
 #jobsTable.split-board .crew-assign-wrap{min-width:0!important}#jobsTable.split-board .lane-empty{padding:32px 15px;text-align:center;color:var(--ink-soft)}
 @media(max-width:1000px){#jobsTable.split-board>#jobsBody{grid-template-columns:1fr}.jobs-panel-head{flex-wrap:wrap}.board-view-toggle{margin-left:0}}
@@ -1665,7 +1665,7 @@
 .logi-split>thead{display:none}.logi-split>#logisticsMoves{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;padding:18px;background:var(--grey-light)}
 .logi-split .lane-table tr[data-move-key]{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--grey-mid,#ddd);border-radius:9px;overflow:hidden;background:var(--white,#fff);margin-bottom:14px}
 #logisticsDispatchView .logi-split .lane-table tr[data-move-key]>td{display:block;width:auto!important;min-width:0!important;max-width:none!important;padding:12px 14px;white-space:normal;border:0;border-bottom:1px solid var(--grey-light);overflow-wrap:anywhere}
-.logi-split .lane-table tr[data-move-key]>td:before{content:attr(data-label);display:block;font:600 10px system-ui;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin-bottom:7px}
+.logi-split .lane-table tr[data-move-key]>td:before{content:attr(data-label);display:block;font:600 10px 'Inter',system-ui,sans-serif;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin-bottom:7px}
 .logi-split .lane-table tr[data-move-key]>td:nth-child(1),.logi-split .lane-table tr[data-move-key]>td:nth-child(4),.logi-split .lane-table tr[data-move-key]>td:nth-child(5),.logi-split .lane-table tr[data-move-key]>td:nth-child(6),.logi-split .lane-table tr[data-move-key]>td:nth-child(7){grid-column:1/-1}
 @media(max-width:1000px){.logi-split>#logisticsMoves{grid-template-columns:1fr}}
 </style>
@@ -1694,10 +1694,64 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
 <style>
 .board-display-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--card);color:var(--ink)}
 .day-controls,.zoom-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.day-controls label{display:flex;align-items:center;gap:8px;font-size:12px;margin-left:8px}
-.board-display-controls button,.board-display-controls input{background:var(--card);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font:600 12px system-ui;cursor:pointer}
+.board-display-controls button,.board-display-controls input{background:var(--card);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font:600 12px 'Inter',system-ui,sans-serif;cursor:pointer}
 .board-display-controls button[aria-pressed=true]{background:var(--orange);color:white;border-color:var(--orange)}
-.board-display-controls button:disabled{opacity:.4;cursor:default}.zoom-controls output{min-width:44px;text-align:center;font:600 12px system-ui}
+.board-display-controls button:disabled{opacity:.4;cursor:default}.zoom-controls output{min-width:44px;text-align:center;font:600 12px 'Inter',system-ui,sans-serif}
 .board-display-controls button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+</style>
+<style id="polish-oct-2026">
+/* Visual polish (Oct 2026): softer cards, one radius, tidy form controls, fewer
+   rows of controls above the board. Looks only; no behavior changes. */
+:root{--r-sm:6px;--r-md:10px;--r-lg:14px;--shadow-1:0 1px 2px rgba(20,22,26,.06),0 1px 3px rgba(20,22,26,.05);--shadow-2:0 2px 6px rgba(20,22,26,.06),0 8px 24px rgba(20,22,26,.06);--focus:0 0 0 3px rgba(232,98,44,.28)}
+body.dark-mode{--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 2px 8px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.25);--focus:0 0 0 3px rgba(232,98,44,.45)}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+::selection{background:var(--orange-tint)}
+/* Panels and status cards */
+.panel,.status-card{border-radius:var(--r-lg)!important;box-shadow:var(--shadow-1)}
+.status-card{transition:transform .15s ease,box-shadow .15s ease}
+.status-card.available:hover,.status-card.booked:hover{transform:translateY(-1px);box-shadow:var(--shadow-2);filter:none}
+/* Control rows: Crew view and the date legend share one line */
+#laborDispatchView .time-color-legend,#logisticsDispatchView .time-color-legend{display:inline-flex;vertical-align:middle;padding:8px 4px}
+.time-color-legend i{box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+/* Form controls */
+#laborCrewFilter,#logisticsCrewFilter,#logisticsSourceFilter{appearance:none;-webkit-appearance:none;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;color:var(--ink);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 30px 7px 10px;font:600 12px 'Inter',sans-serif;cursor:pointer}
+input[type=search],input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{transition:border-color .15s ease,box-shadow .15s ease}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none!important;border-color:var(--orange)!important;box-shadow:var(--focus)!important}
+button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.scope-input{border-radius:var(--r-sm)!important;border:1px solid var(--border)!important;background:var(--stripe)!important;line-height:1.45}
+.scope-input:focus{background:var(--card)!important}
+/* Split board lanes and job cards */
+#jobsTable.split-board>#jobsBody,.logi-split>#logisticsMoves{background:transparent!important;gap:22px}
+.lane-title{border-radius:var(--r-md)!important;box-shadow:var(--shadow-1);font-family:'Oswald',sans-serif!important;letter-spacing:.05em;text-transform:uppercase}
+.lane-title small{font-family:'Inter',sans-serif!important;background:var(--stripe);padding:3px 9px;border-radius:999px}
+body #jobsTable.split-board tr[data-job-row],body #logisticsDispatchView .logi-split tr[data-move-key]{border-radius:var(--r-lg)!important;box-shadow:var(--shadow-1);transition:box-shadow .15s ease}
+body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .logi-split tr[data-move-key]:hover{box-shadow:var(--shadow-2)}
+/* Job ID, client and value on one row; address full width under them */
+#jobsTable.split-board tr[data-job-row]{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+#jobsTable.split-board tr[data-job-row]>td{grid-column:span 3}
+#jobsTable.split-board tr[data-job-row]>td:nth-child(-n+3){grid-column:span 2}
+#jobsTable.split-board tr[data-job-row]>td:nth-child(4),#jobsTable.split-board tr[data-job-row]>td:nth-child(n+7){grid-column:1/-1}
+#jobsTable.split-board tr[data-job-row]>td:nth-child(4){font-size:15.5px;font-weight:600}
+#jobsTable.split-board tr[data-job-row]>td:last-child{border-bottom:0!important}
+#jobsTable.split-board tr[data-job-row]>td:before,.logi-split .lane-table tr[data-move-key]>td:before{color:var(--grey-dark)!important;font-family:'Inter',sans-serif!important}
+/* Buttons in job cards */
+#laborDispatchView .job-stage-btn,#logisticsDispatchView .job-stage-btn{border-radius:var(--r-sm)!important;transition:filter .15s ease,transform .1s ease,box-shadow .15s ease}
+#laborDispatchView .job-stage-btn:hover:not(:disabled),#logisticsDispatchView .job-stage-btn:hover:not(:disabled){filter:brightness(1.05)}
+#laborDispatchView .job-stage-btn:active:not(:disabled),#logisticsDispatchView .job-stage-btn:active:not(:disabled){transform:translateY(1px)}
+.crew-chip{border-radius:999px!important;align-self:center!important;display:inline-flex!important;align-items:center;gap:4px;line-height:1.3}
+.crew-chip-row{align-items:center}
+.btn-primary,.btn-ghost{border-radius:var(--r-sm)!important}
+.btn-primary{box-shadow:0 1px 0 rgba(255,255,255,.15) inset,0 2px 6px rgba(201,79,31,.25)}
+.board-view-toggle{border-radius:var(--r-md)!important}
+.board-view-toggle button{border-radius:var(--r-sm)!important;transition:background .15s ease,color .15s ease}
+.board-display-controls button,.board-display-controls input{border-radius:var(--r-sm)!important}
+/* Side sheets and dialogs */
+#eodSheet input,#eodSheet textarea,#eodSheet select{border-radius:var(--r-sm)}
+/* Scrollbars */
+*{scrollbar-width:thin;scrollbar-color:var(--grey) transparent}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--grey);border-radius:999px;border:2px solid transparent;background-clip:padding-box}::-webkit-scrollbar-track{background:transparent}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:700px){#jobsTable.split-board tr[data-job-row]>td,#jobsTable.split-board tr[data-job-row]>td:nth-child(-n+3){grid-column:1/-1}}
 </style></head>
 <body>
 
@@ -1765,7 +1819,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
         <span class="jobs-search-count mono" id="jobSearchCount"></span>
       </div>
     </div>
-    <div class="time-color-legend" aria-label="Schedule date colors"><span><i style="background:#dc2626"></i>Today</span><span><i style="background:#eab308"></i>Tomorrow</span><span><i style="background:#16a34a"></i>Future</span></div>
+    <label style="display:inline-flex;align-items:center;gap:8px;margin:8px 16px">Crew view <select id="laborCrewFilter" aria-label="Labor crew assignment view"><option value="all">All assignments</option><option value="needs">Needs crew</option><option value="full">Full crew assigned</option></select></label><div class="time-color-legend" aria-label="Schedule date colors"><span><i style="background:#dc2626"></i>Today</span><span><i style="background:#eab308"></i>Tomorrow</span><span><i style="background:#16a34a"></i>Future</span></div>
     <div class="jobs-table-wrap">
       <table class="jobs" id="jobsTable">
         <thead>
@@ -1905,7 +1959,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
     <div class="panel" data-panel="history">
       <div class="panel-head"><h2>Send history</h2><span class="mono" id="historyCount">0</span></div>
       <div class="admin-search"><input type="search" id="historySearch" placeholder="Search by job..." autocomplete="off"></div>
-      <div class="admin-list-scroll history-groups" id="historyList"><p class="load-state">Loading...</p></div>
+      <div class="logistics-note">Senior admins can resubmit saved webhook runs below. EOD resubmissions use the original crew, date and hours.</div><div class="admin-list-scroll history-groups" id="webhookHistoryList"></div><div class="admin-list-scroll history-groups" id="historyList"><p class="load-state">Loading...</p></div>
     </div>
   </div>
   </div>
@@ -1922,7 +1976,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
   <div class="logistics-layout">
     <div class="panel logistics-drivers-panel"><div class="panel-head"><h2>Drivers</h2><span class="mono" id="logisticsDriverCount">0 TOTAL</span></div><ul class="logistics-resource-list" id="logisticsDrivers"></ul></div>
     <div class="panel logistics-assets-panel"><div class="panel-head"><h2>Assets</h2><span class="mono" id="logisticsAssetCount">0 TOTAL</span></div><div class="logistics-note">Drivers and assets stay independent so either can be reassigned.</div><ul class="logistics-resource-list" id="logisticsAssets"></ul></div>
-    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="board-view-toggle" role="group" aria-label="Logistics layout"><button id="logiSplitBtn" aria-pressed="true">Split view</button><button id="logiCombinedBtn" aria-pressed="false">Current view</button></div><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="logi-attn" id="logisticsAttention" hidden></div><div class="logi-bulk" id="logisticsBulk" hidden></div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
+    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="board-view-toggle" role="group" aria-label="Logistics layout"><button id="logiSplitBtn" aria-pressed="true">Split view</button><button id="logiCombinedBtn" aria-pressed="false">Current view</button></div><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><label style="display:inline-flex;align-items:center;gap:8px;margin:8px 16px">Crew view <select id="logisticsCrewFilter" aria-label="Logistics crew assignment view"><option value="all">All assignments</option><option value="needs">Needs crew</option><option value="full">Full crew assigned</option></select></label><div class="logi-attn" id="logisticsAttention" hidden></div><div class="logi-bulk" id="logisticsBulk" hidden></div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
   </div>
 </div>
 
@@ -2009,7 +2063,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
       <label>Job Type</label>
       <div class="segmented" id="jobTypeToggle">
         <button type="button" class="segmented-option active" data-type="hourly">Hourly (Labor)</button>
-        <button type="button" class="segmented-option" data-type="contract">Contract (Demo)</button>
+        <span class="label-optional">Contract (Demo) projects come from GHL or Make.</span>
       </div>
     </div>
     <div class="field">
@@ -2271,7 +2325,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
     <div id="eodSections"></div>
     <div class="eod-section eod-crew" id="eodCrewSection">
       <h3>Crew hours</h3>
-      <p class="eod-crew-note">Each worker starts at the job's hours for the day minus 1 hour for lunch. Change any of them. Workers sent home show the hours picked when they were sent home. On submit each worker's hours go to the weekly hours sheet.</p>
+      <p class="eod-crew-note">Each worker starts at 8 hours. Change any of them. Workers sent home show the hours picked when they were sent home. On submit each worker's hours go to the weekly hours sheet.</p>
       <div class="eod-table-wrap"><table class="eod-table eod-crew-table">
         <colgroup><col><col class="c-hours"></colgroup>
         <thead><tr><th>Worker</th><th style="text-align:right">Hours worked</th></tr></thead>
@@ -2852,6 +2906,7 @@ function getReportEndDate(job) {
 // never pushed to the shared record, since it's a per-dispatcher, ephemeral
 // "I'm working on this right now" signal, not a durable fact worth syncing.
 function isJobTimeLocked(job) {
+  if (!isHourlyJob(job) && !getSharedState(job)?.timesFirstLockedAt) return false;
   const jobId = job.id || '';
   const stored = window.jobTimesLocked ? window.jobTimesLocked[jobId] : undefined;
   if (stored === false) return false;
@@ -3504,15 +3559,27 @@ function scheduleDateTone(date) {
   if (date && date > today) return 'future';
   return 'neutral';
 }
+function matchesCrewView(kind, full) {
+  const view = document.getElementById(kind + 'CrewFilter')?.value || 'all';
+  return view === 'all' || (view === 'full' ? full : !full);
+}
+function hasFullLaborCrew(job) {
+  const crew = getCrew(job);
+  const extras = ((window.jobCrewOverride && window.jobCrewOverride[job.id]) || [])
+    .filter(worker => !crew.some(c => c.name === worker.name));
+  const required = Number(getSharedState(job)?.crewSize ?? job.crewSize);
+  // Unknown crew requirements stay in Needs crew until a size is set.
+  return Number.isFinite(required) && required > 0 && crew.length + extras.length >= required;
+}
 function renderJobsTable(allJobs) {
   const body = document.getElementById('jobsBody');
   const emptyState = document.getElementById('jobsEmpty');
   const table = document.getElementById('jobsTable');
   const openJobs = (allJobs || []).filter(j => !isClosedOnBoard(j));
   const query = (document.getElementById('jobSearch')?.value || '').trim();
-  const jobs = openJobs.filter(j => jobMatchesSearch(j, query) && (!boardDayFilters.labor || getReportDate(j) === boardDayFilters.labor));
+  const jobs = openJobs.filter(j => jobMatchesSearch(j, query) && matchesCrewView('labor', hasFullLaborCrew(j)) && (!boardDayFilters.labor || getReportDate(j) === boardDayFilters.labor));
   const countEl = document.getElementById('jobSearchCount');
-  if (countEl) countEl.textContent = query ? `${jobs.length} of ${openJobs.length}` : '';
+  if (countEl) countEl.textContent = (query || document.getElementById('laborCrewFilter').value !== 'all') ? `${jobs.length} of ${openJobs.length}` : '';
 
   if (!openJobs.length) {
     table.style.display = 'none';
@@ -3682,7 +3749,7 @@ function renderJobsTable(allJobs) {
           <div class="job-stage-actions"><button type="button" class="job-stage-btn reopen" data-job-id="${jobId}" title="Undo Completed/Cancelled so crew and times can be edited again">Reopen job</button></div>`
           : `<div class="status-line"><span class="status-tag ${statusClass}">${statusLabel}</span>${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length) ? `<button type="button" class="unschedule-btn job-unschedule" data-job-id="${jobId}" title="Clear this job's times and take the crew off. It moves to Unscheduled.">Unschedule</button>` : ''}</div>`}
           ${terminalLocally || closedOnBoard ? '' : `<div class="job-stage-actions">
-            <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">Edit Details</button>
+            <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">${needsProjectConfiguration(j) ? 'Configure project' : 'Edit Details'}</button>
             ${isHourlyJob(j) ? '' : `<button type="button" class="job-stage-btn schedule${(psSchedules[jobId] || {}).sentAt ? ' sent' : ''}" data-job-id="${jobId}" title="Project Schedule for this contract job">Project Schedule</button>`}
             <button type="button" class="job-stage-btn reset" data-job-id="${jobId}">Complete EOD Sheet</button>
             <button type="button" class="job-stage-btn complete hold-btn" data-job-id="${jobId}" title="Hold for 5 seconds to mark this job completed">Completed</button>
@@ -4640,21 +4707,15 @@ async function fillEodTruckLoads(job) {
 }
 
 /* EOD crew hours: everyone on the job's crew, plus workers sent home from this
-   job on its date. Default hours = the job's hours for the day minus 1 hour for
-   lunch, editable. A worker sent home gets the hours picked when they were sent
+   job on its date. Default hours = 8 for every worker, editable. A worker sent home gets the hours picked when they were sent
    home (newer than any draft edit). No pay rates are shown or sent. */
 let eodCrewList = [];
 const eodNameKey = name => String(name || '').trim().toLowerCase();
 const eodHoursLabel = h => String(Math.round((Number(h) || 0) * 100) / 100);
 const eodQuarter = h => Math.round(h * 4) / 4;
-function eodDefaultHours(job) {
-  const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
-  const start = toMin(getReportTime(job)), end = toMin(getReportEndTime(job));
-  if (start === null || end === null) return '';
-  let minutes = end - start;
-  if (minutes <= 0) minutes += 24 * 60; // night shift: ends the next morning
-  return Math.max(0, eodQuarter(minutes / 60 - 1));
-}
+// Every worker defaults to 8 hours (Jesse's call), whatever the job's times are.
+const EOD_DEFAULT_HOURS = 8;
+function eodDefaultHours() { return EOD_DEFAULT_HOURS; }
 function eodCrewFor(job) {
   const roster = dashboardData.labor || [];
   const rosterFor = name => roster.find(w => eodNameKey(w.name) === eodNameKey(name)) || {};
@@ -4951,6 +5012,21 @@ document.getElementById('submitEodSheet').addEventListener('click', async () => 
 
 
 async function saveJobTimes(jobId, reportDate, reportTime, endDate, endTime, saveBtn, nightWork = false) {
+  const job = (dashboardData.jobs || []).find(j => j.id === jobId);
+  if (job && !isHourlyJob(job)) {
+    if (needsProjectConfiguration(job)) {
+      showToast('Configure this project and save its details before locking times.', true);
+      openEditJobSheet(jobId); return;
+    }
+    if (!getSharedState(job)?.timesFirstLockedAt) {
+      await loadProjectSchedules();
+      const schedule = psSchedules[jobId]?.input;
+      if (!schedule?.start || !schedule.phases?.some(p => p.on !== false)) {
+        showToast('Save a Project Schedule with a start date and at least one phase before locking the first times.', true);
+        openProjectSchedule(jobId); return;
+      }
+    }
+  }
   const start = parseJobDateTime(reportDate, reportTime), end = parseJobDateTime(endDate, endTime);
   if (start && end && end <= start) { showToast(nightWork ? 'End has to be after the start.' : 'End time must be after the start. Working overnight? Tick Night.', true); return; }
   const original = saveBtn.textContent; saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
@@ -5270,8 +5346,11 @@ const WON_STAGE_IDS = {
   hourly: "6cfb3e15-0954-4f94-9f27-29f8f45b185d",
   contract: "bb901617-1ec6-4f3c-8c77-27ccafb96404"
 };
+function needsProjectConfiguration(job) {
+  return !isHourlyJob(job) && !getSharedState(job)?.projectConfiguredAt;
+}
 function isHourlyJob(job) {
-  if (job && job.sourceType === 'change_order') return false;
+  if (job && (job.sourceType === 'change_order' || job.sourceType === 'demo' || job.jobType === 'contract' || job.pipelineId === JOB_PIPELINE_IDS.contract)) return false;
   if (job && job.pipelineStageId === WON_STAGE_IDS.contract) return false;
   return true; // default true (hourly); matches WON_STAGE_IDS.hourly and any unrecognized stage
 }
@@ -5361,6 +5440,7 @@ document.getElementById('crewPlus').addEventListener('click', () => {
 // on address (job.name) plus client name, preferring a candidate that isn't
 // already time-locked (a brand-new job usually won't be yet).
 document.getElementById('submitBook').addEventListener('click', async () => {
+  if (jobType !== 'hourly') { showToast('Contract projects must be created in GHL or Make.', true); return; }
   const reportDateVal = document.getElementById('jobDate').value;
   const jobEndDateVal = document.getElementById('jobEndDate').value;
 
@@ -5911,6 +5991,7 @@ function openEditJobSheet(jobId) {
     showToast("Couldn't find that job. Try refreshing.", true);
     return;
   }
+  document.querySelector('#editJobSheet h2').textContent = needsProjectConfiguration(job) ? 'Configure project' : 'Edit Job Details';
   currentEditJobId = jobId;
   currentEditJobVersion = dashboardData.sharedStateByJobId.get(jobId)?.version || 0;
   renderEditChangeOrder(job);
@@ -5947,7 +6028,7 @@ function openEditJobSheet(jobId) {
   // as the closest available starting point, since there's no stored value
   // to read back.
   const currentCrewCount = getCrew(job).length;
-  editCrewSize = currentCrewCount > 0 ? currentCrewCount : 4;
+  editCrewSize = Number(getSharedState(job)?.crewSize ?? job.crewSize) || (currentCrewCount > 0 ? currentCrewCount : 4);
   document.getElementById('editCrewCount').textContent = editCrewSize;
 
   editOverlay.classList.add('open');
@@ -6353,6 +6434,7 @@ function renderLogistics() {
     // Needs attention (today and tomorrow only): no saved time, no driver, no vehicle.
     const watch = assignable && (groupKey === 'today' || groupKey === 'tomorrow');
     const flags = { moveKey, group: groupKey, time: watch && !scheduleLocked, driver: watch && !(assignedDriverId || assignedDriverName), vehicle: watch && !assignedAssets.length };
+    flags.fullCrew = Boolean((assignedDriverId || assignedDriverName) && assignedAssets.length);
     flags.any = flags.time || flags.driver || flags.vehicle;
     lastLogisticsFlags = flags;
     const missingBadges = flags.any ? `<div class="logi-missing">${flags.time ? '<span>No time</span>' : ''}${flags.driver ? '<span>No driver</span>' : ''}${flags.vehicle ? '<span>No vehicle</span>' : ''}</div>` : '';
@@ -6398,7 +6480,7 @@ function renderLogistics() {
   const watched = [...built.today, ...built.tomorrow].map(r => r.flags);
   const attn = { time: watched.filter(f => f.time).length, driver: watched.filter(f => f.driver).length, vehicle: watched.filter(f => f.vehicle).length, any: watched.filter(f => f.any).length };
   if (logisticsAttnFilter && !attn[logisticsAttnFilter]) logisticsAttnFilter = '';
-  const shows = r => !logisticsAttnFilter || r.flags[logisticsAttnFilter];
+  const shows = r => matchesCrewView('logistics', r.flags.fullCrew) && (!logisticsAttnFilter || r.flags[logisticsAttnFilter]);
   document.getElementById('logisticsMoves').innerHTML = visibleMoves.length ? sectionDefs.map(({ key, label }) => {
     const rows = built[key].filter(shows);
     return `<tr class="job-group-header-row job-group-${key}"><td colspan="7" class="job-group-header">${label} <span class="job-group-count">${rows.length}</span></td></tr>` +
@@ -7554,19 +7636,25 @@ function editingDispatch() {
 /* Live updates, light on Netlify:
    - asks only for records changed since the last answer (?since=), so most polls are a few bytes
    - redraws only when something actually changed
-   - every 30 s while someone is using the board, every 60 s after 3 idle minutes, never while the tab is hidden
+   - every 30 s while someone is using the board, every 60 s after 3 idle minutes, every 5 min after 15 idle minutes, never while the tab is hidden
      (was 15 s; slowed to save Netlify credits. Your own saves still show instantly.)
    - moves are only polled while the Logistics tab is open
    - the held send nudge (/api/workflow-effect) only goes out while this browser has a Completed/Cancelled waiting;
-     the server job (every 2 minutes, work hours) covers everything else */
+     the server job (every 5 minutes, work hours) covers everything else */
 let sharedSince = '', movesSince = '', lastActivity = Date.now(), pollTimer = null;
 ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => window.addEventListener(t, () => {
   const wasIdle = Date.now() - lastActivity > 180000; lastActivity = Date.now();
   if (wasIdle) schedulePoll(500);
 }, { passive: true, capture: true }));
+// 30 s in use, 60 s after 3 idle minutes, 5 min after 15 idle minutes (a board
+// left open all day in a GHL tab). Any click, key or scroll refreshes right away.
+function nextPollMs() {
+  const idle = Date.now() - lastActivity;
+  return idle > 900000 ? 300000 : idle > 180000 ? 60000 : 30000;
+}
 function schedulePoll(ms) {
   clearTimeout(pollTimer);
-  pollTimer = setTimeout(async () => { await pollSharedState(); schedulePoll(Date.now() - lastActivity > 180000 ? 60000 : 30000); }, ms);
+  pollTimer = setTimeout(async () => { await pollSharedState(); schedulePoll(nextPollMs()); }, ms);
 }
 async function pollSharedState() {
   if (document.hidden || sharedPollBusy || editingDispatch()) return;
@@ -8800,7 +8888,7 @@ if (typeof ResizeObserver === 'function') {
 
 /* Senior admin tools: problems + retry, settings, activity log, send history. */
 async function seniorApi(view, body) {
-  const res = await fetchWithTimeout(view ? '/api/senior?view=' + view : '/api/senior', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { headers: { Accept: 'application/json' } }, 30000);
+  const res = await fetchWithTimeout(view ? '/api/senior?view=' + view : '/api/senior', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { headers: { Accept: 'application/json' } }, 60000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) { const err = new Error(data.error || `HTTP ${res.status}`); err.data = data; throw err; }
   return data;
@@ -8813,7 +8901,7 @@ function renderProblems(data) {
   document.getElementById('resolveAllProblems').hidden = !canAct || effects.length < 2;
   const list = document.getElementById('problemList');
   const rows = [
-    ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
+    ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.webhook ? `<small>Webhook: ${sessionEsc(p.webhook)}</small>` : ''}${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
       + (!canAct ? '' : `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Acknowledge</button></div>`) + '</li>'),
     ...crm.map(c => `<li><div class="who">GHL schedule sync${c.name ? ' · ' + sessionEsc(c.name) : ''}<small>${sessionEsc([c.jobId, seniorWhen(c.at)].filter(Boolean).join(' · '))}</small>${c.error ? `<small class="err">${sessionEsc(c.error)}</small>` : ''}</div>`
       + (!canAct ? '' : `<div class="problem-actions"><button type="button" class="job-stage-btn edit problem-btn" data-action="retry_crm" data-job-id="${sessionEsc(c.jobId)}">Retry</button><button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_crm" data-job-id="${sessionEsc(c.jobId)}">Acknowledge</button></div>`) + '</li>')
@@ -8824,16 +8912,18 @@ function renderActivity(items) {
   document.getElementById('activityCount').textContent = String(items.length);
   document.getElementById('activityList').innerHTML = items.length ? items.map(a => `<li class="activity-row"><div class="who"><b>${sessionEsc(a.actor || 'Someone')}</b> ${sessionEsc(a.action.charAt(0).toLowerCase() + a.action.slice(1))}${a.target ? ': ' + sessionEsc(a.target) : ''}</div><span class="when">${seniorWhen(a.at)}</span></li>`).join('') : '<li class="load-state">No activity yet.</li>';
 }
-let seniorSends = [];
+let seniorSends = [], seniorWebhookRuns = [];
 function renderHistory() {
   const q = document.getElementById('historySearch').value.trim().toLowerCase();
   const shown = seniorSends.filter(s => !q || `${s.jobName} ${s.jobId}`.toLowerCase().includes(q));
-  document.getElementById('historyCount').textContent = String(seniorSends.length);
+  document.getElementById('historyCount').textContent = String(seniorWebhookRuns.length + seniorSends.length);
+  const runs = seniorWebhookRuns.filter(r => !q || [r.jobName, r.jobId, r.label, r.kind, r.date, r.webhook].join(' ').toLowerCase().includes(q));
+  document.getElementById('webhookHistoryList').innerHTML = '<h4>Webhook runs</h4>' + (runs.length ? runs.map(r => `<div class="history-job"><h4>${sessionEsc(r.label)} · ${sessionEsc(r.jobName || r.jobId || 'Job')}</h4><small>${sessionEsc([r.date, ({confirmed:'Confirmed',uncertain:'Needs checking',sending:'Sending',scheduled:'Waiting',cancelled:'Cancelled'})[r.status] || r.status, seniorWhen(r.at)].filter(Boolean).join(' · '))}</small><div class="logistics-note" style="overflow-wrap:anywhere">${sessionEsc(r.webhook || '')}${r.error ? '<br>' + sessionEsc(r.error) : ''}</div>${currentSession.isSenior && r.canResubmit ? `<button type="button" class="job-stage-btn edit webhook-resubmit" data-effect-id="${sessionEsc(r.id)}">Resubmit</button>` : ''}</div>`).join('') : '<p class="load-state">No matching stored webhook runs.</p>');
   const groups = new Map();
   for (const item of shown) { const k = item.jobId || item.jobName; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(item); }
   const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'job_log' ? 'Job log' : k === 'worker_sent_home' ? 'Worker sent home' : k === 'split_day' ? 'Split day booking' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
   document.getElementById('historyList').innerHTML = groups.size ? [...groups.values()].map(items => `<div class="history-job"><h4>${sessionEsc(items[0].jobName || 'Job')}<small>${sessionEsc(items[0].jobId || '')} · ${items.length} sent</small></h4>`
-    + items.map(i => `<div class="history-row"><div><span class="kind">${kindLabel(i.kind)}</span> <span class="file">${sessionEsc(i.fileName || i.detail || '')}</span></div><div>${i.status === 'failed' ? '<span class="st-failed">FAILED</span> ' : ''}${seniorWhen(i.at)}</div></div>`).join('') + '</div>').join('')
+    + items.map(i => `<div class="history-row"><div><span class="kind">${kindLabel(i.kind)}</span> <span class="file">${sessionEsc(i.fileName || i.detail || '')}</span></div><div>${i.status === 'failed' ? '<span class="st-failed">FAILED</span> ' : ''}${seniorWhen(i.at)}${currentSession.isSenior && i.kind === 'project_schedule' ? `<button type="button" class="job-stage-btn edit webhook-resubmit" data-schedule-job-id="${sessionEsc(i.jobId)}">Resubmit saved schedule</button>` : ''}</div></div>`).join('') + '</div>').join('')
     : `<p class="load-state">${seniorSends.length ? 'No jobs match.' : 'Nothing sent yet. EOD sheets and Project Schedule PDFs show here once sent.'}</p>`;
 }
 function renderSettings(st) {
@@ -8853,13 +8943,38 @@ async function loadSeniorTools() {
   const jobs = [
     see('problems') && seniorApi('problems').then(renderProblems).catch(e => { document.getElementById('problemList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
     see('activity') && seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(e => { document.getElementById('activityList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
-    see('history') && seniorApi('history').then(d => { seniorSends = d.sends || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
+    see('history') && seniorApi('history').then(d => { seniorSends = d.sends || []; seniorWebhookRuns = d.runs || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
     currentSession.isSenior && seniorApi('settings').then(renderSettings).catch(e => showToast(e.message, true))
   ].filter(Boolean);
   await Promise.all(jobs);
 }
 document.getElementById('seniorRefresh').addEventListener('click', () => { renderAdminView(true); loadWorkerTemperatures(true); });
 document.getElementById('historySearch').addEventListener('input', renderHistory);
+async function resubmitFromHistory(e) {
+  const btn = e.target.closest('.webhook-resubmit');
+  if (!btn || !currentSession.isSenior || btn.disabled) return;
+  const schedule = btn.dataset.scheduleJobId;
+  if (!confirm(schedule ? 'Send the latest saved Project Schedule to Make again?' : 'Resubmit this saved webhook payload to Make with a new event ID? It may repeat messages, sheet entries or other actions from the original run.')) return;
+  btn.disabled = true; btn.textContent = 'Resubmitting…';
+  // Keep this ID on a network retry so a lost reply cannot create another run.
+  btn.dataset.requestId ||= crypto.randomUUID();
+  try {
+    const result = await seniorApi('', { action: schedule ? 'resubmit_schedule' : 'resubmit_effect', ...(schedule ? { jobId: schedule } : { effectId: btn.dataset.effectId }), requestId: btn.dataset.requestId });
+    showToast(result.ok ? 'Resubmitted. Make confirmed it.' : 'Already attempted. Check webhook history for the result.', !result.ok);
+    const data = await seniorApi('history'); seniorSends = data.sends || []; seniorWebhookRuns = data.runs || []; renderHistory();
+    seniorApi('problems').then(renderProblems).catch(() => {});
+    seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {});
+  } catch (error) {
+    showToast(error.message, true); btn.disabled = false; btn.textContent = 'Resubmit';
+    if (error.data?.effectId) {
+      // A definite server reply recorded the attempt; refresh to expose its result.
+      seniorApi('history').then(data => { seniorSends = data.sends || []; seniorWebhookRuns = data.runs || []; renderHistory(); }).catch(() => {});
+    }
+  }
+}
+document.getElementById('webhookHistoryList').addEventListener('click', resubmitFromHistory);
+document.getElementById('historyList').addEventListener('click', resubmitFromHistory);
+
 document.getElementById('problemList').addEventListener('click', async e => {
   const btn = e.target.closest('.problem-btn'); if (!btn) return;
   const { action } = btn.dataset;
@@ -9231,6 +9346,16 @@ function applyBoardSplit(allJobs) {
 function setBoardView(split){boardSplit=split;localStorage.setItem('a2zBoardSplit',String(split));renderJobs(dashboardData.jobs);}
 document.getElementById('splitViewBtn').onclick=()=>setBoardView(true);
 document.getElementById('combinedViewBtn').onclick=()=>setBoardView(false);
+for (const kind of ['labor', 'logistics']) {
+  const select = document.getElementById(kind + 'CrewFilter');
+  const saved = localStorage.getItem('a2zCrewView-' + kind);
+  select.value = ['all', 'needs', 'full'].includes(saved) ? saved : 'all';
+  select.addEventListener('change', () => {
+    localStorage.setItem('a2zCrewView-' + kind, select.value);
+    if (kind === 'labor') renderJobs(dashboardData.jobs || []);
+    else renderLogistics();
+  });
+}
 /* ---------- Init ---------- */
 enhanceQuarterTimes(document);
 initSession();

@@ -1,5 +1,13 @@
 # A2Z Dispatch 1.9
 
+## 8 hour default, fewer Netlify credits, cleaner look (Oct 21, 2026)
+
+- **EOD crew hours** now start at 8 hours for every worker, whatever the job times are. Dispatch can still change any of them. Workers sent home still show the hours picked when they were sent home.
+- **Idle boards poll less.** A board left open and untouched for 15 minutes checks for changes every 5 minutes (was every 60 s). Any click, key or scroll refreshes right away. Hidden tabs still never poll.
+- **Backup send job** (`effect-dispatcher`) runs every 5 minutes in work hours (was every 2). About 6,100 runs a month instead of 15,300. The board still sends on its own at the end of the countdown, on Send now, and when the tab closes.
+- **No deploy for docs only pushes.** `netlify.toml` now has `ignore = "bash scripts/netlify-ignore.sh"`. A push that only changes .md, .txt, test/ or make-blueprints/ files is skipped. Anything else builds as usual, and a manual Trigger deploy always builds.
+- **Look.** Rounder cards with soft shadows, Job ID, Client and Value on one line with the address bigger under them, pill crew chips, styled Crew view picker on the same line as the date legend, focus rings, thin scrollbars. Dark mode matches. No behavior changes.
+
 ## KPI dashboard feed (1.9)
 
 Adds what the A2Z KPI dashboard needs. Dispatchers see no change.
