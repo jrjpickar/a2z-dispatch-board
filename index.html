@@ -2009,7 +2009,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
       <label>Job Type</label>
       <div class="segmented" id="jobTypeToggle">
         <button type="button" class="segmented-option active" data-type="hourly">Hourly (Labor)</button>
-        <button type="button" class="segmented-option" data-type="contract">Contract (Demo)</button>
+        <span class="label-optional">Contract (Demo) projects come from GHL or Make.</span>
       </div>
     </div>
     <div class="field">
@@ -2852,6 +2852,7 @@ function getReportEndDate(job) {
 // never pushed to the shared record, since it's a per-dispatcher, ephemeral
 // "I'm working on this right now" signal, not a durable fact worth syncing.
 function isJobTimeLocked(job) {
+  if (!isHourlyJob(job) && !getSharedState(job)?.timesFirstLockedAt) return false;
   const jobId = job.id || '';
   const stored = window.jobTimesLocked ? window.jobTimesLocked[jobId] : undefined;
   if (stored === false) return false;
@@ -3694,7 +3695,7 @@ function renderJobsTable(allJobs) {
           <div class="job-stage-actions"><button type="button" class="job-stage-btn reopen" data-job-id="${jobId}" title="Undo Completed/Cancelled so crew and times can be edited again">Reopen job</button></div>`
           : `<div class="status-line"><span class="status-tag ${statusClass}">${statusLabel}</span>${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length) ? `<button type="button" class="unschedule-btn job-unschedule" data-job-id="${jobId}" title="Clear this job's times and take the crew off. It moves to Unscheduled.">Unschedule</button>` : ''}</div>`}
           ${terminalLocally || closedOnBoard ? '' : `<div class="job-stage-actions">
-            <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">Edit Details</button>
+            <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">${needsProjectConfiguration(j) ? 'Configure project' : 'Edit Details'}</button>
             ${isHourlyJob(j) ? '' : `<button type="button" class="job-stage-btn schedule${(psSchedules[jobId] || {}).sentAt ? ' sent' : ''}" data-job-id="${jobId}" title="Project Schedule for this contract job">Project Schedule</button>`}
             <button type="button" class="job-stage-btn reset" data-job-id="${jobId}">Complete EOD Sheet</button>
             <button type="button" class="job-stage-btn complete hold-btn" data-job-id="${jobId}" title="Hold for 5 seconds to mark this job completed">Completed</button>
@@ -4963,6 +4964,21 @@ document.getElementById('submitEodSheet').addEventListener('click', async () => 
 
 
 async function saveJobTimes(jobId, reportDate, reportTime, endDate, endTime, saveBtn, nightWork = false) {
+  const job = (dashboardData.jobs || []).find(j => j.id === jobId);
+  if (job && !isHourlyJob(job)) {
+    if (needsProjectConfiguration(job)) {
+      showToast('Configure this project and save its details before locking times.', true);
+      openEditJobSheet(jobId); return;
+    }
+    if (!getSharedState(job)?.timesFirstLockedAt) {
+      await loadProjectSchedules();
+      const schedule = psSchedules[jobId]?.input;
+      if (!schedule?.start || !schedule.phases?.some(p => p.on !== false)) {
+        showToast('Save a Project Schedule with a start date and at least one phase before locking the first times.', true);
+        openProjectSchedule(jobId); return;
+      }
+    }
+  }
   const start = parseJobDateTime(reportDate, reportTime), end = parseJobDateTime(endDate, endTime);
   if (start && end && end <= start) { showToast(nightWork ? 'End has to be after the start.' : 'End time must be after the start. Working overnight? Tick Night.', true); return; }
   const original = saveBtn.textContent; saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
@@ -5282,8 +5298,11 @@ const WON_STAGE_IDS = {
   hourly: "6cfb3e15-0954-4f94-9f27-29f8f45b185d",
   contract: "bb901617-1ec6-4f3c-8c77-27ccafb96404"
 };
+function needsProjectConfiguration(job) {
+  return !isHourlyJob(job) && !getSharedState(job)?.projectConfiguredAt;
+}
 function isHourlyJob(job) {
-  if (job && job.sourceType === 'change_order') return false;
+  if (job && (job.sourceType === 'change_order' || job.sourceType === 'demo' || job.jobType === 'contract' || job.pipelineId === JOB_PIPELINE_IDS.contract)) return false;
   if (job && job.pipelineStageId === WON_STAGE_IDS.contract) return false;
   return true; // default true (hourly); matches WON_STAGE_IDS.hourly and any unrecognized stage
 }
@@ -5373,6 +5392,7 @@ document.getElementById('crewPlus').addEventListener('click', () => {
 // on address (job.name) plus client name, preferring a candidate that isn't
 // already time-locked (a brand-new job usually won't be yet).
 document.getElementById('submitBook').addEventListener('click', async () => {
+  if (jobType !== 'hourly') { showToast('Contract projects must be created in GHL or Make.', true); return; }
   const reportDateVal = document.getElementById('jobDate').value;
   const jobEndDateVal = document.getElementById('jobEndDate').value;
 
@@ -5923,6 +5943,7 @@ function openEditJobSheet(jobId) {
     showToast("Couldn't find that job. Try refreshing.", true);
     return;
   }
+  document.querySelector('#editJobSheet h2').textContent = needsProjectConfiguration(job) ? 'Configure project' : 'Edit Job Details';
   currentEditJobId = jobId;
   currentEditJobVersion = dashboardData.sharedStateByJobId.get(jobId)?.version || 0;
   renderEditChangeOrder(job);
@@ -5959,7 +5980,7 @@ function openEditJobSheet(jobId) {
   // as the closest available starting point, since there's no stored value
   // to read back.
   const currentCrewCount = getCrew(job).length;
-  editCrewSize = currentCrewCount > 0 ? currentCrewCount : 4;
+  editCrewSize = Number(getSharedState(job)?.crewSize ?? job.crewSize) || (currentCrewCount > 0 ? currentCrewCount : 4);
   document.getElementById('editCrewCount').textContent = editCrewSize;
 
   editOverlay.classList.add('open');

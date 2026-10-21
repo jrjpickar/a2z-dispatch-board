@@ -8,3 +8,12 @@ Admin problems now show the affected webhook URL, including existing failed runs
 
 Apply the changed-files ZIP to the repository root, or use the complete project ZIP. Deploy through the existing Netlify process.
 Verified: production build/syntax checks; browser checks for partial/full/unknown labor crews and assigned/missing-driver logistics.
+
+Contract workflow update
+- Dispatch booking supports Hourly (Labor) only. Contract/Demo jobs must originate in GHL or Make; imports remain supported.
+- Contract rows initially show Configure project. The existing Edit Job Details screen is used; after its first successful save, the row returns to Edit Details.
+- Before the first board time lock, contract jobs need saved configuration and a saved Project Schedule with a start date and at least one enabled phase. Sending the PDF is not required.
+- Imported contract times are editable until this first lock. Existing contract jobs will also need this initial setup after deploying the update.
+- Configuration and first-lock status are shared across dispatchers and survive daily resets. Later time edits do not require a new Project Schedule.
+- The server verifies job type against GHL on detail and time saves, so GHL must be available for those operations.
+Verified: 28 state/workflow tests, production build checks, and browser checks for contract booking removal, configuration labels, and first-lock behavior.

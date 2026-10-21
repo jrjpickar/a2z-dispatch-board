@@ -1,7 +1,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { authorizeWrite, readPayload, json, errorResponse } from '../../lib/http.mjs';
 import { jobRecord, saveState } from '../../lib/store.mjs';
-import { syncJobSchedule } from '../../lib/ghl.mjs';
+import { syncJobSchedule, ghl, changeOrderPipelineId } from '../../lib/ghl.mjs';
 import { linkChangeOrder, unlinkChangeOrder } from '../../lib/change-order.mjs';
 import { sessionFromRequest } from '../../lib/session.mjs';
 import { logActivity } from '../../lib/activity.mjs';
@@ -41,7 +41,14 @@ export default async function handler(request) {
     if (['complete', 'cancel'].includes(payload.action) && session && !payload.closedBy) payload.closedBy = session.name;
     if (payload.action === 'reopen' && session && !payload.reopenedBy) payload.reopenedBy = session.name;
     if (payload.action === 'send_home' && session && !payload.sentHomeBy) payload.sentHomeBy = session.name;
-    const result = await saveState(sql, 'job', payload);
+    // Resolve type from GHL rather than trusting a browser's jobType flag.
+    let context = {};
+    if (['save_times', 'update_details'].includes(payload.action)) {
+      const { opportunity } = await ghl(`/opportunities/${encodeURIComponent(payload.jobId || payload.opportunityId || '')}`);
+      if (!opportunity?.id) throw new Error('Could not verify the project in GHL. Refresh and try again.');
+      context.contract = [process.env.DEMO_PIPELINE_ID || 'd5Ix1SlN3YpZ5gQewZUo', changeOrderPipelineId()].includes(opportunity.pipelineId);
+    }
+    const result = await saveState(sql, 'job', payload, context);
     if (['complete', 'cancel', 'reopen'].includes(payload.action) && !result.replayed) {
       const label = { complete: 'Marked job completed', cancel: 'Marked job cancelled', reopen: 'Reopened job' }[payload.action];
       await logActivity(sql, session, label, payload.jobAddress || payload.jobId, { jobId: payload.jobId });
