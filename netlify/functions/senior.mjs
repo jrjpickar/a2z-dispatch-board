@@ -14,7 +14,7 @@ import { requireSenior } from '../../lib/session.mjs';
 import { requirePanel } from '../../lib/layout.mjs';
 import { logActivity, recentActivity, logSend, sendHistory } from '../../lib/activity.mjs';
 import { seniorSettings, saveSettings } from '../../lib/settings.mjs';
-import { sendWorkflow, workflows } from '../../lib/effects.mjs';
+import { sendWorkflow, workflows, webhookUrl } from '../../lib/effects.mjs';
 import { syncJobSchedule } from '../../lib/ghl.mjs';
 
 const KIND_LABELS = { workers: 'Worker notification', drivers: 'Driver notification', job_details: 'Job details update', job_stage: 'Job stage (complete/cancel)', container: 'Container update', driver_log: 'Driver log', eod_sheet: 'EOD sheet', job_log: 'Job log', worker_sent_home: 'Worker sent home', split_day: 'Split day booking', job_hours: 'Job hours', labor_added: 'Laborer added', logistics_reminder: 'Logistics reminder', labor_reminder: 'Labor reminder' };
@@ -26,7 +26,7 @@ async function problems(sql) {
   const effects = (await sql`select effect_id, kind, status, last_error, payload, created_at, updated_at from dispatch_effects
     where status not in ('confirmed', 'cancelled', 'scheduled') and updated_at < now() - interval '45 seconds'
     order by updated_at desc limit 100`).map(r => ({
-      id: r.effect_id, kind: r.kind, label: KIND_LABELS[r.kind] || r.kind, status: r.status,
+      id: r.effect_id, kind: r.kind, webhook: workflows[r.kind] ? webhookUrl(r.kind) : '', label: KIND_LABELS[r.kind] || r.kind, status: r.status,
       error: r.status === 'sending' ? 'No answer from Make (timed out). Check Make history.' : (r.last_error || ''),
       jobId: String(r.payload?.jobId || r.payload?.moveId || r.payload?.opportunityId || ''), name: recordName(r.payload),
       action: String(r.payload?.action || ''), canRetry: !!r.payload && !!workflows[r.kind], at: r.updated_at || r.created_at

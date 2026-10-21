@@ -1765,7 +1765,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
         <span class="jobs-search-count mono" id="jobSearchCount"></span>
       </div>
     </div>
-    <div class="time-color-legend" aria-label="Schedule date colors"><span><i style="background:#dc2626"></i>Today</span><span><i style="background:#eab308"></i>Tomorrow</span><span><i style="background:#16a34a"></i>Future</span></div>
+    <label style="display:inline-flex;align-items:center;gap:8px;margin:8px 16px">Crew view <select id="laborCrewFilter" aria-label="Labor crew assignment view"><option value="all">All assignments</option><option value="needs">Needs crew</option><option value="full">Full crew assigned</option></select></label><div class="time-color-legend" aria-label="Schedule date colors"><span><i style="background:#dc2626"></i>Today</span><span><i style="background:#eab308"></i>Tomorrow</span><span><i style="background:#16a34a"></i>Future</span></div>
     <div class="jobs-table-wrap">
       <table class="jobs" id="jobsTable">
         <thead>
@@ -1922,7 +1922,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
   <div class="logistics-layout">
     <div class="panel logistics-drivers-panel"><div class="panel-head"><h2>Drivers</h2><span class="mono" id="logisticsDriverCount">0 TOTAL</span></div><ul class="logistics-resource-list" id="logisticsDrivers"></ul></div>
     <div class="panel logistics-assets-panel"><div class="panel-head"><h2>Assets</h2><span class="mono" id="logisticsAssetCount">0 TOTAL</span></div><div class="logistics-note">Drivers and assets stay independent so either can be reassigned.</div><ul class="logistics-resource-list" id="logisticsAssets"></ul></div>
-    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="board-view-toggle" role="group" aria-label="Logistics layout"><button id="logiSplitBtn" aria-pressed="true">Split view</button><button id="logiCombinedBtn" aria-pressed="false">Current view</button></div><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><div class="logi-attn" id="logisticsAttention" hidden></div><div class="logi-bulk" id="logisticsBulk" hidden></div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
+    <div class="panel"><div class="panel-head"><h2>Logistics Moves</h2><div class="board-view-toggle" role="group" aria-label="Logistics layout"><button id="logiSplitBtn" aria-pressed="true">Split view</button><button id="logiCombinedBtn" aria-pressed="false">Current view</button></div><div class="logistics-toolbar"><select id="logisticsSourceFilter"><option value="all">All GHL Pipelines</option><option value="demo">Demo Jobs</option><option value="container">Container</option></select><button class="btn-primary" id="newContainerBtn">+ Book Container</button></div></div><div class="logistics-note">Standalone containers create their own GHL opportunity. Demo-job add-ons will use a separate workflow.</div><label style="display:inline-flex;align-items:center;gap:8px;margin:8px 16px">Crew view <select id="logisticsCrewFilter" aria-label="Logistics crew assignment view"><option value="all">All assignments</option><option value="needs">Needs crew</option><option value="full">Full crew assigned</option></select></label><div class="logi-attn" id="logisticsAttention" hidden></div><div class="logi-bulk" id="logisticsBulk" hidden></div><div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Job</th><th>Move</th><th>Value</th><th>Route</th><th>Schedule</th><th>Driver &amp; vehicle</th><th>Status</th></tr></thead><tbody id="logisticsMoves"><tr><td colspan="7" class="load-state">Open this tab to load logistics.</td></tr></tbody></table></div></div>
   </div>
 </div>
 
@@ -3504,15 +3504,27 @@ function scheduleDateTone(date) {
   if (date && date > today) return 'future';
   return 'neutral';
 }
+function matchesCrewView(kind, full) {
+  const view = document.getElementById(kind + 'CrewFilter')?.value || 'all';
+  return view === 'all' || (view === 'full' ? full : !full);
+}
+function hasFullLaborCrew(job) {
+  const crew = getCrew(job);
+  const extras = ((window.jobCrewOverride && window.jobCrewOverride[job.id]) || [])
+    .filter(worker => !crew.some(c => c.name === worker.name));
+  const required = Number(getSharedState(job)?.crewSize ?? job.crewSize);
+  // Unknown crew requirements stay in Needs crew until a size is set.
+  return Number.isFinite(required) && required > 0 && crew.length + extras.length >= required;
+}
 function renderJobsTable(allJobs) {
   const body = document.getElementById('jobsBody');
   const emptyState = document.getElementById('jobsEmpty');
   const table = document.getElementById('jobsTable');
   const openJobs = (allJobs || []).filter(j => !isClosedOnBoard(j));
   const query = (document.getElementById('jobSearch')?.value || '').trim();
-  const jobs = openJobs.filter(j => jobMatchesSearch(j, query) && (!boardDayFilters.labor || getReportDate(j) === boardDayFilters.labor));
+  const jobs = openJobs.filter(j => jobMatchesSearch(j, query) && matchesCrewView('labor', hasFullLaborCrew(j)) && (!boardDayFilters.labor || getReportDate(j) === boardDayFilters.labor));
   const countEl = document.getElementById('jobSearchCount');
-  if (countEl) countEl.textContent = query ? `${jobs.length} of ${openJobs.length}` : '';
+  if (countEl) countEl.textContent = (query || document.getElementById('laborCrewFilter').value !== 'all') ? `${jobs.length} of ${openJobs.length}` : '';
 
   if (!openJobs.length) {
     table.style.display = 'none';
@@ -6353,6 +6365,7 @@ function renderLogistics() {
     // Needs attention (today and tomorrow only): no saved time, no driver, no vehicle.
     const watch = assignable && (groupKey === 'today' || groupKey === 'tomorrow');
     const flags = { moveKey, group: groupKey, time: watch && !scheduleLocked, driver: watch && !(assignedDriverId || assignedDriverName), vehicle: watch && !assignedAssets.length };
+    flags.fullCrew = Boolean((assignedDriverId || assignedDriverName) && assignedAssets.length);
     flags.any = flags.time || flags.driver || flags.vehicle;
     lastLogisticsFlags = flags;
     const missingBadges = flags.any ? `<div class="logi-missing">${flags.time ? '<span>No time</span>' : ''}${flags.driver ? '<span>No driver</span>' : ''}${flags.vehicle ? '<span>No vehicle</span>' : ''}</div>` : '';
@@ -6398,7 +6411,7 @@ function renderLogistics() {
   const watched = [...built.today, ...built.tomorrow].map(r => r.flags);
   const attn = { time: watched.filter(f => f.time).length, driver: watched.filter(f => f.driver).length, vehicle: watched.filter(f => f.vehicle).length, any: watched.filter(f => f.any).length };
   if (logisticsAttnFilter && !attn[logisticsAttnFilter]) logisticsAttnFilter = '';
-  const shows = r => !logisticsAttnFilter || r.flags[logisticsAttnFilter];
+  const shows = r => matchesCrewView('logistics', r.flags.fullCrew) && (!logisticsAttnFilter || r.flags[logisticsAttnFilter]);
   document.getElementById('logisticsMoves').innerHTML = visibleMoves.length ? sectionDefs.map(({ key, label }) => {
     const rows = built[key].filter(shows);
     return `<tr class="job-group-header-row job-group-${key}"><td colspan="7" class="job-group-header">${label} <span class="job-group-count">${rows.length}</span></td></tr>` +
@@ -8813,7 +8826,7 @@ function renderProblems(data) {
   document.getElementById('resolveAllProblems').hidden = !canAct || effects.length < 2;
   const list = document.getElementById('problemList');
   const rows = [
-    ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
+    ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.webhook ? `<small>Webhook: ${sessionEsc(p.webhook)}</small>` : ''}${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
       + (!canAct ? '' : `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Acknowledge</button></div>`) + '</li>'),
     ...crm.map(c => `<li><div class="who">GHL schedule sync${c.name ? ' · ' + sessionEsc(c.name) : ''}<small>${sessionEsc([c.jobId, seniorWhen(c.at)].filter(Boolean).join(' · '))}</small>${c.error ? `<small class="err">${sessionEsc(c.error)}</small>` : ''}</div>`
       + (!canAct ? '' : `<div class="problem-actions"><button type="button" class="job-stage-btn edit problem-btn" data-action="retry_crm" data-job-id="${sessionEsc(c.jobId)}">Retry</button><button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_crm" data-job-id="${sessionEsc(c.jobId)}">Acknowledge</button></div>`) + '</li>')
@@ -9231,6 +9244,16 @@ function applyBoardSplit(allJobs) {
 function setBoardView(split){boardSplit=split;localStorage.setItem('a2zBoardSplit',String(split));renderJobs(dashboardData.jobs);}
 document.getElementById('splitViewBtn').onclick=()=>setBoardView(true);
 document.getElementById('combinedViewBtn').onclick=()=>setBoardView(false);
+for (const kind of ['labor', 'logistics']) {
+  const select = document.getElementById(kind + 'CrewFilter');
+  const saved = localStorage.getItem('a2zCrewView-' + kind);
+  select.value = ['all', 'needs', 'full'].includes(saved) ? saved : 'all';
+  select.addEventListener('change', () => {
+    localStorage.setItem('a2zCrewView-' + kind, select.value);
+    if (kind === 'labor') renderJobs(dashboardData.jobs || []);
+    else renderLogistics();
+  });
+}
 /* ---------- Init ---------- */
 enhanceQuarterTimes(document);
 initSession();

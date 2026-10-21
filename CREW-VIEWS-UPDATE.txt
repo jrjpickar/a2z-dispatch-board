@@ -1,0 +1,10 @@
+Crew assignment views update
+
+Added Crew view to Labor and Logistics: All assignments, Needs crew, Full crew assigned.
+Labor is full when assigned workers meet or exceed the saved crew size. Unknown or zero crew sizes remain in Needs crew.
+Logistics is full when both a driver and at least one vehicle are assigned.
+Views work with existing layouts, date filters, and labor search. Each board remembers its selection in this browser.
+Admin problems now show the affected webhook URL, including existing failed runs. New workflow failures include webhook type and URL in their error text.
+
+Apply the changed-files ZIP to the repository root, or use the complete project ZIP. Deploy through the existing Netlify process.
+Verified: production build/syntax checks; browser checks for partial/full/unknown labor crews and assigned/missing-driver logistics.
