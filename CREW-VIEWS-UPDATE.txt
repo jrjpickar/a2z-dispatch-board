@@ -17,3 +17,15 @@ Contract workflow update
 - Configuration and first-lock status are shared across dispatchers and survive daily resets. Later time edits do not require a new Project Schedule.
 - The server verifies job type against GHL on detail and time saves, so GHL must be available for those operations.
 Verified: 28 state/workflow tests, production build checks, and browser checks for contract booking removal, configuration labels, and first-lock behavior.
+
+Senior-admin webhook resubmission update
+- Admin > Send history > Webhook runs lists the latest 500 stored webhook runs, including EOD sheets, worker/driver notifications, job logs, hours, details/stage updates, reminders and resubmitted Project Schedules.
+- Senior admins can Resubmit confirmed, acknowledged, failed or timed-out stored runs. Ordinary admins and signed-out callers cannot resubmit through the API.
+- EOD resubmissions rebuild the sheet from the original saved payload, preserving that run's crew, date and hours even after the board has been reset.
+- Resubmissions receive a new event ID so a previously processed event does not block an intentional re-send. A confirmation explains that downstream messages or entries may repeat.
+- Each attempt and its result are recorded in the activity log. Existing board state is not changed by resubmission.
+- Pending/cancelled originals cannot be resubmitted. Fresh sends and simultaneous resubmissions are blocked; a repeated request after a lost reply does not send again.
+- Project Schedule history includes Resubmit saved schedule, which sends the latest saved version; resubmitted schedules then also appear in Webhook runs.
+- Legacy EOD/webhook sends without a retained original payload cannot be reconstructed automatically. The existing Retry control remains available for unconfirmed effects.
+- Uses the configured current webhook URL for the selected kind and displays the affected webhook in history.
+Verification: production build, 38 focused state/workflow/access tests, browser verification of senior-only controls and original-run request selection. No live webhook was sent during verification.

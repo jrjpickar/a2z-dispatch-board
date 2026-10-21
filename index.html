@@ -1905,7 +1905,7 @@ body.dark-mode #laborDispatchView .crew-assign-toggle,body.dark-mode #laborDispa
     <div class="panel" data-panel="history">
       <div class="panel-head"><h2>Send history</h2><span class="mono" id="historyCount">0</span></div>
       <div class="admin-search"><input type="search" id="historySearch" placeholder="Search by job..." autocomplete="off"></div>
-      <div class="admin-list-scroll history-groups" id="historyList"><p class="load-state">Loading...</p></div>
+      <div class="logistics-note">Senior admins can resubmit saved webhook runs below. EOD resubmissions use the original crew, date and hours.</div><div class="admin-list-scroll history-groups" id="webhookHistoryList"></div><div class="admin-list-scroll history-groups" id="historyList"><p class="load-state">Loading...</p></div>
     </div>
   </div>
   </div>
@@ -8834,7 +8834,7 @@ if (typeof ResizeObserver === 'function') {
 
 /* Senior admin tools: problems + retry, settings, activity log, send history. */
 async function seniorApi(view, body) {
-  const res = await fetchWithTimeout(view ? '/api/senior?view=' + view : '/api/senior', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { headers: { Accept: 'application/json' } }, 30000);
+  const res = await fetchWithTimeout(view ? '/api/senior?view=' + view : '/api/senior', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { headers: { Accept: 'application/json' } }, 60000);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) { const err = new Error(data.error || `HTTP ${res.status}`); err.data = data; throw err; }
   return data;
@@ -8858,16 +8858,18 @@ function renderActivity(items) {
   document.getElementById('activityCount').textContent = String(items.length);
   document.getElementById('activityList').innerHTML = items.length ? items.map(a => `<li class="activity-row"><div class="who"><b>${sessionEsc(a.actor || 'Someone')}</b> ${sessionEsc(a.action.charAt(0).toLowerCase() + a.action.slice(1))}${a.target ? ': ' + sessionEsc(a.target) : ''}</div><span class="when">${seniorWhen(a.at)}</span></li>`).join('') : '<li class="load-state">No activity yet.</li>';
 }
-let seniorSends = [];
+let seniorSends = [], seniorWebhookRuns = [];
 function renderHistory() {
   const q = document.getElementById('historySearch').value.trim().toLowerCase();
   const shown = seniorSends.filter(s => !q || `${s.jobName} ${s.jobId}`.toLowerCase().includes(q));
-  document.getElementById('historyCount').textContent = String(seniorSends.length);
+  document.getElementById('historyCount').textContent = String(seniorWebhookRuns.length + seniorSends.length);
+  const runs = seniorWebhookRuns.filter(r => !q || [r.jobName, r.jobId, r.label, r.kind, r.date, r.webhook].join(' ').toLowerCase().includes(q));
+  document.getElementById('webhookHistoryList').innerHTML = '<h4>Webhook runs</h4>' + (runs.length ? runs.map(r => `<div class="history-job"><h4>${sessionEsc(r.label)} · ${sessionEsc(r.jobName || r.jobId || 'Job')}</h4><small>${sessionEsc([r.date, ({confirmed:'Confirmed',uncertain:'Needs checking',sending:'Sending',scheduled:'Waiting',cancelled:'Cancelled'})[r.status] || r.status, seniorWhen(r.at)].filter(Boolean).join(' · '))}</small><div class="logistics-note" style="overflow-wrap:anywhere">${sessionEsc(r.webhook || '')}${r.error ? '<br>' + sessionEsc(r.error) : ''}</div>${currentSession.isSenior && r.canResubmit ? `<button type="button" class="job-stage-btn edit webhook-resubmit" data-effect-id="${sessionEsc(r.id)}">Resubmit</button>` : ''}</div>`).join('') : '<p class="load-state">No matching stored webhook runs.</p>');
   const groups = new Map();
   for (const item of shown) { const k = item.jobId || item.jobName; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(item); }
   const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'job_log' ? 'Job log' : k === 'worker_sent_home' ? 'Worker sent home' : k === 'split_day' ? 'Split day booking' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
   document.getElementById('historyList').innerHTML = groups.size ? [...groups.values()].map(items => `<div class="history-job"><h4>${sessionEsc(items[0].jobName || 'Job')}<small>${sessionEsc(items[0].jobId || '')} · ${items.length} sent</small></h4>`
-    + items.map(i => `<div class="history-row"><div><span class="kind">${kindLabel(i.kind)}</span> <span class="file">${sessionEsc(i.fileName || i.detail || '')}</span></div><div>${i.status === 'failed' ? '<span class="st-failed">FAILED</span> ' : ''}${seniorWhen(i.at)}</div></div>`).join('') + '</div>').join('')
+    + items.map(i => `<div class="history-row"><div><span class="kind">${kindLabel(i.kind)}</span> <span class="file">${sessionEsc(i.fileName || i.detail || '')}</span></div><div>${i.status === 'failed' ? '<span class="st-failed">FAILED</span> ' : ''}${seniorWhen(i.at)}${currentSession.isSenior && i.kind === 'project_schedule' ? `<button type="button" class="job-stage-btn edit webhook-resubmit" data-schedule-job-id="${sessionEsc(i.jobId)}">Resubmit saved schedule</button>` : ''}</div></div>`).join('') + '</div>').join('')
     : `<p class="load-state">${seniorSends.length ? 'No jobs match.' : 'Nothing sent yet. EOD sheets and Project Schedule PDFs show here once sent.'}</p>`;
 }
 function renderSettings(st) {
@@ -8887,13 +8889,38 @@ async function loadSeniorTools() {
   const jobs = [
     see('problems') && seniorApi('problems').then(renderProblems).catch(e => { document.getElementById('problemList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
     see('activity') && seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(e => { document.getElementById('activityList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
-    see('history') && seniorApi('history').then(d => { seniorSends = d.sends || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
+    see('history') && seniorApi('history').then(d => { seniorSends = d.sends || []; seniorWebhookRuns = d.runs || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
     currentSession.isSenior && seniorApi('settings').then(renderSettings).catch(e => showToast(e.message, true))
   ].filter(Boolean);
   await Promise.all(jobs);
 }
 document.getElementById('seniorRefresh').addEventListener('click', () => { renderAdminView(true); loadWorkerTemperatures(true); });
 document.getElementById('historySearch').addEventListener('input', renderHistory);
+async function resubmitFromHistory(e) {
+  const btn = e.target.closest('.webhook-resubmit');
+  if (!btn || !currentSession.isSenior || btn.disabled) return;
+  const schedule = btn.dataset.scheduleJobId;
+  if (!confirm(schedule ? 'Send the latest saved Project Schedule to Make again?' : 'Resubmit this saved webhook payload to Make with a new event ID? It may repeat messages, sheet entries or other actions from the original run.')) return;
+  btn.disabled = true; btn.textContent = 'Resubmitting…';
+  // Keep this ID on a network retry so a lost reply cannot create another run.
+  btn.dataset.requestId ||= crypto.randomUUID();
+  try {
+    const result = await seniorApi('', { action: schedule ? 'resubmit_schedule' : 'resubmit_effect', ...(schedule ? { jobId: schedule } : { effectId: btn.dataset.effectId }), requestId: btn.dataset.requestId });
+    showToast(result.ok ? 'Resubmitted. Make confirmed it.' : 'Already attempted. Check webhook history for the result.', !result.ok);
+    const data = await seniorApi('history'); seniorSends = data.sends || []; seniorWebhookRuns = data.runs || []; renderHistory();
+    seniorApi('problems').then(renderProblems).catch(() => {});
+    seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {});
+  } catch (error) {
+    showToast(error.message, true); btn.disabled = false; btn.textContent = 'Resubmit';
+    if (error.data?.effectId) {
+      // A definite server reply recorded the attempt; refresh to expose its result.
+      seniorApi('history').then(data => { seniorSends = data.sends || []; seniorWebhookRuns = data.runs || []; renderHistory(); }).catch(() => {});
+    }
+  }
+}
+document.getElementById('webhookHistoryList').addEventListener('click', resubmitFromHistory);
+document.getElementById('historyList').addEventListener('click', resubmitFromHistory);
+
 document.getElementById('problemList').addEventListener('click', async e => {
   const btn = e.target.closest('.problem-btn'); if (!btn) return;
   const { action } = btn.dataset;
