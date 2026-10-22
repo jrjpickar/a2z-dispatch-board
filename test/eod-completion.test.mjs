@@ -54,3 +54,21 @@ test('webhooks include Monday-Sunday MM/DD week boundaries across years', async 
     for (const payload of payloads.slice(1)) assert.deepEqual([payload.weekStart, payload.weekEnd, payload.weekRange], ['12/28', '01/03', '12/28-01/03']);
   } finally { globalThis.fetch = previous; }
 });
+test('a second EOD sheet on the same date gets its own request (no duplicate blocking) and still resets the day', () => {
+  const start = { active: true, data: { crew: [{ name: 'Ana' }], reportDate: today, reportTime: '07:00' } };
+  const first = mutateJob(start, { action: 'begin_eod', date: today, requestId: 'req-first-aaaaaaaaaa' });
+  const reset = mutateJob(mutateJob(first, { action: 'record_eod', date: today }), { action: 'reset_dispatch' });
+  assert.equal(reset.data.reportDate, '');
+  assert.equal(reset.data.crew.length, 0);
+  const second = mutateJob(reset, { action: 'begin_eod', date: today, requestId: 'req-second-bbbbbbbbb' });
+  assert.equal(second.data.eodRequests[today], 'req-second-bbbbbbbbb');
+  assert.deepEqual(mutateJob(second, { action: 'record_eod', date: today }).data.eodSubmittedDates, [today]);
+});
+test('job row shows the dates EOD sheets were completed', () => {
+  const src = html.match(/function eodDoneNote[\s\S]*?\n}\n/)[0];
+  const map = new Map([['j1', { eodSubmittedDates: ['2026-10-22', '2026-10-20', '2026-10-20'] }], ['j2', {}]]);
+  const ctx = vm.createContext({ dashboardData: { sharedStateByJobId: map } });
+  vm.runInContext(src, ctx);
+  assert.match(ctx.eodDoneNote('j1'), /EOD completed on dates 10\/20, 10\/22</);
+  assert.equal(ctx.eodDoneNote('j2'), '');
+});

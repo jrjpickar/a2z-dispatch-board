@@ -796,6 +796,7 @@
   .sent-home-foot .btn-primary { background: #5a4aa3; }
   .job-stage-btn.reopen:hover { background: #287a54; color: #fff; }
   .status-tag.closed { background: var(--grey-light); color: var(--ink-soft); border: 1px solid var(--grey); }
+  .eod-done-note { margin-top: 6px; max-width: 190px; font-size: 11px; line-height: 1.4; color: #1f6b3a; font-weight: 600; }
   .job-closed-note { margin-top: 6px; max-width: 190px; font-size: 11px; line-height: 1.4; color: var(--ink-soft); }
   .job-stage-btn.edit:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
   .job-stage-btn.reset { border: 1px solid var(--orange); color: var(--orange-dark); }
@@ -2648,6 +2649,14 @@ function getCustomFieldValue(customFields, fieldId) {
 // (kept only as an instant-UI bridge for the brief window between an action
 // and the next refresh), then finally to raw GHL fields for jobs that have
 // never touched this dashboard and have no shared database record at all.
+// "EOD completed on 10/20, 10/22": the dates this job has an EOD sheet sent for.
+function eodDoneNote(jobId) {
+  const rec = dashboardData.sharedStateByJobId?.get(jobId);
+  const dates = [...new Set((rec?.eodSubmittedDates || []).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort();
+  if (!dates.length) return '';
+  const label = dates.map(d => d.slice(5, 7) + '/' + d.slice(8, 10)).join(', ');
+  return `<div class="eod-done-note" title="EOD sheets sent for this job">EOD completed on ${dates.length > 1 ? 'dates ' : ''}${label}</div>`;
+}
 function getSharedState(job) {
   const map = dashboardData.sharedStateByJobId;
   if (!map || !job || !job.id) return null;
@@ -3755,6 +3764,7 @@ function renderJobsTable(allJobs) {
             <button type="button" class="job-stage-btn complete hold-btn" data-job-id="${jobId}" title="Hold for 5 seconds to mark this job completed">Completed</button>
             <button type="button" class="job-stage-btn cancel hold-btn" data-job-id="${jobId}" title="Hold for 5 seconds to mark this job cancelled">Cancelled</button>
           </div>`}
+          ${eodDoneNote(jobId)}
         </td>
       </tr>
     `;
