@@ -40,6 +40,27 @@ function dashboardJob(opportunity, sourceType) {
   };
 }
 
+function dedupe(jobs) {
+  const seen = new Set();
+  return jobs.filter(job => job.id && !seen.has(job.id) && seen.add(job.id));
+}
+
+// The GHL job list is shared by every open board for DASHBOARD_CACHE_SECONDS
+// (default 60, 0 turns it off), so opening the board in GHL again and again
+// does not page through GHL each time. fresh skips the cache and refills it.
+async function cachedGhlJobs(sql, fresh, load) {
+  const ttl = Math.max(0, Math.min(600, Number(process.env.DASHBOARD_CACHE_SECONDS ?? 60) || 0)) * 1000;
+  if (!fresh && ttl) {
+    const [cached] = await sql`select data, updated_at from dispatch_feed_cache where key = 'ghl-jobs'`;
+    const data = cached && (typeof cached.data === 'string' ? JSON.parse(cached.data) : cached.data);
+    if (Array.isArray(data) && Date.now() - new Date(cached.updated_at).getTime() < ttl) return data;
+  }
+  const jobs = await load();
+  await sql`insert into dispatch_feed_cache (key, data, updated_at) values ('ghl-jobs', ${sql.json(jobs)}, now())
+    on conflict (key) do update set data = excluded.data, updated_at = now()`;
+  return jobs;
+}
+
 export default async function handler(request) {
   if (request.method !== "GET") {
     return json({ error: "Method not allowed" }, 405, { Allow: "GET" });
@@ -61,30 +82,40 @@ export default async function handler(request) {
     const laborPipelineId = process.env.LABOR_PIPELINE_ID || DEFAULTS.laborPipelineId;
     const demoPipelineId = process.env.DEMO_PIPELINE_ID || DEFAULTS.demoPipelineId;
     const changeOrderPipelineId = configuredChangeOrderPipelineId();
+    // ?fresh=1 (the board's Refresh button and its own saves) skips the shared cache.
+    const fresh = new URL(request.url).searchParams.get('fresh') === '1';
 
-    const [labor, demo, changeOrders, sharedRows] = await Promise.all([
-      searchOpportunities(token, locationId, laborPipelineId),
-      searchOpportunities(token, locationId, demoPipelineId),
-      searchOpportunities(token, locationId, changeOrderPipelineId),
-      sql`
-        select *
-        from job_shared_state
-        order by updated_at desc
-      `
-    ]);
+    const jobs = await cachedGhlJobs(sql, fresh, async () => {
+      const laborStages = new Set(DEFAULTS.laborStages);
+      const demoStages = new Set(DEFAULTS.demoStages);
+      // One search per active stage (not every won job ever in the pipeline).
+      const [labor, demo, changeOrders] = await Promise.all([
+        Promise.all(DEFAULTS.laborStages.map(stage => searchOpportunities(token, locationId, laborPipelineId, stage))).then(lists => lists.flat()),
+        Promise.all(DEFAULTS.demoStages.map(stage => searchOpportunities(token, locationId, demoPipelineId, stage))).then(lists => lists.flat()),
+        searchOpportunities(token, locationId, changeOrderPipelineId)
+      ]);
+      return dedupe([
+        ...labor.filter(job => laborStages.has(job.pipelineStageId)).map(job => dashboardJob(job, "labor")),
+        ...demo.filter(job => demoStages.has(job.pipelineStageId)).map(job => dashboardJob(job, "demo")),
+        ...changeOrders.map(job => dashboardJob(job, "change_order"))
+      ]);
+    });
 
-    const laborStages = new Set(DEFAULTS.laborStages);
-    const demoStages = new Set(DEFAULTS.demoStages);
-    const jobs = [
-      ...labor.filter(job => laborStages.has(job.pipelineStageId)).map(job => dashboardJob(job, "labor")),
-      ...demo.filter(job => demoStages.has(job.pipelineStageId)).map(job => dashboardJob(job, "demo")),
-      ...changeOrders.map(job => dashboardJob(job, "change_order"))
-    ];
-
-    const sharedState = sharedRows.map(jobRecord);
+    // Only the records the board needs: open jobs, jobs GHL still lists (even if
+    // closed on the board), and change orders linked to a job on the board.
+    // Old closed jobs load on the Completed tab (/api/shared-state?view=closed).
+    const ids = jobs.map(job => job.id).filter(Boolean);
+    const idList = ids.length ? ids : [''];
+    const [{ now }] = await sql`select now() as now`;
+    const sharedRows = await sql`
+      select *
+      from job_shared_state
+      where active = true or job_id = any(${idList}) or data->>'parentJobId' = any(${idList})
+      order by updated_at desc
+    `;
 
     return json(
-      { jobs, sharedState },
+      { jobs, sharedState: sharedRows.map(jobRecord), serverTime: new Date(now).toISOString() },
       200,
       { "cache-control": "no-store" }
     );

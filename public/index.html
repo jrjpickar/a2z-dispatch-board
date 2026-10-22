@@ -2490,9 +2490,18 @@ function setSessionToken(token) {
    use America/Los_Angeles (PST/PDT handled). */
 const BOARD_TZ = 'America/Los_Angeles';
 const pacificFmt = new Intl.DateTimeFormat('en-US', { timeZone: BOARD_TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+// Remembered per second (the parts only go down to seconds), so a redraw that asks
+// for "today" once per row does not format the same moment over and over.
+const pacificPartsCache = new Map();
 function pacificParts(d = new Date()) {
+  const key = Math.floor(d.getTime() / 1000);
+  const hit = pacificPartsCache.get(key);
+  if (hit) return { ...hit };
   const p = {}; for (const x of pacificFmt.formatToParts(d)) p[x.type] = x.value;
-  return { y: +p.year, mo: +p.month, d: +p.day, h: +p.hour % 24, mi: +p.minute, s: +p.second };
+  const out = { y: +p.year, mo: +p.month, d: +p.day, h: +p.hour % 24, mi: +p.minute, s: +p.second };
+  if (pacificPartsCache.size > 5000) pacificPartsCache.clear();
+  pacificPartsCache.set(key, out);
+  return { ...out };
 }
 // The real moment for a Pacific wall clock time (date + HH:MM as dispatch typed it).
 function pacificDate(y, mo, d, h = 0, mi = 0) {
@@ -2786,9 +2795,10 @@ function getOpportunityValue(job) {
   return isNaN(num) ? null : num;
 }
 
+const USD_FMT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 function formatCurrency(num) {
   if (num === null || num === undefined || isNaN(num)) return 'N/A';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
+  return USD_FMT.format(num);
 }
 
 // Deep link straight to this opportunity's detail view in GHL. Pattern
@@ -3056,12 +3066,18 @@ async function fetchJsonStrict(url, label, options = {}) {
   }
 }
 
-async function loadDashboard() {
-  document.getElementById('jobsBody').innerHTML =
+// fresh: true skips the server's short shared cache of the GHL job list (Refresh
+// and the board's own creates and edits). Opening the board uses the cache.
+async function loadDashboard({ fresh = true, draw = true } = {}) {
+  // The spinner only shows before the first load; a refresh keeps the board up.
+  if (!jobRowCache.size) document.getElementById('jobsBody').innerHTML =
     `<tr><td colspan="9" class="load-state"><div class="spinner"></div>Loading jobs...</td></tr>`;
   try {
-    const data = await fetchJsonStrict(CONFIG.GET_DASHBOARD_DATA_URL, 'Jobs webhook');
+    const url = CONFIG.GET_DASHBOARD_DATA_URL + (fresh ? (CONFIG.GET_DASHBOARD_DATA_URL.includes('?') ? '&' : '?') + 'fresh=1' : '');
+    const data = await fetchJsonStrict(url, 'Jobs webhook');
     clearBackendError('Jobs webhook');
+    // Live checks start from this answer, so the first one does not download everything again.
+    if (data.serverTime && !sharedSince) sharedSince = data.serverTime;
 
     dashboardData.jobs = Array.isArray(data.jobs) ? data.jobs : (Array.isArray(data) ? data : []);
 
@@ -3121,13 +3137,13 @@ async function loadDashboard() {
     // Keep the last confirmed board visible during a temporary read failure.
     setBackendError('Jobs webhook', err);
   }
-  render();
+  if (draw) render();
 }
 
 // The Make labor roster as last loaded, before GHL-added workers are merged in.
 let laborRosterRaw = null;
-async function loadLaborRoster() {
-  document.getElementById('rosterList').innerHTML =
+async function loadLaborRoster({ draw = true } = {}) {
+  if (!(dashboardData.labor || []).length) document.getElementById('rosterList').innerHTML =
     `<li class="load-state" style="border:none;"><div class="spinner"></div>Loading roster...</li>`;
   try {
     const [data] = await Promise.all([fetchJsonStrict(CONFIG.LABOR_ROSTER_URL, 'Labor webhook'), loadManualWorkers()]);
@@ -3141,11 +3157,17 @@ async function loadLaborRoster() {
     dashboardData.labor = mergeManualWorkers([], 'labor');
     setBackendError('Labor webhook', err);
   }
-  render();
+  if (draw) render();
 }
 
-async function refreshAll() {
-  await Promise.all([loadDashboard(), loadLaborRoster()]);
+// Jobs and roster load together and draw once. If the roster is still loading
+// 1.5 s after the jobs arrive, the jobs are drawn first and again with the roster.
+async function refreshAll({ fresh = true } = {}) {
+  const roster = loadLaborRoster({ draw: false });
+  await loadDashboard({ fresh, draw: false });
+  const rosterDone = await Promise.race([roster.then(() => true), new Promise(r => setTimeout(() => r(false), 1500))]);
+  if (!rosterDone) { render(); await roster; }
+  render();
 }
 
 /* ---------- Rendering ---------- */
@@ -3463,8 +3485,7 @@ function hasSavedJobTimes(job) {
 function renderJobs(allJobs) {
   const pickerState = openCrewPickerState();
   const timeEdits = openTimeEditsState();
-  renderJobsTable(allJobs);
-  applyBoardSplit(allJobs);
+  if (renderJobsTable(allJobs) !== false) applyBoardSplit(allJobs);
   restoreTimeEdits(timeEdits);
   restoreCrewPicker(pickerState);
   enhanceQuarterTimes(document.getElementById('jobsBody'));
@@ -3475,6 +3496,8 @@ function renderJobs(allJobs) {
    HH:MM value every save and payload already reads. */
 const QT_VALUE = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
 let qtSeq = 0;
+const QT_HOUR_OPTIONS = '<option value="">--</option>' + Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+const QT_MIN_OPTIONS = '<option value="">--</option>' + ['00', '15', '30', '45'].map(m => `<option value="${m}">${m}</option>`).join('');
 function enhanceQuarterTimes(root) {
   (root || document).querySelectorAll('input[type=time][step="900"]:not([data-qt])').forEach(enhanceQuarterTime);
 }
@@ -3483,8 +3506,8 @@ function enhanceQuarterTime(input) {
   const box = document.createElement('span');
   box.className = 'qtime'; box.dataset.for = input.dataset.qt;
   const label = input.getAttribute('aria-label') || input.title || 'Time';
-  box.innerHTML = `<select data-qpart="h" aria-label="${escapeAttr(label)} hour"><option value="">--</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select>`
-    + `<select data-qpart="m" aria-label="${escapeAttr(label)} minutes"><option value="">--</option>${['00', '15', '30', '45'].map(m => `<option value="${m}">${m}</option>`).join('')}</select>`
+  box.innerHTML = `<select data-qpart="h" aria-label="${escapeAttr(label)} hour">${QT_HOUR_OPTIONS}</select>`
+    + `<select data-qpart="m" aria-label="${escapeAttr(label)} minutes">${QT_MIN_OPTIONS}</select>`
     + `<select data-qpart="ap" aria-label="${escapeAttr(label)} AM or PM"><option value="AM">AM</option><option value="PM">PM</option></select>`;
   input.after(box);
   input.classList.add('qtime-source');
@@ -3515,31 +3538,45 @@ function enhanceQuarterTime(input) {
 
 // Typed but unsaved times in open rows survive a board refresh.
 const TIME_EDIT_FIELDS = ['report-date-input', 'report-time-input', 'end-date-input', 'end-time-input', 'night-input'];
+// Only rows someone actually typed a time into are read and put back (the
+// rest have nothing unsaved), so a redraw doesn't scan every row.
+const timeEditedJobs = new Set();
+['input', 'change'].forEach(type => document.getElementById('jobsBody').addEventListener(type, e => {
+  const wrap = e.target.closest && e.target.closest('.time-edit-wrap');
+  if (wrap && wrap.dataset.jobId) timeEditedJobs.add(wrap.dataset.jobId);
+}, true));
+function timeEditWraps(id) {
+  const row = jobRowCache.get('r:' + id)?.node;
+  return row && row.isConnected ? [...row.querySelectorAll('.time-edit-wrap:not(.locked)')] : [];
+}
 function openTimeEditsState() {
   const out = {}; let focus = null;
-  document.querySelectorAll('#jobsBody .time-edit-wrap:not(.locked)').forEach(wrap => {
-    const id = wrap.dataset.jobId; if (!id) return;
-    for (const cls of TIME_EDIT_FIELDS) {
+  for (const id of timeEditedJobs) {
+    const wraps = timeEditWraps(id);
+    if (!wraps.length) { if (!jobRowCache.has('r:' + id)) timeEditedJobs.delete(id); continue; }
+    for (const wrap of wraps) for (const cls of TIME_EDIT_FIELDS) {
       const el = wrap.querySelector('.' + cls); if (!el) continue;
       (out[id] = out[id] || {})[cls] = el.type === 'checkbox' ? el.checked : el.value;
     }
-    const a = document.activeElement;
-    if (a && wrap.contains(a)) focus = { id, cls: [...a.classList].find(c => TIME_EDIT_FIELDS.includes(c)) || '', part: a.dataset.qpart || '', of: a.closest('.qtime')?.dataset.for || '' };
-  });
+  }
+  const a = document.activeElement;
+  const wrap = a && a.closest && a.closest('#jobsBody .time-edit-wrap:not(.locked)');
+  if (wrap && wrap.dataset.jobId) focus = { id: wrap.dataset.jobId, cls: [...a.classList].find(c => TIME_EDIT_FIELDS.includes(c)) || '', part: a.dataset.qpart || '', of: a.closest('.qtime')?.dataset.for || '', el: a };
   return { values: out, focus };
 }
 function restoreTimeEdits(state) {
   if (!state) return;
   for (const [id, fields] of Object.entries(state.values)) {
-    document.querySelectorAll(`#jobsBody .time-edit-wrap:not(.locked)[data-job-id="${CSS.escape(id)}"]`).forEach(wrap => {
-      for (const [cls, v] of Object.entries(fields)) { const el = wrap.querySelector('.' + cls); if (!el) continue; if (el.type === 'checkbox') el.checked = v; else el.value = v; }
+    timeEditWraps(id).forEach(wrap => {
+      for (const [cls, v] of Object.entries(fields)) { const el = wrap.querySelector('.' + cls); if (!el) continue; if (el.type === 'checkbox') { if (el.checked !== v) el.checked = v; } else if (el.value !== v) el.value = v; }
     });
   }
   const f = state.focus; if (!f) return;
-  enhanceQuarterTimes(document.getElementById('jobsBody'));
-  const wraps = document.querySelectorAll(`#jobsBody .time-edit-wrap:not(.locked)[data-job-id="${CSS.escape(f.id)}"]`);
+  if (f.el && f.el.isConnected) { if (document.activeElement !== f.el) f.el.focus(); return; }
+  const wraps = timeEditWraps(f.id);
+  wraps.forEach(w => enhanceQuarterTimes(w));
   for (const wrap of wraps) {
-    const target = f.part ? wrap.querySelector(`.qtime[data-for="${f.of}"] [data-qpart="${f.part}"]`) : (f.cls ? wrap.querySelector('.' + f.cls) : null);
+    const target = f.part ? (wrap.querySelector(`.qtime[data-for="${f.of}"] [data-qpart="${f.part}"]`) || wrap.querySelector(`[data-qpart="${f.part}"]`)) : (f.cls ? wrap.querySelector('.' + f.cls) : null);
     if (target) { target.focus(); break; }
   }
 }
@@ -3780,19 +3817,55 @@ function renderJobsTable(allJobs) {
     { key: 'unscheduled', label: 'Unscheduled' }
   ];
 
-  body.innerHTML = sectionDefs.map(({ key, label }) => {
+  const pieces = [];
+  sectionDefs.forEach(({ key, label }) => {
     const groupJobs = sortGroup(groups[key]);
-    const headerRow = `
-      <tr class="job-group-header-row job-group-${key}">
+    pieces.push(['h:' + key, `<tr class="job-group-header-row job-group-${key}">
         <td colspan="9" class="job-group-header">${label} <span class="job-group-count">${groupJobs.length}</span></td>
-      </tr>
-    `;
-    const rows = groupJobs.length
-      ? groupJobs.map(buildJobRow).join('')
-      : `<tr class="job-group-empty-row"><td colspan="9" class="job-group-empty">No jobs</td></tr>`;
-    return headerRow + rows;
-  }).join('');
+      </tr>`]);
+    if (groupJobs.length) groupJobs.forEach(j => pieces.push(['r:' + (j.id || ''), buildJobRow(j)]));
+    else pieces.push(['e:' + key, `<tr class="job-group-empty-row"><td colspan="9" class="job-group-empty">No jobs</td></tr>`]);
+  });
+  return patchJobRows(body, pieces);
 }
+
+/* Faster redraws: a job row whose HTML is exactly the same as last time keeps
+   its existing row on the page instead of being rebuilt, so one save or one
+   live update only rebuilds the rows that changed. A row anyone clicked, typed
+   or focused in since it was drawn is always rebuilt (same as before). */
+const jobRowCache = new Map();   // key -> { html, node }
+const dirtyJobRows = new Set();  // job ids touched since their row was drawn
+function htmlToRow(html) {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+let jobRowOrder = [], jobRowLayout = null;
+// Returns false when nothing on the board changed (no DOM work at all).
+function patchJobRows(body, pieces) {
+  const next = new Map();
+  const nodes = [];
+  for (const [key, html] of pieces) {
+    const old = jobRowCache.get(key);
+    const jobId = key.startsWith('r:') ? key.slice(2) : '';
+    const reuse = old && old.html === html && !next.has(key) && !(jobId && dirtyJobRows.has(jobId));
+    const node = reuse ? old.node : htmlToRow(html);
+    if (!next.has(key)) next.set(key, { html, node });
+    nodes.push(node);
+  }
+  jobRowCache.clear();
+  next.forEach((v, k) => jobRowCache.set(k, v));
+  dirtyJobRows.clear();
+  const same = jobRowLayout === boardSplit && nodes.length === jobRowOrder.length && nodes.every((n, i) => n === jobRowOrder[i] && (!n.dataset.jobRow || n.isConnected));
+  jobRowOrder = nodes; jobRowLayout = boardSplit;
+  if (same) return false;
+  body.replaceChildren(...nodes);
+  return true;
+}
+['pointerdown', 'focusin', 'input', 'change', 'keydown'].forEach(type => document.getElementById('jobsBody').addEventListener(type, e => {
+  const row = e.target.closest && e.target.closest('tr[data-job-row]');
+  if (row) dirtyJobRows.add(row.dataset.jobRow);
+}, true));
 
 // True when the backend hasn't started sending associations at all (vs. a job
 // that legitimately has zero crew assigned yet), keeps the honest placeholder
@@ -5686,9 +5759,23 @@ function closedJobRows() {
     };
   }).sort((a, b) => String(b.closedAt).localeCompare(String(a.closedAt)));
 }
+// Old closed jobs are not part of the board's feed; they load the first time
+// the Completed tab is opened (and on Refresh while it's open).
+let closedJobsLoaded = false, closedJobsLoading = null;
+function loadClosedJobs() {
+  if (closedJobsLoading) return closedJobsLoading;
+  if (!closedJobsLoaded) document.getElementById('completedBody').innerHTML = `<tr class="job-group-empty-row"><td colspan="7" class="completed-empty"><div class="spinner"></div>Loading closed jobs...</td></tr>`;
+  const url = CONFIG.SHARED_STATE_SYNC_URL + (CONFIG.SHARED_STATE_SYNC_URL.includes('?') ? '&' : '?') + 'view=closed';
+  closedJobsLoading = fetchJsonStrict(url, 'Completed jobs')
+    .then(data => { acceptJobRecords(Array.isArray(data.sharedState) ? data.sharedState : []); closedJobsLoaded = true; })
+    .catch(err => { console.error('Completed jobs failed:', err); showToast("Couldn't load completed jobs. Try Refresh.", true); })
+    .finally(() => { closedJobsLoading = null; renderCompletedView(); });
+  return closedJobsLoading;
+}
 function renderCompletedView() {
   const view = document.getElementById('completedDispatchView');
   if (!view || view.hidden) return;
+  if (!closedJobsLoaded && closedJobsLoading) return;
   const all = closedJobRows();
   const filter = document.getElementById('completedFilter').value;
   const q = document.getElementById('completedSearch').value.trim().toLowerCase();
@@ -7503,7 +7590,7 @@ document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListe
   document.getElementById('logisticsDispatchView').hidden = !logistics;
   document.getElementById('scheduleDispatchView').hidden = view !== 'schedule';
   document.getElementById('completedDispatchView').hidden = view !== 'completed';
-  if (view === 'completed') renderCompletedView();
+  if (view === 'completed') { renderCompletedView(); if (!closedJobsLoaded) loadClosedJobs(); }
   document.getElementById('adminDispatchView').hidden = view !== 'admin';
   if (logistics && !logisticsLoaded) loadLogistics();
   else if (logistics) schedulePoll(200); // catch up on moves changed while another tab was open
@@ -7514,6 +7601,7 @@ document.getElementById('logisticsSourceFilter').addEventListener('change', rend
 document.getElementById('refreshBtn').addEventListener('click', () => {
   if (!document.getElementById('logisticsDispatchView').hidden) return loadLogistics();
   if (!document.getElementById('adminDispatchView').hidden) { renderAdminView(true); return ensureAdminDriverRoster(true); }
+  if (!document.getElementById('completedDispatchView').hidden) loadClosedJobs();
   refreshAll(); loadProjectSchedules();
 });
 
@@ -7536,16 +7624,20 @@ let jobLoadSequence = 0;
 const pendingStateWrites = new Map();
 const lastCommittedRequests = new Map();
 function acceptJobRecords(records) {
+  const OVERRIDES = ['jobTimeOverride', 'jobEndOverride', 'jobDetailsOverride', 'jobCrewOverride', 'jobCrewCleared'];
+  const changed = new Set();
+  const jobsById = new Map((dashboardData.jobs || []).map(j => [j.id, j]));
   for (const record of records) {
     const old = dashboardData.sharedStateByJobId.get(record.jobId);
     if (old && Number(old.version || 0) > Number(record.version || 0)) continue;
     dashboardData.sharedStateByJobId.set(record.jobId, record);
-    for (const key of ['jobTimeOverride', 'jobEndOverride', 'jobDetailsOverride', 'jobCrewOverride', 'jobCrewCleared']) {
-      if (window[key]) { delete window[key][record.jobId]; persistTimeOverride(key, window[key]); }
+    for (const key of OVERRIDES) {
+      if (window[key] && Object.hasOwn(window[key], record.jobId)) { delete window[key][record.jobId]; changed.add(key); }
     }
-    const job = dashboardData.jobs.find(j => j.id === record.jobId);
+    const job = jobsById.get(record.jobId);
     if (job && Object.hasOwn(record, 'jobAddress')) job.name = record.jobAddress;
   }
+  changed.forEach(key => persistTimeOverride(key, window[key]));
 }
 function acceptMoveRecords(records) {
   for (const record of records) {
@@ -9371,8 +9463,7 @@ enhanceQuarterTimes(document);
 initSession();
 loadBoardDefaults();
 fmtDateHeader();
-loadDashboard();
-loadLaborRoster();
+refreshAll({ fresh: false });
 loadProjectSchedules();
 schedulePoll(15000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastActivity = Date.now(); schedulePoll(300); } });

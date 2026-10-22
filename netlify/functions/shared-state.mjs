@@ -17,6 +17,11 @@ export default async function handler(request) {
     if (request.method === 'POST') authorizeWrite(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
+      // ?view=closed: every job closed on the board, for the Completed tab (loaded only when it's opened).
+      if (new URL(request.url).searchParams.get('view') === 'closed') {
+        const [[{ now }], rows] = await Promise.all([sql`select now() as now`, sql`select * from job_shared_state where active = false order by updated_at desc`]);
+        return json({ sharedState: rows.map(jobRecord), serverTime: new Date(now).toISOString() });
+      }
       // ?since=<serverTime from the last answer>: only rows changed after it (polls stay tiny).
       const since = sinceParam(request);
       const [rows, pendingSync, [{ now }]] = await Promise.all([

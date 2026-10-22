@@ -74,6 +74,10 @@ async function createSchema(sql) {
   await sql`create table if not exists dispatch_roster_cache (
     kind text primary key, data jsonb not null, updated_at timestamptz not null default now()
   )`;
+  // Short shared cache of the GHL job list for /api/dashboard-data (Refresh skips it).
+  await sql`create table if not exists dispatch_feed_cache (
+    key text primary key, data jsonb not null, updated_at timestamptz not null default now()
+  )`;
   await sql`create table if not exists dispatch_effects (
     effect_id text primary key, request_id text not null, kind text not null,
     fingerprint text not null, status text not null, last_error text,
