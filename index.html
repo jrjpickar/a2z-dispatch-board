@@ -4315,13 +4315,15 @@ function jobDayOfWeek(date) {
   const d = new Date(String(date || '') + 'T12:00:00Z');
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase();
 }
-function buildJobLogPayload(job, action, date) {
+function buildJobLogPayload(job, action, date, hoursWorked = 0) {
   const value = Number(getOpportunityValue(job));
   return {
     jobId: job.id || '', action, ...jobWeekFields(date || getReportDate(job) || localIsoDate()), ...(date ? { date } : {}), dayOfWeek: jobDayOfWeek(date || getReportDate(job) || localIsoDate()),
     jobAddress: job.name || '', clientName: getClientName(job), clientPhone: toE164(getClientPhone(job)),
     scopeOfWork: getScopeOfWork(job) || '', toolsRequired: getToolsRequired(job) || '',
     monetaryValue: Number.isFinite(value) ? value : 0,
+    // Total of every worker's hours on the day's EOD sheet (sent home workers included). 0 on Completed.
+    hoursWorked: Number(hoursWorked) || 0,
     reportDate: getReportDate(job) || '', reportTime: getReportTime(job) || '',
     reportEndDate: getReportEndDate(job) || '', reportEndTime: getReportEndTime(job) || '',
     assignedWorkers: getCrew(job).filter(w => w && w.name).map(w => ({
@@ -4582,7 +4584,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
   } else if (!eodSheet && !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return false;
   const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
   // Job log snapshot, taken BEFORE the reset clears the schedule and crew.
-  const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet', eodSheet.date) : null;
+  const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet', eodSheet.date, eodSheet.totalCrewHours) : null;
   btn.disabled = true;
   try {
     if (eodSheet) await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'begin_eod', jobId, date: eodSheet.date });
