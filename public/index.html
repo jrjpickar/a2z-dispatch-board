@@ -2530,10 +2530,6 @@ const CONFIG = {
   // Worker sent home: workerName + hoursWorked, sent through /api/workflow-effect
   // with kind "worker_sent_home" (server posts to WORKER_SENT_HOME_WEBHOOK or this hook).
   WORKER_SENT_HOME_URL: "https://hook.us2.make.com/mo2wtttzdfhpl4liym6c8uw3pbq6mmth",
-  // Job hours: on Complete EOD Sheet, one run per worker { date, employeeName,
-  // hoursWorked, notes, ... } for the A2Z Weekly Hours sheets. Sent through
-  // /api/workflow-effect with kind "job_hours" (JOB_HOURS_WEBHOOK or this hook).
-  JOB_HOURS_URL: "https://hook.us2.make.com/swmlb2j1ef0k89fesawlizhmur714kqo",
   // Also handles Report End Time + Report End Date updates for existing jobs.
   // Expects POST body: { jobId, reportEndTime, reportEndDate }
   // Netlify is the sole dispatch-state authority.
@@ -4599,11 +4595,6 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
       catch (error) { problems.push(error.message); }
       try { await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log'); }
       catch (error) { problems.push(error.message); }
-      // Job hours: one run per worker with hours, for the weekly hours sheets.
-      for (const payload of buildJobHoursPayloads(job, eodSheet)) {
-        try { await runSideEffect(CONFIG.JOB_HOURS_URL, payload, `Hours for ${payload.employeeName}`, 'job_hours', 'hours-' + (String(payload.workerPhone).replace(/\D/g, '') || payload.contactId || payload.employeeName)); }
-        catch (error) { problems.push(error.message); }
-      }
     } else if (removedWorkers.length && !noText) {
       try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers, ...(unschedule ? { reason: 'unscheduled', unscheduled: true } : {}) }, 'Worker release notifications'); }
       catch (error) { problems.push(error.message); }
@@ -4853,25 +4844,6 @@ function eodCrewDraft() {
     crew[eodNameKey(eodCrewList[Number(row.dataset.index)].workerName)] = { hours: input.value, at: Number(input.dataset.editedAt) };
   });
   return crew;
-}
-// One job hours run per worker with hours over 0, shaped for the Weekly Hours
-// scenario: date (YYYY-MM-DD), employeeName, hoursWorked, notes. Extra fields
-// (dayOfWeek, weekStart, job, contact) are there if a route wants them.
-function buildJobHoursPayloads(job, sheet) {
-  const date = sheet.date;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
-  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
-  const dayOfWeek = d ? d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() : '';
-  const week = jobWeekFields(date);
-  const notes = cleanEodText(sheet.jobName || [getClientName(job), job.name].filter(Boolean).join(' - ')).trim();
-  return (sheet.crewHours || []).filter(w => Number(w.hoursWorked) > 0).map((w, i, all) => ({
-    action: 'job_hours', jobId: job.id, opportunityId: job.id,
-    date, employeeName: w.workerName, hoursWorked: Number(w.hoursWorked), notes,
-    dayOfWeek, ...week, sentHome: !!w.sentHome,
-    contactId: w.contactId || '', workerPhone: w.workerPhone || '',
-    jobName: sheet.jobName || '', jobAddress: job.name || '', clientName: getClientName(job),
-    workerIndex: i + 1, workerCount: all.length, submittedAt: sheet.submittedAt
-  }));
 }
 
 // Reads the form into the payload shape sent to Make. Every template line is
@@ -7713,7 +7685,7 @@ async function retryCrm(jobId) {
 // Make / GHL problems list, where it can be retried).
 const MAKE_CONFIRM_WAIT_MS = 45000;
 function runSideEffect(url, payload, label, kindOverride, effectKey) {
-  const requireConfirmation = payload.action === 'eod_sheet' || kindOverride === 'job_hours';
+  const requireConfirmation = payload.action === 'eod_sheet';
   // State is already committed. Never reapply it to retry a notification.
   const kinds = { [CONFIG.MOVE_WORKER_URL]: 'workers', [CONFIG.DRIVER_ASSIGNMENT_URL]: 'drivers', [CONFIG.EDIT_JOB_DETAILS_URL]: 'job_details', [CONFIG.CREATE_JOB_URL]: 'job_stage', [CONFIG.LOGISTICS_CREATE_URL]: 'container', [CONFIG.DRIVER_LOG_URL]: 'driver_log' };
   const requestId = requireConfirmation ? getSharedState({ id: payload.jobId })?.eodRequests?.[payload.date || payload.reportDate] : lastCommittedRequests.get(String(payload.moveId || payload.jobId || payload.opportunityId || ''));

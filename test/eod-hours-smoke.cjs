@@ -1,5 +1,5 @@
 // Optional browser QA: EOD crew hours (default = 8 h for every worker, editable,
-// sent home value carried in), no markup, one job_hours run per worker, and the
+// sent home value carried in), no markup, the day's total hours on the job log (no job_hours runs), and the
 // password gate outside GHL.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
@@ -103,15 +103,11 @@ const { pathToFileURL } = require('node:url');
   assert.ok(!('markupPercent' in eod) && !('MARKUP_PERCENT' in eod) && !('totalPriceToCustomer' in eod));
   assert.deepEqual(eod.crewHours.map(w => [w.workerName, w.hoursWorked, w.sentHome]), [['Bob Ray', 6.25, false], ['Cara Diaz', 8, false], ['Ana Lopez', 4, true]]);
   assert.equal(eod.totalCrewHours, 18.25); assert.equal(eod.CREW_3_NAME, 'Ana Lopez'); assert.equal(eod.CREW_3_HOURS, 4);
-  const hoursRuns = effects.filter(e => e.kind === 'job_hours');
-  assert.equal(hoursRuns.length, 3, 'one job hours run per worker');
-  assert.equal(new Set(hoursRuns.map(e => e.effectKey)).size, 3);
-  const bob = hoursRuns.find(e => e.payload.employeeName === 'Bob Ray').payload;
-  assert.equal(bob.date, day); assert.equal(bob.hoursWorked, 6.25); assert.equal(bob.notes, 'Client - 55 Elm St'); assert.equal(bob.action, 'job_hours');
-  assert.equal(bob.dayOfWeek, new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase());
-  assert.ok(effects.some(e => e.kind === 'job_log'));
+  assert.equal(effects.filter(e => e.kind === 'job_hours').length, 0, 'job hours webhook is retired');
+  const log = effects.find(e => e.kind === 'job_log').payload;
+  assert.equal(log.hoursWorked, 18.25, 'job log carries the whole crew total');
   assert.deepEqual(rec.crew, [], 'day reset');
   assert.deepEqual(errors, []);
   await browser.close();
-  console.log('EOD hours + password gate smoke passed.', JSON.stringify(bob));
+  console.log('EOD hours + password gate smoke passed.', JSON.stringify({ hoursWorked: log.hoursWorked }));
 })().catch(e => { console.error(e); process.exit(1); });

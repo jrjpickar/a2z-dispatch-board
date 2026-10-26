@@ -71,15 +71,9 @@ Google Sheets fields (top level, named to match the values batchUpdate placehold
 
 **Crew hours (no pay rates).** The EOD sheet lists every worker on the job plus anyone sent home from it that day. Each starts at 8 hours, and dispatch can change any of them. A worker sent home shows the hours picked on **Worker sent home**. They are in `crewHours` (`workerName`, `hoursWorked`, `sentHome`, `contactId`, `workerPhone`) and on the workbook under CREW HOURS, where Markup % and Total price to customer used to be.
 
-## Job hours webhook (new, on Complete EOD Sheet)
+## Job hours webhook (retired)
 
-Complete EOD Sheet also posts one plain JSON run per worker with hours over 0 to `https://hook.us2.make.com/swmlb2j1ef0k89fesawlizhmur714kqo` (override with `JOB_HOURS_WEBHOOK` in Netlify). Fields:
-
-- `date` (`YYYY-MM-DD`, the EOD sheet date, for `parseDate(27.date; "YYYY-MM-DD")`)
-- `employeeName`, `hoursWorked` (a number, like `7.5`), `notes` (the EOD Job Name, like `Client - 55 Elm St`)
-- also `action` (`"job_hours"`), `jobId`, `opportunityId`, `dayOfWeek` (like `Wednesday`), `weekStart` (that week's Monday, `YYYY-MM-DD`), `sentHome`, `contactId`, `workerPhone`, `jobName`, `jobAddress`, `clientName`, `workerIndex`, `workerCount`, `submittedAt`, `eventId`
-
-In the scenario: Redetermine data structure on the webhook and submit one EOD sheet so Make learns the fields, then map `27.date`, `27.employeeName`, `27.hoursWorked` and `27.notes` as the blueprint already does. Add a Webhook response with body `{"ok":true}` right after the webhook (before the weekday router), or every run shows under Admin > Make / GHL problems.
+The board no longer posts to `https://hook.us2.make.com/swmlb2j1ef0k89fesawlizhmur714kqo` (`JOB_HOURS_WEBHOOK` is no longer read). The day's total crew hours now go on the job log as `hoursWorked` (see Complete EOD Sheet above). You can turn that scenario off in Make. Any old Job hours runs still listed under Admin > Make / GHL problems can't be retried; press Resolve on them.
 
 ## New worker webhook (Admin > Workers > + Add from GHL)
 

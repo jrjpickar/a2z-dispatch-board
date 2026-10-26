@@ -31,13 +31,13 @@ test('client weekdays stay lowercase without timezone date shifts', () => {
   assert.equal(context.jobDayOfWeek('2026-10-20'), 'tuesday');
   assert.equal(context.jobDayOfWeek('2026-10-19'), 'monday');
 });
-test('job log and hours delivery normalize weekdays to lowercase', async () => {
+test('job log delivery normalizes weekdays to lowercase', async () => {
   const previous = globalThis.fetch;
   try {
     const payloads = [];
     globalThis.fetch = async (_url, options) => { payloads.push(JSON.parse(options.body)); return new Response('{"ok":true}'); };
     await sendWorkflow('job_log', { reportDate: today, dayOfWeek: 'WRONG' }, 'log');
-    await sendWorkflow('job_hours', { date: '2026-10-19' }, 'hours');
+    await sendWorkflow('job_log', { date: '2026-10-19' }, 'log2');
     assert.equal(payloads[0].dayOfWeek, 'tuesday');
     assert.equal(payloads[1].dayOfWeek, 'monday');
   } finally { globalThis.fetch = previous; }
@@ -47,7 +47,7 @@ test('webhooks include Monday-Sunday MM/DD week boundaries across years', async 
   try {
     const payloads = [];
     globalThis.fetch = async (_url, options) => { payloads.push(JSON.parse(options.body)); return new Response('{"ok":true}'); };
-    for (const [kind, date] of [['job_log', '2026-10-20'], ['job_hours', '2027-01-03'], ['job_log', '2026-12-28']]) {
+    for (const [kind, date] of [['job_log', '2026-10-20'], ['job_log', '2027-01-03'], ['job_log', '2026-12-28']]) {
       await sendWorkflow(kind, { date }, kind + date);
     }
     assert.deepEqual([payloads[0].weekStart, payloads[0].weekEnd, payloads[0].weekRange], ['10/19', '10/25', '10/19-10/25']);
