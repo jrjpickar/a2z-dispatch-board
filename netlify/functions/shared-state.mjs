@@ -46,6 +46,7 @@ export default async function handler(request) {
     if (['complete', 'cancel'].includes(payload.action) && session && !payload.closedBy) payload.closedBy = session.name;
     if (payload.action === 'reopen' && session && !payload.reopenedBy) payload.reopenedBy = session.name;
     if (payload.action === 'send_home' && session && !payload.sentHomeBy) payload.sentHomeBy = session.name;
+    if (payload.action === 'record_eod' && session) payload.eodSubmittedBy = session.name;
     // Resolve type from GHL rather than trusting a browser's jobType flag.
     let context = {};
     if (['save_times', 'update_details'].includes(payload.action)) {

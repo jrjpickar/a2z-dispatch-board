@@ -766,6 +766,32 @@
   .ghl-active-badge { display: inline-block; margin-top: 5px; padding: 2px 7px; border-radius: 999px; font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .05em; text-transform: uppercase; background: #fff1dd; color: #8a4b00; border: 1px solid #e8c48e; }
   body.dark-mode .ghl-active-badge { background: #3a2c17; color: #f4c27a; border-color: #7a5a2a; }
   .completed-empty { padding: 18px; color: var(--ink-soft); font-size: 13px; }
+  #eodDoneDispatchView { padding: 18px 20px; }
+  #jobsPanel.eod-mode > :not(.jobs-panel-head):not(#eodDoneDispatchView) { display: none !important; }
+  .eod-day-btn { color: var(--ink-soft) !important; border-color: var(--border) !important; padding: 7px 11px !important; font-size: 13px; line-height: 1; }
+  .eod-day-btn:hover { color: var(--ink) !important; border-color: var(--ink-soft) !important; }
+  #eodDoneDate { padding: 6px 8px; font: 13px 'IBM Plex Mono', monospace; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--ink); }
+  .eod-done-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+  .eod-stat { background: var(--card); padding: 12px 16px; }
+  .eod-stat b { display: block; font: 700 26px/1.1 'Oswald', sans-serif; color: var(--ink); }
+  .eod-stat span { font: 600 11px 'Oswald', sans-serif; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); }
+  .eod-stat.done b { color: #2f7d4f; } .eod-stat.waiting b { color: var(--orange); }
+  @media (max-width: 760px) { .eod-done-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .eod-stat:last-child { grid-column: 1 / -1; } }
+  .eod-job-name { font-weight: 600; }
+  .eod-job-client { color: var(--ink-soft); font-size: 12px; }
+  .eod-crew-list { display: flex; flex-direction: column; gap: 2px; min-width: 210px; }
+  .eod-crew-item { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+  .eod-crew-item .mono { color: var(--ink-soft); white-space: nowrap; }
+  .eod-sent-home { white-space: nowrap; }
+  .eod-sent-home { margin-left: 5px; padding: 1px 5px; border-radius: 999px; font: 700 8px 'IBM Plex Mono', monospace; letter-spacing: .05em; text-transform: uppercase; background: var(--orange-tint); color: var(--orange-dark); }
+  .eod-big { font: 600 15px 'Oswald', sans-serif; }
+  .eod-sheet-sep { border-top: 1px dashed var(--border); margin: 6px 0; }
+  .eod-status { display: inline-block; padding: 3px 8px; border-radius: 999px; font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+  .eod-status.done { background: #e2f3e8; color: #2f7d4f; border: 1px solid #a9d8b9; }
+  .eod-status.waiting { background: var(--orange-tint-soft); color: var(--orange-dark); border: 1px solid var(--orange-tint); }
+  .eod-status.closed { background: var(--grey-light); color: var(--ink-soft); border: 1px solid var(--grey); }
+  .eod-muted { color: var(--ink-soft); font-size: 12px; }
+  body.dark-mode .eod-status.done { background: #183324; color: #8fd4a8; border-color: #2f5e41; }
   .sent-home-backdrop { position: fixed; inset: 0; z-index: 900; background: rgba(20,21,23,.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
   .sent-home-backdrop[hidden] { display: none; }
   .sent-home-card.unsched-card { border-top-color: var(--danger); }
@@ -1812,9 +1838,9 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
   </div>
 
   <!-- Jobs scheduled -->
-  <div class="panel">
+  <div class="panel" id="jobsPanel">
     <div class="panel-head jobs-panel-head">
-      <h2>Jobs Scheduled</h2><div class="board-view-toggle" role="group" aria-label="Board layout"><button type="button" id="splitViewBtn" aria-pressed="true">Split view</button><button type="button" id="combinedViewBtn" aria-pressed="false">Current view</button></div>
+      <h2>Jobs Scheduled</h2><div class="board-view-toggle" role="group" aria-label="Board layout"><button type="button" id="splitViewBtn" aria-pressed="true">Split view</button><button type="button" id="combinedViewBtn" aria-pressed="false">Current view</button><button type="button" id="eodDoneViewBtn" aria-pressed="false">EOD Done</button></div>
       <div class="jobs-search-wrap">
         <input type="search" id="jobSearch" class="jobs-search" placeholder="Search address, client, crew or job ID" autocomplete="off" aria-label="Search jobs">
         <span class="jobs-search-count mono" id="jobSearchCount"></span>
@@ -1843,6 +1869,29 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
       <div class="label-caps">No jobs on the board</div>
       <p>Nothing's scheduled for this window yet.</p>
       <button class="btn-primary" id="emptyBookBtn">+ Book a Job</button>
+    </div>
+    <div class="eod-done-section" id="eodDoneDispatchView" hidden>
+      <div class="psv-head">
+        <div><p id="eodDoneSub">Jobs with an EOD sheet sent for the day, and the day's jobs still waiting on one.</p></div>
+        <div class="completed-tools">
+          <button type="button" class="btn-ghost eod-day-btn" id="eodDonePrev" aria-label="Previous day">&lsaquo;</button>
+          <input type="date" id="eodDoneDate" aria-label="Day">
+          <button type="button" class="btn-ghost eod-day-btn" id="eodDoneNext" aria-label="Next day">&rsaquo;</button>
+          <button type="button" class="btn-ghost eod-day-btn" id="eodDoneToday">Today</button>
+          <select id="eodDoneFilter" aria-label="Show">
+            <option value="done">EOD done</option>
+            <option value="waiting">Still needs EOD</option>
+            <option value="all">All jobs that day</option>
+          </select>
+        </div>
+      </div>
+      <div class="eod-done-stats" id="eodDoneStats"></div>
+      <div class="jobs-table-wrap completed-wrap">
+        <table class="jobs" id="eodDoneTable">
+          <thead><tr><th>Job</th><th>Shift</th><th>EOD sent</th><th>Crew hours</th><th>Total hours</th><th>Loads</th><th>EOD cost</th><th>Status</th></tr></thead>
+          <tbody id="eodDoneBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -3182,6 +3231,7 @@ function render() {
   renderRoster();
   renderJobs(jobs);
   if (typeof renderCompletedView === 'function') renderCompletedView();
+  if (typeof renderEodDoneView === 'function') renderEodDoneView();
   if (typeof renderScheduleView === 'function') renderScheduleView();
 }
 
@@ -4581,6 +4631,10 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
   const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
   // Job log snapshot, taken BEFORE the reset clears the schedule and crew.
   const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet', eodSheet.date, eodSheet.totalCrewHours) : null;
+  // EOD Done view: what this sheet was (crew hours, loads, cost, shift), saved with the job.
+  const eodSummary = eodSheet ? { jobName: eodSheet.jobName || '', reportTime: getReportTime(job) || '', reportEndTime: getReportEndTime(job) || '',
+    crew: (eodSheet.crewHours || []).map(w => ({ name: w.workerName, hours: Number(w.hoursWorked) || 0, sentHome: !!w.sentHome })),
+    totalCrewHours: eodSheet.totalCrewHours, truckLoads: eodSheet.truckLoads || 0, totalJobCost: eodSheet.totalJobCost } : null;
   btn.disabled = true;
   try {
     if (eodSheet) await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'begin_eod', jobId, date: eodSheet.date });
@@ -4601,7 +4655,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
     }
     if (eodSheet) {
       if (problems.length) { showToast(problems.join(' '), true); return false; }
-      await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'record_eod', jobId, date: eodSheet.date });
+      await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'record_eod', jobId, date: eodSheet.date, eodSummary });
       if (!completing) await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reset_dispatch', jobId });
     }
     render();
@@ -5743,7 +5797,7 @@ function loadClosedJobs() {
   closedJobsLoading = fetchJsonStrict(url, 'Completed jobs')
     .then(data => { acceptJobRecords(Array.isArray(data.sharedState) ? data.sharedState : []); closedJobsLoaded = true; })
     .catch(err => { console.error('Completed jobs failed:', err); showToast("Couldn't load completed jobs. Try Refresh.", true); })
-    .finally(() => { closedJobsLoading = null; renderCompletedView(); });
+    .finally(() => { closedJobsLoading = null; renderCompletedView(); renderEodDoneView(); });
   return closedJobsLoading;
 }
 function renderCompletedView() {
@@ -5780,8 +5834,107 @@ document.getElementById('completedBody').addEventListener('click', e => {
   const btn = e.target.closest('.job-stage-btn.reopen');
   if (btn) reopenJob(btn.dataset.jobId, btn);
 });
-document.getElementById('jobSearch').addEventListener('input', () => renderJobs(dashboardData.jobs || []));
-document.getElementById('jobSearch').addEventListener('keydown', e => { if (e.key === 'Escape') { e.target.value = ''; renderJobs(dashboardData.jobs || []); } });
+/* ---------- EOD Done view ---------- */
+// One day at a time (today by default). "EOD done" = jobs with an EOD sheet sent
+// for that day (eodSubmittedDates). The sheet's crew hours, loads and cost come
+// from eodLog, saved with record_eod. Sheets sent before eodLog existed show the
+// job with "Details not saved". "Still needs EOD" = jobs scheduled that day with
+// no sheet yet.
+function eodShiftDay(ymd, days) {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+function eodTime12(t) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
+  if (!m) return '';
+  const h = +m[1];
+  return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+function eodHours(n) { return (Math.round((Number(n) || 0) * 100) / 100).toString(); }
+function eodDoneRows(day) {
+  const feed = new Map((dashboardData.jobs || []).map(j => [j.id, j]));
+  const rows = new Map();
+  for (const r of dashboardData.sharedStateByJobId?.values() || []) {
+    if (!r || !(r.eodSubmittedDates || []).includes(day)) continue;
+    const job = feed.get(r.jobId);
+    const closed = r.active === false || r.active === 'false';
+    rows.set(r.jobId, {
+      id: r.jobId, job, done: true,
+      name: (job && job.name) || r.closedJobName || r.jobAddress || r.changeOrderName || '',
+      client: (job && getClientName(job)) || r.closedClientName || r.clientName || '',
+      contract: job ? !isHourlyJob(job) : r.jobType === 'contract',
+      sheets: Array.isArray(r.eodLog?.[day]) ? r.eodLog[day] : [],
+      status: closed ? (/cancel/.test(r.status || '') ? 'Cancelled' : 'Completed') : 'Open'
+    });
+  }
+  for (const job of dashboardData.jobs || []) {
+    if (rows.has(job.id) || isClosedOnBoard(job) || getReportDate(job) !== day) continue;
+    rows.set(job.id, { id: job.id, job, done: false, name: job.name || '', client: getClientName(job), contract: !isHourlyJob(job), sheets: [],
+      crewNow: getCrew(job).filter(w => w && w.name).map(w => w.name), reportTime: getReportTime(job), reportEndTime: getReportEndTime(job), status: 'Open' });
+  }
+  return [...rows.values()];
+}
+function renderEodDoneView() {
+  const view = document.getElementById('eodDoneDispatchView');
+  if (!view || view.hidden) return;
+  const dateInput = document.getElementById('eodDoneDate');
+  const today = localIsoDate();
+  if (!dateInput.value) dateInput.value = today;
+  const day = dateInput.value;
+  const isToday = day === today;
+  document.getElementById('eodDoneToday').hidden = isToday;
+  const nice = new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' });
+  document.getElementById('eodDoneSub').textContent = `${isToday ? 'Today, ' : ''}${nice}. Jobs with an EOD sheet sent for the day, and the day's jobs still waiting on one.`;
+  const all = eodDoneRows(day);
+  const filter = document.getElementById('eodDoneFilter').value;
+  const words = document.getElementById('jobSearch').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const rows = all.filter(r => filter === 'all' || (filter === 'done' ? r.done : !r.done))
+    .filter(r => { const hay = [r.name, r.client, r.id, ...(r.crewNow || []), ...r.sheets.flatMap(s => [s.submittedBy, ...(s.crew || []).map(w => w.name)])].join(' ').toLowerCase(); return words.every(w => hay.includes(w)); })
+    .sort((a, b) => (b.done - a.done) || String(b.sheets.at(-1)?.submittedAt || '').localeCompare(String(a.sheets.at(-1)?.submittedAt || '')) || a.name.localeCompare(b.name));
+  const countEl = document.getElementById('jobSearchCount');
+  if (countEl) countEl.textContent = words.length ? `${rows.length} of ${all.filter(r => filter === 'all' || (filter === 'done' ? r.done : !r.done)).length}` : '';
+  const done = all.filter(r => r.done), sheets = done.flatMap(r => r.sheets);
+  const sum = key => sheets.reduce((t, s) => t + (Number(s[key]) || 0), 0);
+  const waiting = all.length - done.length;
+  document.getElementById('eodDoneStats').innerHTML = [
+    ['done', done.length, done.length === 1 ? 'Job EOD done' : 'Jobs EOD done'],
+    ['waiting', waiting, 'Still need EOD'],
+    ['', eodHours(sum('totalCrewHours')), 'Crew hours'],
+    ['', sum('truckLoads'), 'Truck loads'],
+    ['', formatCurrency(sum('totalJobCost')), 'EOD cost']
+  ].map(([cls, n, label]) => `<div class="eod-stat ${cls}"><b>${escapeAttr(String(n))}</b><span>${label}</span></div>`).join('');
+  const fmtAt = v => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d.toLocaleTimeString('en-US', { timeZone: BOARD_TZ, hour: 'numeric', minute: '2-digit' }) : ''; };
+  const crewHtml = list => list.length ? `<div class="eod-crew-list">${list.map(w => `<div class="eod-crew-item"><span>${escapeAttr(w.name)}${w.sentHome ? '<span class="eod-sent-home">Sent home</span>' : ''}</span><span class="mono">${eodHours(w.hours)} h</span></div>`).join('')}</div>` : '<span class="eod-muted">No crew hours</span>';
+  const cell = (r, fn, empty) => r.sheets.length ? r.sheets.map(fn).join('<div class="eod-sheet-sep"></div>') : empty;
+  document.getElementById('eodDoneBody').innerHTML = rows.length ? rows.map(r => {
+    const link = getGhlOpportunityLink({ id: r.id });
+    const noDetails = '<span class="eod-muted">Details not saved</span>';
+    const shift = r.done
+      ? cell(r, s => s.reportTime ? `<span class="mono">${eodTime12(s.reportTime)}${s.reportEndTime ? ' to ' + eodTime12(s.reportEndTime) : ''}</span>` : '<span class="eod-muted">N/A</span>', '<span class="eod-muted">N/A</span>')
+      : (r.reportTime ? `<span class="mono">${eodTime12(r.reportTime)}${r.reportEndTime ? ' to ' + eodTime12(r.reportEndTime) : ''}</span>` : '<span class="eod-muted">No time set</span>');
+    const status = r.status !== 'Open' ? `<span class="eod-status closed">${r.status}</span>` : r.done ? `<span class="eod-status done">EOD done</span>` : `<span class="eod-status waiting">Needs EOD</span>`;
+    return `<tr data-eod-row="${escapeAttr(r.id)}">
+      <td data-label="Job"><div class="eod-job-name">${escapeAttr(r.name || 'N/A')}</div><div class="eod-job-client">${escapeAttr(r.client || '')}</div>
+        <a class="job-id" href="${link}" target="_blank" rel="noopener" title="Open in GHL">${escapeAttr(String(r.id).slice(-8))}</a>${r.contract ? ' <span class="job-type-badge" style="background:var(--gold-tint-soft);color:var(--ink)">Contract</span>' : ''}</td>
+      <td data-label="Shift">${shift}</td>
+      <td data-label="EOD sent">${r.done ? cell(r, s => `<span class="mono">${escapeAttr(fmtAt(s.submittedAt))}</span>${s.submittedBy ? `<div class="eod-muted">by ${escapeAttr(s.submittedBy)}</div>` : ''}`, '<span class="mono">Sent</span>') : '<span class="eod-muted">Not yet</span>'}</td>
+      <td data-label="Crew hours">${r.done ? cell(r, s => crewHtml(s.crew || []), noDetails) : (r.crewNow.length ? `<div class="eod-muted">On the job: ${escapeAttr(r.crewNow.join(', '))}</div>` : '<span class="eod-muted">No crew</span>')}</td>
+      <td data-label="Total hours">${r.done ? cell(r, s => `<span class="eod-big">${eodHours(s.totalCrewHours)}</span>`, '') : ''}</td>
+      <td data-label="Loads">${r.done ? cell(r, s => `<span class="eod-big">${Number(s.truckLoads) || 0}</span>`, '') : ''}</td>
+      <td data-label="EOD cost">${r.done ? cell(r, s => `<span class="opp-value">${formatCurrency(Number(s.totalJobCost) || 0)}</span>`, '') : ''}</td>
+      <td data-label="Status">${status}${r.sheets.length > 1 ? `<div class="eod-muted">${r.sheets.length} sheets</div>` : ''}</td>
+    </tr>`;
+  }).join('') : `<tr class="job-group-empty-row"><td colspan="8" class="completed-empty">${all.length ? 'Nothing matches.' : filter === 'waiting' || !isToday ? 'No jobs on this day.' : 'No EOD sheets sent yet today.'}</td></tr>`;
+}
+document.getElementById('eodDoneDate').addEventListener('change', renderEodDoneView);
+document.getElementById('eodDoneFilter').addEventListener('change', renderEodDoneView);
+document.getElementById('eodDonePrev').addEventListener('click', () => { const i = document.getElementById('eodDoneDate'); i.value = eodShiftDay(i.value || localIsoDate(), -1); renderEodDoneView(); });
+document.getElementById('eodDoneNext').addEventListener('click', () => { const i = document.getElementById('eodDoneDate'); i.value = eodShiftDay(i.value || localIsoDate(), 1); renderEodDoneView(); });
+document.getElementById('eodDoneToday').addEventListener('click', () => { document.getElementById('eodDoneDate').value = localIsoDate(); renderEodDoneView(); });
+
+// The same search box serves EOD Done (it stays put when you switch views).
+document.getElementById('jobSearch').addEventListener('input', () => { renderJobs(dashboardData.jobs || []); renderEodDoneView(); });
+document.getElementById('jobSearch').addEventListener('keydown', e => { if (e.key === 'Escape') { e.target.value = ''; renderJobs(dashboardData.jobs || []); renderEodDoneView(); } });
 
 /* ---------- Worker sent home ---------- */
 // Top bar button. Dispatch picks a worker on any open job and the hours they
@@ -7575,7 +7728,7 @@ document.getElementById('logisticsSourceFilter').addEventListener('change', rend
 document.getElementById('refreshBtn').addEventListener('click', () => {
   if (!document.getElementById('logisticsDispatchView').hidden) return loadLogistics();
   if (!document.getElementById('adminDispatchView').hidden) { renderAdminView(true); return ensureAdminDriverRoster(true); }
-  if (!document.getElementById('completedDispatchView').hidden) loadClosedJobs();
+  if (!document.getElementById('completedDispatchView').hidden || (boardEodMode && !document.getElementById('laborDispatchView').hidden)) loadClosedJobs();
   refreshAll(); loadProjectSchedules();
 });
 
@@ -9394,11 +9547,12 @@ function setLogisticsSplit(split){logisticsSplit=split;localStorage.setItem('a2z
 document.getElementById('logiSplitBtn').onclick=()=>setLogisticsSplit(true);
 document.getElementById('logiCombinedBtn').onclick=()=>setLogisticsSplit(false);
 let boardSplit = localStorage.getItem('a2zBoardSplit') !== 'false';
+let boardEodMode = false;
 function applyBoardSplit(allJobs) {
  const table=document.getElementById('jobsTable'), body=document.getElementById('jobsBody');
  table.classList.toggle('split-board',boardSplit);
- document.getElementById('splitViewBtn').setAttribute('aria-pressed',String(boardSplit));
- document.getElementById('combinedViewBtn').setAttribute('aria-pressed',String(!boardSplit));
+ document.getElementById('splitViewBtn').setAttribute('aria-pressed',String(!boardEodMode&&boardSplit));
+ document.getElementById('combinedViewBtn').setAttribute('aria-pressed',String(!boardEodMode&&!boardSplit));
  if(!boardSplit)return;
  const rows=[...body.querySelectorAll('tr[data-job-row]')];
  const labels=['Job ID','Client','Value','Address','Report time','End date / time','Crew','Scope of work','Status'];
@@ -9419,9 +9573,20 @@ function applyBoardSplit(allJobs) {
  });
  body.replaceChildren(...lanes);
 }
-function setBoardView(split){boardSplit=split;localStorage.setItem('a2zBoardSplit',String(split));renderJobs(dashboardData.jobs);}
+// EOD Done is the third button on the same toggle: it swaps the job list for the
+// EOD Done section. Split / Current view stays remembered for when you go back.
+function applyEodMode() {
+ document.getElementById('jobsPanel').classList.toggle('eod-mode', boardEodMode);
+ document.getElementById('eodDoneDispatchView').hidden = !boardEodMode;
+ document.getElementById('eodDoneViewBtn').setAttribute('aria-pressed', String(boardEodMode));
+ document.getElementById('splitViewBtn').setAttribute('aria-pressed', String(!boardEodMode && boardSplit));
+ document.getElementById('combinedViewBtn').setAttribute('aria-pressed', String(!boardEodMode && !boardSplit));
+ document.getElementById('jobSearch').placeholder = boardEodMode ? 'Search address, client or worker' : 'Search address, client, crew or job ID';
+}
+function setBoardView(split){boardSplit=split;boardEodMode=false;localStorage.setItem('a2zBoardSplit',String(split));applyEodMode();renderJobs(dashboardData.jobs);}
 document.getElementById('splitViewBtn').onclick=()=>setBoardView(true);
 document.getElementById('combinedViewBtn').onclick=()=>setBoardView(false);
+document.getElementById('eodDoneViewBtn').onclick=()=>{boardEodMode=true;applyEodMode();renderEodDoneView();if(!closedJobsLoaded)loadClosedJobs();};
 for (const kind of ['labor', 'logistics']) {
   const select = document.getElementById(kind + 'CrewFilter');
   const saved = localStorage.getItem('a2zCrewView-' + kind);
