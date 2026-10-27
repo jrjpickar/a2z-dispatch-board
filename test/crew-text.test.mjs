@@ -45,10 +45,12 @@ test('crew_text texts everyone through Twilio, logs to GHL, and a retry only red
     url = String(url);
     if (url.includes('api.twilio.com')) { const b = new URLSearchParams(init.body); texts.push({ to: b.get('To'), from: b.get('From'), body: b.get('Body') }); return Response.json({ sid: 'SM' + texts.length, from: b.get('From') }, { status: 201 }); }
     if (url.includes('/contacts/search/duplicate')) return Response.json({ contact: { id: 'cMario' } });
-    if (url.endsWith('/conversations/messages/outbound')) {
+    if (url.includes('/conversations/search?')) { const c = new URL(url).searchParams.get('contactId'); return Response.json({ conversations: c === 'c3' ? [] : [{ id: 'conv-' + c }] }); }
+    if (url.endsWith('/conversations/') && init.method === 'POST') return Response.json({ conversation: { id: 'conv-new-' + JSON.parse(init.body).contactId } });
+    if (url.endsWith('/conversations/messages/inbound')) {
       const b = JSON.parse(init.body);
       assert.equal(init.headers.Authorization, 'Bearer at');
-      if (b.contactId === 'cMario' && failMario) return Response.json({ message: 'boom' }, { status: 500 });
+      if (b.conversationId === 'conv-cMario' && failMario) return Response.json({ message: 'boom' }, { status: 500 });
       logs.push(b); return Response.json({ messageId: 'm' + logs.length });
     }
     throw new Error('unexpected fetch ' + url);
@@ -58,12 +60,13 @@ test('crew_text texts everyone through Twilio, logs to GHL, and a retry only red
   assert.equal(texts.length, 4);
   assert.ok(texts.every(t => t.from === '+19495550000' && t.body.startsWith('MONDAY')));
   assert.equal(logs.length, 3);
-  assert.deepEqual(Object.keys(logs[0]).sort(), ['altId', 'contactId', 'conversationProviderId', 'date', 'message', 'type']);
-  assert.equal(logs[0].type, 'SMS'); assert.equal(logs[0].conversationProviderId, 'prov1'); assert.equal(logs[0].altId, 'SM1');
+  assert.deepEqual(Object.keys(logs[0]).sort(), ['altId', 'conversationId', 'conversationProviderId', 'date', 'direction', 'message', 'type']);
+  assert.equal(logs[0].type, 'SMS'); assert.equal(logs[0].direction, 'outbound');
+  assert.ok(logs.some(l => l.conversationId === 'conv-new-c3'), 'conversation made when the worker has none'); assert.equal(logs[0].conversationProviderId, 'prov1'); assert.equal(logs[0].altId, 'SM1');
   // Retry: the day changed since, but the same text goes out and nobody is texted twice.
   await sql`update job_shared_state set data = data || '{"crew":[]}'::jsonb where job_id = 'j2'`;
   failMario = false;
   await sendWorkflow('crew_text', payload, 'r1:crew_text:x');
   assert.equal(texts.length, 4, 'no second text');
-  assert.equal(logs.length, 4); assert.equal(logs[3].contactId, 'cMario'); assert.equal(logs[3].altId, 'SM4');
+  assert.equal(logs.length, 4); assert.equal(logs[3].conversationId, 'conv-cMario'); assert.equal(logs[3].altId, 'SM4');
 });
