@@ -55,7 +55,9 @@ test('crew_text texts everyone through Twilio, logs to GHL, and a retry only red
     }
     throw new Error('unexpected fetch ' + url);
   };
-  const payload = { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26' };
+  const payload = { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26', textWorkers: [
+    { contactId: 'c1', workerName: 'Niko Reyes', workerPhone: '+15555550100' }, { contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '+15555550101' },
+    { contactId: 'c3', workerName: 'Jose Fabian', workerPhone: '+15555550102' }, { contactId: '', workerName: 'Mario Danna', workerPhone: '+15555550103' }] };
   await assert.rejects(sendWorkflow('crew_text', payload, 'r1:crew_text:x'), /Mario Danna: texted, GHL log failed/);
   assert.equal(texts.length, 4);
   assert.ok(texts.every(t => t.from === '+19495550000' && t.body.startsWith('MONDAY')));
@@ -69,4 +71,25 @@ test('crew_text texts everyone through Twilio, logs to GHL, and a retry only red
   await sendWorkflow('crew_text', payload, 'r1:crew_text:x');
   assert.equal(texts.length, 4, 'no second text');
   assert.equal(logs.length, 4); assert.equal(logs[3].conversationId, 'conv-cMario'); assert.equal(logs[3].altId, 'SM4');
+});
+
+test('only the workers in this assignment get texted, with the whole day in the text', async () => {
+  const texts = [];
+  globalThis.fetch = async (url, init = {}) => {
+    url = String(url);
+    if (url.includes('api.twilio.com')) { const b = new URLSearchParams(init.body); texts.push({ to: b.get('To'), body: b.get('Body') }); return Response.json({ sid: 'SMx' + texts.length }, { status: 201 }); }
+    if (url.includes('/conversations/search?')) return Response.json({ conversations: [{ id: 'conv' }] });
+    if (url.endsWith('/conversations/messages/inbound')) return Response.json({ messageId: 'm' });
+    throw new Error('unexpected fetch ' + url);
+  };
+  await sendWorkflow('crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26', textWorkers: [{ contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '(555) 555-0101' }] }, 'r2:crew_text:y');
+  assert.deepEqual(texts.map(t => t.to), ['+15555550101']);
+  assert.ok(texts[0].body.startsWith('MONDAY') && texts[0].body.includes('* Niko Reyes'));
+});
+
+test('a run without textWorkers (old board tab) texts nobody', async () => {
+  let called = false;
+  globalThis.fetch = async () => { called = true; return Response.json({}); };
+  await sendWorkflow('crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26' }, 'r3:crew_text:z');
+  assert.equal(called, false);
 });
