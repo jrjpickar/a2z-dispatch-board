@@ -1,6 +1,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
+import { crewTextDelayMs } from '../../lib/crew-text.mjs';
 import { recordEffect, deliverEffect, sendHeldEffects, cancelHeldEffects, QUIET_STATUSES } from '../../lib/effect-queue.mjs';
 const idList = value => (Array.isArray(value) ? value : []).map(v => String(v || '').slice(0, 240)).filter(Boolean).slice(0, 20);
 export default async function handler(request) {
@@ -25,7 +26,10 @@ export default async function handler(request) {
       const result = await sendHeldEffects(sql, { ids });
       return json({ ok: result.failed.length === 0, ...result });
     }
-    const { requestId, kind, payload, effectKey, delayMs } = body;
+    const { requestId, kind, payload, effectKey } = body;
+    // Crew schedule text: the server sets when it goes out (12 hours before the start,
+    // or now for Send schedule now), whatever the browser asked.
+    const delayMs = kind === 'crew_text' ? crewTextDelayMs(payload) : body.delayMs;
     const { effectId, status } = await recordEffect(sql, { requestId, kind, payload, effectKey, delayMs });
     if (delayMs > 0) {
       if (status === 'new' || status === 'scheduled') return json({ ok: true, scheduled: true, effectId });

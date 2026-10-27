@@ -47,7 +47,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   assert.equal(perWorker.length, 2, 'per worker runs unchanged');
   assert.ok(perWorker.every(e => !('scheduleText' in e.payload)));
   assert.equal(crew.length, 1); assert.equal(crew[0].kind, 'crew_text', 'built and texted on the server, not Make');
-  assert.deepEqual(Object.keys(crew[0].payload).sort(), ['action', 'jobAddress', 'jobId', 'rapidAssign', 'reportDate', 'textWorkers', 'timeZone', 'triggeredBy']);
+  assert.deepEqual(Object.keys(crew[0].payload).sort(), ['action', 'jobAddress', 'jobId', 'rapidAssign', 'reportDate', 'reportTime', 'textWorkers', 'timeZone', 'triggeredBy']);
   assert.equal(crew[0].payload.reportDate, '2026-10-26');
   console.log('crewText OK', JSON.stringify(crew[0]));
   assert.deepEqual(errors, []);

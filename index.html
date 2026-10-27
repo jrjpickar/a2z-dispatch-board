@@ -4057,11 +4057,13 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
       (rapid ? 'rapid-assign-' : 'assign-') + workerKey);
   }));
   // Crew schedule text: built, texted (Twilio) and logged in GHL on the server.
+  // Assign selected: the server holds it until 12 hours before the start; Send
+  // schedule now: right away. The Make runs above still go out now, as before.
   // Only the workers in THIS assignment get the text (the whole day's schedule);
   // everyone already on the board is not texted again. Per worker runs above unchanged.
   const scheduleDate = getReportDate(job);
   const crewText = await Promise.allSettled([runSideEffect(CONFIG.MOVE_WORKER_URL,
-    { action: 'crewText', jobId, jobAddress: job.name || '', reportDate: scheduleDate, timeZone: BOARD_TZ, triggeredBy: effectBase.action, rapidAssign: rapid,
+    { action: 'crewText', jobId, jobAddress: job.name || '', reportDate: scheduleDate, reportTime: getReportTime(job), timeZone: BOARD_TZ, triggeredBy: effectBase.action, rapidAssign: rapid,
       textWorkers: assignedWorkers.map(w => ({ contactId: w.contactId || '', workerName: w.workerName, workerPhone: w.workerPhone })) },
     'Crew schedule text', 'crew_text', 'crew-text-' + (scheduleDate || 'nodate') + '-' + assignedWorkers.map(w => String(w.workerPhone || '').replace(/\D/g, '').slice(-4)).join('-').slice(0, 40))]);
   if (crewText[0].status === 'rejected') console.warn('Crew schedule text not confirmed', crewText[0].reason);

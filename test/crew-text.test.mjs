@@ -93,3 +93,28 @@ test('a run without textWorkers (old board tab) texts nobody', async () => {
   await sendWorkflow('crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26' }, 'r3:crew_text:z');
   assert.equal(called, false);
 });
+
+test('Assign selected waits until 12 hours before the start (Pacific); Send schedule now and late assigns go now', async () => {
+  const { crewTextDelayMs, pacificToUtc } = await import('../lib/crew-text.mjs');
+  assert.equal(new Date(pacificToUtc('2026-10-26', '07:00')).toISOString(), '2026-10-26T14:00:00.000Z'); // PDT
+  assert.equal(new Date(pacificToUtc('2026-11-10', '07:00')).toISOString(), '2026-11-10T15:00:00.000Z'); // PST
+  const now = Date.parse('2026-10-25T12:00:00Z'); // Oct 25 5:00 AM Pacific
+  assert.equal(crewTextDelayMs({ reportDate: '2026-10-26', reportTime: '07:00' }, now), Date.parse('2026-10-26T02:00:00Z') - now); // Oct 25 7 PM Pacific
+  assert.equal(crewTextDelayMs({ reportDate: '2026-10-26', reportTime: '07:00', rapidAssign: true }, now), 0);
+  assert.equal(crewTextDelayMs({ reportDate: '2026-10-25', reportTime: '10:00' }, now), 0);
+  assert.equal(crewTextDelayMs({ reportDate: '', reportTime: '' }, now), 0);
+});
+
+test('a worker taken off the day before the held text goes out is skipped', async () => {
+  const texts = [];
+  globalThis.fetch = async (url, init = {}) => {
+    url = String(url);
+    if (url.includes('api.twilio.com')) { texts.push(new URLSearchParams(init.body).get('To')); return Response.json({ sid: 'SMr' }, { status: 201 }); }
+    if (url.includes('/conversations/search?')) return Response.json({ conversations: [{ id: 'conv' }] });
+    if (url.endsWith('/conversations/messages/inbound')) return Response.json({ messageId: 'm' });
+    throw new Error('unexpected fetch ' + url);
+  };
+  await sendWorkflow('crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26', textWorkers: [
+    { contactId: 'gone', workerName: 'Gone Guy', workerPhone: '+15555550999' }, { contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '+15555550101' }] }, 'r4:crew_text:w');
+  assert.deepEqual(texts, ['+15555550101']);
+});
