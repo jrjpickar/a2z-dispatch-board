@@ -3,7 +3,7 @@
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); const fs = require('fs'), path = require('path'), assert = require('assert/strict');
 (async () => {
   const browser = await chromium.launch({ headless: true, ...(process.env.PW_EXEC ? { executablePath: process.env.PW_EXEC } : {}) }); const context = await browser.newContext();
-  const effects = []; const commits = []; const errors = [];
+  const effects = [], crewTexts = []; const commits = []; const errors = [];
   const times = { reportDate: '2026-10-09', reportTime: '07:00', reportEndDate: '2026-10-09', reportEndTime: '15:30' };
   const state = {
     job1: { jobId: 'job1', version: 1, active: true, crew: [], ...times },
@@ -24,7 +24,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
       if (b.action === 'assign') state[b.jobId] = { ...rec, crew: [...rec.crew, ...b.crewChanges.map(w => ({ id: w.contactId, name: w.workerName, phone: w.workerPhone }))], version: rec.version + 1 };
       return reply({ ok: true, record: state[b.jobId] });
     }
-    if (u.pathname === '/api/workflow-effect') { if (req.method() === 'POST') effects.push(req.postDataJSON()); return reply(req.method() === 'POST' ? { ok: true } : { issues: [] }); }
+    if (u.pathname === '/api/workflow-effect') { if (req.method() === 'POST') { const e = req.postDataJSON(); if (e.payload?.action === 'crewText') crewTexts.push(e); else effects.push(e); } return reply(req.method() === 'POST' ? { ok: true } : { issues: [] }); }
     if (u.pathname === '/api/manual-workers') return reply({ workers: [], hidden: [] });
     return reply({});
   });

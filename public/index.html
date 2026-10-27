@@ -3964,6 +3964,49 @@ window.jobStageOverride = {};
 // noText: "Don't text workers" ticked. The crew is saved on the board (and GHL's
 // schedule sync) but no Make run goes out: the worker webhook and the split day
 // webhook are not hit, so nobody gets a text.
+// scheduleText: the whole day's schedule as one text block, sent in one extra
+// run (action "crewText") on the worker webhook after each Assign selected or
+// Send schedule now (not with Don't text workers). Covers every open job on the same
+// report date as the job being assigned that has at least one worker on it.
+// Contract jobs first, then hourly jobs (marked "(HOURLY)"), then night jobs,
+// each group in start time order. Built after the crew is saved, so it includes
+// the workers just assigned.
+// Workers split between jobs that day get "4hr" (8 hrs split across their jobs).
+const SCHEDULE_TEXT_SIGNOFF = 'buenas noches guys';
+function scheduleClock(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(hhmm || '')); if (!m) return '';
+  const h = +m[1] % 24;
+  return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+function buildScheduleText(date) {
+  const d = new Date(String(date || '') + 'T12:00:00Z');
+  if (!date || Number.isNaN(d.getTime())) return '';
+  const jobs = (dashboardData.jobs || [])
+    .filter(j => !isClosedOnBoard(j) && getReportDate(j) === date && getCrew(j).some(w => w && w.name))
+    .map(j => ({ j, group: getNightWork(j) ? 2 : isHourlyJob(j) ? 1 : 0, start: getReportTime(j) || '99:99' }))
+    .sort((a, b) => a.group - b.group || a.start.localeCompare(b.start) || String(a.j.name || '').localeCompare(String(b.j.name || '')));
+  const lines = [
+    d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toUpperCase(),
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }),
+    `${jobs.length} ${jobs.length === 1 ? 'job' : 'jobs'}`
+  ];
+  const blocks = jobs.map(({ j }) => {
+    const start = scheduleClock(getReportTime(j)), end = scheduleClock(getReportEndTime(j));
+    const parts = [];
+    if (isHourlyJob(j)) parts.push('(HOURLY)');
+    parts.push(`(${getClientName(j) || 'No client'})`);
+    if (j.name) parts.push(j.name);
+    if (start || end) parts.push([start, end].filter(Boolean).join(' - '));
+    // Split day: a worker on more than one job this day shows as "Name 4hr" on each,
+    // the 8 hour day split evenly across their jobs (rounded to the half hour).
+    parts.push(getCrew(j).filter(w => w && w.name).map(w => {
+      const count = jobs.filter(o => workerOnJob(o.j, w)).length;
+      return count > 1 ? `* ${w.name} ${Math.round(16 / count) / 2}hr` : `* ${w.name}`;
+    }).join('\n'));
+    return parts.join('\n\n');
+  });
+  return [lines.join('\n\n'), ...blocks, SCHEDULE_TEXT_SIGNOFF].join('\n\n\n\n');
+}
 async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = false } = {}) {
   if (noText) rapid = false;
   const selected = workers.filter(w => w.phone && w.phone.trim());
@@ -4052,6 +4095,14 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
       undefined,
       (rapid ? 'rapid-assign-' : 'assign-') + workerKey);
   }));
+  // One extra run on the worker webhook with the whole day's schedule as text
+  // (action "crewText"). The per worker runs above are unchanged.
+  const scheduleDate = getReportDate(job);
+  const crewText = await Promise.allSettled([runSideEffect(CONFIG.MOVE_WORKER_URL,
+    { action: 'crewText', jobId, jobAddress: job.name || '', reportDate: scheduleDate, timeZone: BOARD_TZ,
+      triggeredBy: effectBase.action, rapidAssign: rapid, scheduleText: buildScheduleText(scheduleDate) },
+    'Crew schedule text', undefined, 'crew-text-' + (scheduleDate || 'nodate'))]);
+  if (crewText[0].status === 'rejected') console.warn('Crew schedule text not confirmed', crewText[0].reason);
   const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected' && !splitFailed.has(assignedWorkers[i].workerName)).map(w => w.workerName);
   if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only and nothing was sent for them. Take them off with the x and try again.`, true);
   else if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);

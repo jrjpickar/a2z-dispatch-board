@@ -5,7 +5,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
 const ymd = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 (async () => {
   const browser = await chromium.launch({ headless: true, ...(process.env.PW_EXEC ? { executablePath: process.env.PW_EXEC } : {}) }); const context = await browser.newContext();
-  const effects = [], commits = [], errors = [];
+  const effects = [], crewTexts = [], commits = [], errors = [];
   const today = ymd(new Date()), later = ymd(new Date(Date.now() + 7 * 864e5));
   const t = d => ({ reportDate: d, reportTime: '07:00', reportEndDate: d, reportEndTime: '15:30' });
   const state = {
@@ -29,7 +29,7 @@ const ymd = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angel
       if (b.action === 'assign') state[b.jobId] = { ...rec, crew: [...rec.crew, ...b.crewChanges.map(w => ({ id: w.contactId, name: w.workerName, phone: w.workerPhone }))], version: rec.version + 1 };
       return reply({ ok: true, record: state[b.jobId] });
     }
-    if (u.pathname === '/api/workflow-effect') { if (req.method() === 'POST') effects.push(req.postDataJSON()); return reply(req.method() === 'POST' ? { ok: true } : { issues: [] }); }
+    if (u.pathname === '/api/workflow-effect') { if (req.method() === 'POST') { const e = req.postDataJSON(); if (e.payload?.action === 'crewText') crewTexts.push(e); else effects.push(e); } return reply(req.method() === 'POST' ? { ok: true } : { issues: [] }); }
     if (u.pathname === '/api/manual-workers') return reply({ workers: [], hidden: [] });
     return reply({});
   });

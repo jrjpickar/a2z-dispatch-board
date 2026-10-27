@@ -31,7 +31,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   await page.screenshot({ path: '/tmp/rapid.png' });
   await page.click('.crew-assign-rapid');
   await page.waitForFunction(() => true); await page.waitForTimeout(800);
-  assert.equal(effects.length, 1); assert.equal(effects[0].kind, 'workers'); assert.equal(effects[0].payload.action, 'rapid_assign'); assert.equal(effects[0].payload.workerName, 'Ana Lopez');
+  effects.splice(0, effects.length, ...effects.filter(e => e.payload.action !== 'crewText')); assert.equal(effects.length, 1); assert.equal(effects[0].kind, 'workers'); assert.equal(effects[0].payload.action, 'rapid_assign'); assert.equal(effects[0].payload.workerName, 'Ana Lopez');
   assert.deepEqual(errors, []);
   console.log('rapid OK', JSON.stringify({ action: effects[0].payload.action, effectKey: effects[0].effectKey }));
   await browser.close();
