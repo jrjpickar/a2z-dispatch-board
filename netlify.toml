@@ -52,6 +52,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/oauth/callback"
+  to = "/.netlify/functions/ghl-oauth"
+  status = 200
+
+[[redirects]]
   from = "/api/workflow-effect"
   to = "/.netlify/functions/workflow-effect"
   status = 200

@@ -1,4 +1,4 @@
-// Optional browser QA: Assign selected also sends one crewText run with the day's scheduleText.
+// Optional browser QA: Assign selected also queues one crew_text effect (server builds, texts and logs it).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); const fs = require('fs'), path = require('path'), assert = require('assert/strict');
 (async () => {
   const browser = await chromium.launch({ headless: true }); const context = await browser.newContext();
@@ -46,12 +46,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   const crew = effects.filter(e => e.payload.action === 'crewText');
   assert.equal(perWorker.length, 2, 'per worker runs unchanged');
   assert.ok(perWorker.every(e => !('scheduleText' in e.payload)));
-  assert.equal(crew.length, 1); assert.equal(crew[0].kind, 'workers');
-  const text = crew[0].payload.scheduleText;
-  assert.equal((text.match(/\* Niko Reyes 4hr/g) || []).length, 2, 'split worker shows 4hr on both jobs');
-  assert.ok(text.includes('* Julio Herrera\n') && !text.includes('Other Day'));
-  console.log(text);
-  console.log(JSON.stringify({ ...crew[0].payload, scheduleText: '...' }));
+  assert.equal(crew.length, 1); assert.equal(crew[0].kind, 'crew_text', 'built and texted on the server, not Make');
+  assert.deepEqual(Object.keys(crew[0].payload).sort(), ['action', 'jobAddress', 'jobId', 'rapidAssign', 'reportDate', 'timeZone', 'triggeredBy']);
+  assert.equal(crew[0].payload.reportDate, '2026-10-26');
+  console.log('crewText OK', JSON.stringify(crew[0]));
   assert.deepEqual(errors, []);
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });
