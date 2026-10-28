@@ -1,5 +1,5 @@
-// Optional browser QA: Send now (next to Unschedule) shows for a job with a held crew text,
-// needs a 5 second hold in its box, and posts only crew_text_send_now (no Make run).
+// Optional browser QA: Send now is always next to Unschedule, shows how many crew changes
+// are waiting for 6:30 PM, needs a 5 second hold in its box, and posts job_send_now.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); const fs = require('fs'), path = require('path'), assert = require('assert/strict');
 (async () => {
   const browser = await chromium.launch({ headless: true }); const context = await browser.newContext();
@@ -14,8 +14,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
     if (u.pathname === '/api/roster') return reply([]);
     if (u.pathname === '/api/shared-state') return reply({ sharedState: [job], pendingSync: [] });
     if (u.pathname === '/api/workflow-effect') {
-      if (req.method() === 'GET' && u.searchParams.get('crewText') === 'pending') return reply({ pending: held ? [{ effectId: 'e1', jobId: 'job1', dueAt: '2026-11-30T23:00:00.000Z', workers: ['Ana Lopez'] }] : [] });
-      if (req.method() === 'POST') { posts.push(req.postDataJSON()); held = false; return reply({ ok: true, sent: ['e1'], failed: [] }); }
+      if (req.method() === 'GET' && u.searchParams.get('waiting') === 'jobs') return reply({ jobs: held ? { job1: { changes: 2, names: ['Ana Lopez'] } } : {}, nextRun: '2026-11-01T01:30:00.000Z' });
+      if (req.method() === 'POST') { posts.push(req.postDataJSON()); held = false; return reply({ ok: true, jobId: 'job1', makeSent: 1, makeFailed: 0, makeDropped: 1, texted: 1, textOk: true }); }
       return reply({ issues: [] });
     }
     if (u.pathname === '/api/manual-workers') return reply({ workers: [], hidden: [] });
@@ -23,19 +23,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   });
   const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
   await page.goto('https://a2z.test/');
-  await page.waitForSelector('.job-crewtext-now', { timeout: 15000 });
+  await page.waitForFunction(() => /Send now · 2/.test(document.querySelector('.job-crewtext-now')?.textContent || ''), null, { timeout: 15000 });
   const sameLine = await page.evaluate(() => { const b = document.querySelector('.job-crewtext-now'); return !!b.closest('.status-line')?.querySelector('.job-unschedule'); });
   assert.ok(sameLine, 'Send now sits next to Unschedule');
   await page.click('.job-crewtext-now');
   await page.waitForSelector('#crewTextNowBackdrop:not([hidden])');
-  assert.match(await page.textContent('#crewTextNowBody'), /Ana Lopez.*Mon, Nov 30, 3:00 PM Pacific.*nothing is sent to Make/s);
+  assert.match(await page.textContent('#crewTextNowBody'), /2 crew changes \(Ana Lopez\) are waiting for the Sat 6:30 PM run.*Make gets only what changed/s);
   await page.click('#crewTextNowConfirm'); await page.waitForTimeout(300);
   assert.equal(posts.length, 0, 'a plain click does not send');
   const box = await page.locator('#crewTextNowConfirm').boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(5300); await page.mouse.up();
   await page.waitForTimeout(800);
-  assert.deepEqual(posts, [{ op: 'crew_text_send_now', jobId: 'job1' }]);
-  await page.waitForFunction(() => !document.querySelector('.job-crewtext-now'));
+  assert.deepEqual(posts, [{ op: 'job_send_now', jobId: 'job1' }]);
+  await page.waitForFunction(() => (document.querySelector('.job-crewtext-now')?.textContent || '').trim() === 'Send now', null, { timeout: 15000 });
   await page.screenshot({ path: process.env.SHOT || '/tmp/send-now.png' });
   assert.deepEqual(errors, []);
   console.log('send now OK');

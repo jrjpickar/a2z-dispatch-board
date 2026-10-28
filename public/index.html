@@ -3144,7 +3144,7 @@ async function loadDashboard({ fresh = true, draw = true } = {}) {
     if (data.serverTime && !sharedSince) sharedSince = data.serverTime;
 
     dashboardData.jobs = Array.isArray(data.jobs) ? data.jobs : (Array.isArray(data) ? data : []);
-    if (!crewTextPendingAt) refreshCrewTextPending();
+    if (!dispatchWaitingAt) refreshDispatchWaiting();
 
     let normalizedShared;
     if (typeof data.sharedState === 'string') {
@@ -3859,7 +3859,7 @@ function renderJobsTable(allJobs) {
           ${closedOnBoard ? `<span class="status-tag closed">${/cancel/.test(closedRec.status || '') ? 'Cancelled' : 'Completed'}</span>
           <div class="job-closed-note">Closed on the board${closedRec.closedBy ? ' by ' + escapeAttr(closedRec.closedBy) : ''}${closedRec.closedAt ? ' ' + escapeAttr(new Date(closedRec.closedAt).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' })) : ''}, but GHL still shows it as an active job.</div>
           <div class="job-stage-actions"><button type="button" class="job-stage-btn reopen" data-job-id="${jobId}" title="Undo Completed/Cancelled so crew and times can be edited again">Reopen job</button></div>`
-          : `<div class="status-line"><span class="status-tag ${statusClass}">${statusLabel}</span>${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length) ? `<button type="button" class="unschedule-btn job-unschedule" data-job-id="${jobId}" title="Clear this job's times and take the crew off. It moves to Unscheduled.">Unschedule</button>` : ''}${!terminalLocally && crewTextHeldFor(jobId).length ? `<button type="button" class="unschedule-btn crewtext-now-btn job-crewtext-now" data-job-id="${jobId}" title="${escapeAttr(crewTextNowTitle(jobId))}">Send now</button>` : ''}</div>`}
+          : `<div class="status-line"><span class="status-tag ${statusClass}">${statusLabel}</span>${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length) ? `<button type="button" class="unschedule-btn job-unschedule" data-job-id="${jobId}" title="Clear this job's times and take the crew off. It moves to Unscheduled.">Unschedule</button>` : ''}${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length || waitingFor(jobId)) ? `<button type="button" class="unschedule-btn crewtext-now-btn job-crewtext-now" data-job-id="${jobId}" title="${escapeAttr(sendNowTitle(jobId))}">Send now${waitingFor(jobId) ? ` · ${waitingFor(jobId).changes}` : ''}</button>` : ''}</div>`}
           ${terminalLocally || closedOnBoard ? '' : `<div class="job-stage-actions">
             <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">${needsProjectConfiguration(j) ? 'Configure project' : 'Edit Details'}</button>
             ${isHourlyJob(j) ? '' : `<button type="button" class="job-stage-btn schedule${(psSchedules[jobId] || {}).sentAt ? ' sent' : ''}" data-job-id="${jobId}" title="Project Schedule for this contract job">Project Schedule</button>`}
@@ -4076,26 +4076,24 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
       undefined,
       (rapid ? 'rapid-assign-' : 'assign-') + workerKey);
   }));
-  // Crew schedule text: built, texted (Twilio) and logged in GHL on the server.
-  // Assign selected: the server holds it until 12 hours before the start; Send
-  // schedule now: right away. The Make runs above still go out now, as before.
-  // Only the workers in THIS assignment get the text (the whole day's schedule);
-  // everyone already on the board is not texted again. Per worker runs above unchanged.
+  // Crew schedule text (that job only), built, texted (Twilio) and logged in GHL on
+  // the server. Send schedule now: right away, to the workers in this assignment.
+  // Assign selected: nothing here; the 6:30 PM run (or Send now on the row) texts
+  // everyone on the job who hasn't gotten it. The Make runs above wait for 6:30 PM
+  // too unless this is Send schedule now (the server decides).
   const scheduleDate = getReportDate(job);
-  const crewText = await Promise.allSettled([runSideEffect(CONFIG.MOVE_WORKER_URL,
+  const crewText = !rapid ? [{ status: 'fulfilled' }] : await Promise.allSettled([runSideEffect(CONFIG.MOVE_WORKER_URL,
     { action: 'crewText', jobId, jobAddress: job.name || '', reportDate: scheduleDate, reportTime: getReportTime(job), timeZone: BOARD_TZ, triggeredBy: effectBase.action, rapidAssign: rapid,
       textWorkers: assignedWorkers.map(w => ({ contactId: w.contactId || '', workerName: w.workerName, workerPhone: w.workerPhone })) },
     'Crew schedule text', 'crew_text', 'crew-text-' + (scheduleDate || 'nodate') + '-' + assignedWorkers.map(w => String(w.workerPhone || '').replace(/\D/g, '').slice(-4)).join('-').slice(0, 40))]);
   if (crewText[0].status === 'rejected') console.warn('Crew schedule text not confirmed', crewText[0].reason);
-  // Assign selected leaves the crew text waiting: show Send now on this job. The
-  // crew text is queued in the background, so keep checking for a little while
-  // until the server has it (it can take a few seconds after the click).
-  if (!rapid) watchCrewTextHeld(jobId);
+  // Assign selected leaves the Make runs waiting for 6:30 PM: show the count on Send now.
+  if (!rapid) watchDispatchWaiting();
   const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected' && !splitFailed.has(assignedWorkers[i].workerName)).map(w => w.workerName);
   if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only and nothing was sent for them. Take them off with the x and try again.`, true);
   else if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
   else if (rapid) showToast(assignedWorkers.length === 1 ? 'Crew assigned. Schedule sent now.' : `Crew assigned. Schedule sent now to ${assignedWorkers.length} workers.`);
-  else showToast(assignedWorkers.length === 1 ? 'Crew assignment saved.' : `Crew assignment saved. ${assignedWorkers.length} notifications sent.`);
+  else showToast(`Crew assignment saved. It goes to Make and the crew at 6:30 PM, or hold Send now on the job.`);
   render();
 }
 
@@ -4299,7 +4297,7 @@ function updateCrewAssignSelection(panel) {
   const noText = panel.classList.contains('no-text');
   if (summary) summary.innerHTML = !names.length ? '' : noText
     ? `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. Saved on the board only. Nobody gets a text.`
-    : `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> texts the schedule 12 hours before the start time. <b>Send schedule now</b> texts it right away.`;
+    : `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> goes to Make and texts the schedule at 6:30 PM (or hold <b>Send now</b> on the job). <b>Send schedule now</b> sends it right away.`;
   if (btn && !btn.textContent.endsWith('...')) btn.textContent = noText ? 'Assign without texting' : 'Assign selected';
   setPickerButtons(panel, renderSplitPicks(panel));
   // The jobs table scrolls horizontally, which also clips this dropdown on the
@@ -4319,7 +4317,7 @@ function removeWorkerFlow({ name, what }) {
   const setBody = () => {
     body.textContent = box.checked
       ? `Takes ${name} off this job on the board only. No text goes out.`
-      : `Takes ${name} off this job. They get the usual removed from job text.`;
+      : `Takes ${name} off this job. They get the usual removed from job text at 6:30 PM (or when Send now is held on the job).`;
   };
   document.getElementById('removeWorkerWhat').textContent = what;
   document.getElementById('removeWorkerNoTextName').textContent = name;
@@ -4349,7 +4347,7 @@ async function removeCrewMember(jobId, phone, name, chipEl) {
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, payload);
     // Don't text ticked: the worker webhook is not hit at all.
-    if (!choice.noText) await runSideEffect(CONFIG.MOVE_WORKER_URL, payload, 'Worker removal notifications');
+    if (!choice.noText) { await runSideEffect(CONFIG.MOVE_WORKER_URL, payload, 'Worker removal notifications'); watchDispatchWaiting(); }
     showToast(choice.noText ? `${name} removed. No text sent.` : 'Worker removed.'); render();
   } catch (error) { showToast(error.message, true); chipEl.style.opacity = '1'; }
 }
@@ -4628,48 +4626,47 @@ document.addEventListener('keydown', e => {
 }, true);
 document.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { if (e.target.closest?.('.hold-btn')) e.preventDefault(); endHold(true); } }, true);
 
-/* ---------- Crew schedule text: Send now ----------
-   Assign selected holds the crew text on the server until 12 hours before the start.
-   Jobs with one still waiting show Send now next to Unschedule; holding it in the box
-   sends that job's waiting crew text(s) right away. Only the crew text is sent: the
-   Make runs went out at assign time and are not touched. */
-window.crewTextPending = new Map(); // jobId -> [{ effectId, dueAt, workers }]
-let crewTextPendingAt = 0, crewTextPendingBusy = false;
+/* ---------- Send now (job row) and the 6:30 PM run ----------
+   Assign and remove worker runs to Make wait on the server until 6:30 PM Pacific
+   every day (lib/daily-dispatch.mjs). Then each job goes out as it sits: Make gets
+   only the net change per worker, and tomorrow's crews get the schedule text for
+   their own job (once each). Send schedule now in the picker still goes right away.
+   Every job row has Send now next to Unschedule: hold it in the box and that job
+   goes out now, the same way (Make changes plus the schedule text to anyone on it
+   who hasn't gotten it). */
+window.dispatchWaiting = {}; // jobId -> { changes, names }
+let dispatchWaitingAt = 0, dispatchWaitingBusy = false, dispatchNextRun = '';
 // Redraws once nobody is mid edit (a box open, typing, a hold in progress).
 function drawWhenFree(tries = 20) {
   if (!editingDispatch()) return render();
   if (tries > 0) setTimeout(() => drawWhenFree(tries - 1), 1500);
 }
-function crewTextHeldFor(jobId) { return window.crewTextPending.get(String(jobId)) || []; }
-function crewTextWhen(iso) {
-  return new Date(iso).toLocaleString('en-US', { timeZone: BOARD_TZ, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+function waitingFor(jobId) { return window.dispatchWaiting[String(jobId)] || null; }
+function sendNowWhen(iso) {
+  return iso ? new Date(iso).toLocaleString('en-US', { timeZone: BOARD_TZ, weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '6:30 PM';
 }
-function crewTextNowTitle(jobId) {
-  const held = crewTextHeldFor(jobId); if (!held.length) return '';
-  const names = [...new Set(held.flatMap(h => h.workers))];
-  return `Schedule text for ${names.join(', ') || 'the new workers'} goes out ${crewTextWhen(held[0].dueAt)}. Send it now instead.`;
+function sendNowTitle(jobId) {
+  const w = waitingFor(jobId);
+  return w ? `${w.changes} crew change${w.changes === 1 ? '' : 's'} (${w.names.join(', ')}) waiting for ${sendNowWhen(dispatchNextRun)}. Send this job now.` : 'Send this job now: crew changes to Make and the schedule text to anyone on it who hasn\'t gotten it.';
 }
-async function refreshCrewTextPending({ redraw = true } = {}) {
-  if (crewTextPendingBusy) { await new Promise(r => setTimeout(r, 400)); if (crewTextPendingBusy) return; }
-  crewTextPendingBusy = true;
+async function refreshDispatchWaiting({ redraw = true } = {}) {
+  if (dispatchWaitingBusy) { await new Promise(r => setTimeout(r, 400)); if (dispatchWaitingBusy) return; }
+  dispatchWaitingBusy = true;
   try {
-    const res = await fetch('/api/workflow-effect?crewText=pending&_=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch('/api/workflow-effect?waiting=jobs&_=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return;
     const data = await res.json();
-    const next = new Map();
-    for (const p of data.pending || []) { if (!next.has(p.jobId)) next.set(p.jobId, []); next.get(p.jobId).push(p); }
-    const changed = JSON.stringify([...next]) !== JSON.stringify([...window.crewTextPending]);
-    window.crewTextPending = next; crewTextPendingAt = Date.now();
+    const next = data.jobs || {};
+    const changed = JSON.stringify(next) !== JSON.stringify(window.dispatchWaiting);
+    window.dispatchWaiting = next; dispatchNextRun = data.nextRun || ''; dispatchWaitingAt = Date.now();
     if (changed && redraw) drawWhenFree();
-  } catch { /* the button just stays as it was */ }
-  finally { crewTextPendingBusy = false; }
+  } catch { /* the count just stays as it was */ }
+  finally { dispatchWaitingBusy = false; }
 }
-function watchCrewTextHeld(jobId, waits = [1500, 4000, 8000, 15000, 30000]) {
+// After an assign or remove the runs reach the server in the background: check a few times.
+function watchDispatchWaiting(waits = [1500, 5000, 15000]) {
   const next = waits[0]; if (next == null) return;
-  setTimeout(async () => {
-    await refreshCrewTextPending();
-    if (!crewTextHeldFor(jobId).length) watchCrewTextHeld(jobId, waits.slice(1));
-  }, next);
+  setTimeout(async () => { await refreshDispatchWaiting(); watchDispatchWaiting(waits.slice(1)); }, next);
 }
 function crewTextNowFlow({ what, body }) {
   const back = document.getElementById('crewTextNowBackdrop');
@@ -4689,25 +4686,24 @@ function crewTextNowFlow({ what, body }) {
     document.addEventListener('keydown', onKey, true);
   });
 }
-async function sendCrewTextNow(jobId, btn) {
+async function sendJobNow(jobId, btn) {
   const job = (dashboardData.jobs || []).find(j => j.id === jobId) || {};
-  const held = crewTextHeldFor(jobId);
-  if (!held.length) { showToast('No schedule text is waiting for this job.'); return; }
-  const names = [...new Set(held.flatMap(h => h.workers))];
+  await refreshDispatchWaiting({ redraw: false });
+  const w = waitingFor(jobId);
   const ok = await crewTextNowFlow({ what: [job.name, getClientName(job)].filter(Boolean).join(' · '),
-    body: `The schedule text for ${names.join(', ') || 'the new workers'} is set to go out ${crewTextWhen(held[0].dueAt)} Pacific (12 hours before the start). This sends it now instead. Only the schedule text goes out; nothing is sent to Make.` });
+    body: `${w ? `${w.changes} crew change${w.changes === 1 ? '' : 's'} (${w.names.join(', ')}) ${w.changes === 1 ? 'is' : 'are'} waiting for the ${sendNowWhen(dispatchNextRun)} run. ` : 'No crew changes are waiting for this job. '}This sends the job now as it sits: Make gets only what changed, and anyone on the job who hasn't gotten the schedule text gets it.` });
   if (!ok) return;
   btn.disabled = true; btn.textContent = 'Sending...';
   try {
-    const res = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'crew_text_send_now', jobId }) }, 60000);
+    const res = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'job_send_now', jobId }) }, 60000);
     const data = await res.json().catch(() => ({}));
-    if (data.nothingHeld) showToast('That schedule text already went out.');
-    else if (!res.ok || data.ok !== true) showToast(data.error || `Schedule text not confirmed (HTTP ${res.status}). Check Admin > Make / GHL problems.`, true);
-    else showToast(names.length === 1 ? `Schedule text sent to ${names[0]}.` : `Schedule text sent to ${names.length} workers.`);
-  } catch (error) { showToast(`Schedule text not confirmed: ${error.message}. Check Admin > Make / GHL problems.`, true); }
-  window.crewTextPending.delete(String(jobId));
+    if (!res.ok || data.ok !== true) showToast(data.error || `Send now not confirmed (HTTP ${res.status}). Check Admin > Make / GHL problems.`, true);
+    else if (!data.makeSent && !data.texted) showToast('Nothing new to send for this job. Make and the crew already have it.');
+    else showToast(`Sent now: ${data.makeSent} to Make, schedule text to ${data.texted} worker${data.texted === 1 ? '' : 's'}.`);
+  } catch (error) { showToast(`Send now not confirmed: ${error.message}. Check Admin > Make / GHL problems.`, true); }
+  delete window.dispatchWaiting[String(jobId)];
   render();
-  refreshCrewTextPending();
+  refreshDispatchWaiting();
 }
 
 /* Unschedule confirmation, built in the page (browser pop ups are blocked in some
@@ -4744,7 +4740,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
   let noText = false;
   if (unschedule) {
     const ok = await unscheduleFlow({ what: [job.name, getClientName(job)].filter(Boolean).join(' · '),
-      body: `This clears its start and end times${crewBeforeReset.length ? ` and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job (they get the usual removed from job text)` : ''}. The job moves to Unscheduled. Job details are kept.`,
+      body: `This clears its start and end times${crewBeforeReset.length ? ` and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job (they get the usual removed from job text at 6:30 PM, or when Send now is held)` : ''}. The job moves to Unscheduled. Job details are kept.`,
       bodyNoText: crewBeforeReset.length ? `This clears its start and end times and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job. No text goes out. The job moves to Unscheduled. Job details are kept.` : '' });
     if (!ok) return false;
     noText = !!crewBeforeReset.length && document.getElementById('unschedNoText').checked;
@@ -4771,7 +4767,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
       try { await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log'); }
       catch (error) { problems.push(error.message); }
     } else if (removedWorkers.length && !noText) {
-      try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers, ...(unschedule ? { reason: 'unscheduled', unscheduled: true } : {}) }, 'Worker release notifications'); }
+      try { await runSideEffect(CONFIG.MOVE_WORKER_URL, { action: 'remove', jobId, jobAddress: job.name || '', removedWorkers, ...(unschedule ? { reason: 'unscheduled', unscheduled: true } : {}) }, 'Worker release notifications'); watchDispatchWaiting(); }
       catch (error) { problems.push(error.message); }
     }
     if (eodSheet) {
@@ -5331,7 +5327,7 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
   }
 
   const crewTextNowBtn = e.target.closest('.job-crewtext-now');
-  if (crewTextNowBtn) { sendCrewTextNow(crewTextNowBtn.dataset.jobId, crewTextNowBtn); return; }
+  if (crewTextNowBtn) { sendJobNow(crewTextNowBtn.dataset.jobId, crewTextNowBtn); return; }
 
   const unscheduleBtn = e.target.closest('.job-unschedule');
   if (unscheduleBtn) { resetJobDay(unscheduleBtn.dataset.jobId, unscheduleBtn, null, { unschedule: true }); return; }
@@ -8037,8 +8033,8 @@ async function pollSharedState() {
     clearPersistentIssue('read');
     if (jobRecords.length) render();
     if (moveRecords.length && logisticsOpen) renderLogistics();
-    // Send now buttons: the waiting crew texts, checked every 2 minutes at most.
-    if (Date.now() - crewTextPendingAt > 120000) refreshCrewTextPending();
+    // Send now counts: crew changes waiting for 6:30 PM, checked every 2 minutes at most.
+    if (Date.now() - dispatchWaitingAt > 120000) refreshDispatchWaiting();
   } catch { showPersistentIssue('read', 'Live updates paused. Showing the last confirmed data. Retrying automatically.'); }
   finally { sharedPollBusy = false; }
 }

@@ -1,4 +1,4 @@
-// Optional browser QA: Assign selected also queues one crew_text effect (server builds, texts and logs it).
+// Optional browser QA: Assign selected queues no crew text (the 6:30 PM run sends it); Send schedule now queues one for that assignment.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); const fs = require('fs'), path = require('path'), assert = require('assert/strict');
 (async () => {
   const browser = await chromium.launch({ headless: true }); const context = await browser.newContext();
@@ -43,13 +43,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   });
   await page.waitForTimeout(500);
   const perWorker = effects.filter(e => e.payload.action === 'assign');
+  assert.equal(perWorker.length, 2, 'per worker runs unchanged (the server holds them for 6:30 PM)');
+  assert.equal(effects.filter(e => e.payload.action === 'crewText').length, 0, 'Assign selected queues no crew text: the 6:30 PM run sends it');
+  // Send schedule now still texts the workers in that assignment right away.
+  await page.evaluate(async () => {
+    const btn = document.createElement('button'); document.body.append(btn);
+    await assignCrew('job1', [{ id: 'w5', name: 'Pat Doe', phone: '+15555550105' }], btn, { rapid: true });
+  });
+  await page.waitForTimeout(500);
   const crew = effects.filter(e => e.payload.action === 'crewText');
-  assert.equal(perWorker.length, 2, 'per worker runs unchanged');
-  assert.ok(perWorker.every(e => !('scheduleText' in e.payload)));
-  assert.equal(crew.length, 1); assert.equal(crew[0].kind, 'crew_text', 'built and texted on the server, not Make');
-  assert.deepEqual(Object.keys(crew[0].payload).sort(), ['action', 'jobAddress', 'jobId', 'rapidAssign', 'reportDate', 'reportTime', 'textWorkers', 'timeZone', 'triggeredBy']);
-  assert.equal(crew[0].payload.reportDate, '2026-10-26');
-  console.log('crewText OK', JSON.stringify(crew[0]));
+  assert.equal(crew.length, 1); assert.equal(crew[0].kind, 'crew_text');
+  assert.equal(crew[0].payload.rapidAssign, true);
+  assert.deepEqual(crew[0].payload.textWorkers.map(w => w.workerName), ['Pat Doe']);
+  console.log('crewText OK');
   assert.deepEqual(errors, []);
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });

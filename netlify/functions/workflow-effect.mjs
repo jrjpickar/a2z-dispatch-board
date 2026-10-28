@@ -1,7 +1,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
-import { crewTextDelayMs, heldCrewTexts, heldCrewTextIds } from '../../lib/crew-text.mjs';
+import { waitsForNightly, sendJob, waitingSummary, nextDispatchUtc } from '../../lib/daily-dispatch.mjs';
 import { recordEffect, deliverEffect, sendHeldEffects, cancelHeldEffects, QUIET_STATUSES } from '../../lib/effect-queue.mjs';
 const idList = value => (Array.isArray(value) ? value : []).map(v => String(v || '').slice(0, 240)).filter(Boolean).slice(0, 20);
 export default async function handler(request) {
@@ -10,20 +10,22 @@ export default async function handler(request) {
     if (request.method === 'POST') authorizeWrite(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
-      // ?crewText=pending: crew schedule texts still waiting for their 12 hour mark (Send now button).
-      if (new URL(request.url).searchParams.get('crewText') === 'pending') return json({ pending: await heldCrewTexts(sql) });
+      // ?waiting=jobs: crew changes waiting for the 6:30 PM run, per job (Send now box).
+      if (new URL(request.url).searchParams.get('waiting') === 'jobs') return json(await waitingSummary(sql));
       // Every open board polls this, so it also sends anything whose undo window is over.
       try { await sendHeldEffects(sql); } catch (error) { console.error('Held send sweep failed', error); }
       return json({ issues: await sql`select effect_id as id, kind, status, last_error as error from dispatch_effects where not (status = any(${QUIET_STATUSES})) order by created_at desc limit 50` });
     }
     const body = await readPayload(request);
-    // Send now (job row): sends this job's held crew schedule texts right away.
-    // Only crew_text rows are touched; the Make runs already went out at assign time.
-    if (body.op === 'crew_text_send_now') {
-      const ids = await heldCrewTextIds(sql, String(body.jobId || ''));
-      if (!ids.length) return json({ ok: true, sent: [], failed: [], nothingHeld: true });
-      const result = await sendHeldEffects(sql, { ids, timeoutMs: 25000 });
-      return json({ ok: result.failed.length === 0, ...result, ...(result.failed.length ? { error: 'Some crew texts did not finish. Check Admin > Make / GHL problems.' } : {}) });
+    // Send now (job row): sends this job as it sits right now, without waiting for
+    // 6:30 PM: its waiting Make assign / remove runs (net change only) and the
+    // schedule text to anyone on it who hasn't gotten it for that day.
+    if (body.op === 'job_send_now') {
+      const jobId = String(body.jobId || '').slice(0, 160);
+      if (!jobId) throw new StateError('Pick the job to send');
+      const result = await sendJob(sql, jobId, { why: 'send_now' });
+      const ok = !result.makeFailed && result.textOk;
+      return json({ ok, ...result, ...(ok ? {} : { error: 'Some of it did not finish. Check Admin > Make / GHL problems.' }) });
     }
     // Undo window controls for held sends.
     if (body.op === 'cancel') {
@@ -36,10 +38,16 @@ export default async function handler(request) {
       const result = await sendHeldEffects(sql, { ids });
       return json({ ok: result.failed.length === 0, ...result });
     }
-    const { requestId, kind, payload, effectKey } = body;
-    // Crew schedule text: the server sets when it goes out (12 hours before the start,
-    // or now for Send schedule now), whatever the browser asked.
-    const delayMs = kind === 'crew_text' ? crewTextDelayMs(payload) : body.delayMs;
+    const { requestId, kind, payload, effectKey, delayMs } = body;
+    // Crew schedule text from Assign selected: nothing to queue. The 6:30 PM run (or
+    // Send now) texts everyone on the job who hasn't gotten it. Send schedule now
+    // (rapidAssign) texts right away, below.
+    if (kind === 'crew_text' && payload?.rapidAssign !== true) return json({ ok: true, waitsForNightly: true, nextRun: new Date(nextDispatchUtc()).toISOString() });
+    // Assign / remove worker runs wait for the 6:30 PM run (or Send now on the job).
+    if (waitsForNightly(kind, payload)) {
+      const { effectId, status } = await recordEffect(sql, { requestId, kind, payload, effectKey, nightly: true });
+      return json({ ok: status !== 'cancelled', waitsForNightly: true, effectId, status, nextRun: new Date(nextDispatchUtc()).toISOString() });
+    }
     const { effectId, status } = await recordEffect(sql, { requestId, kind, payload, effectKey, delayMs });
     if (delayMs > 0) {
       if (status === 'new' || status === 'scheduled') return json({ ok: true, scheduled: true, effectId });

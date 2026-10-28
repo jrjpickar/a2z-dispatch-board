@@ -6,7 +6,8 @@ const real = await import('../netlify/functions/db.mjs');
 mock.module('../netlify/functions/db.mjs', { namedExports: { db: () => adapter(pg), ensureSchema: real.ensureSchema } });
 Object.assign(process.env, { GHL_API_TOKEN: 'pit', TWILIO_ACCOUNT_SID: 'AC1', TWILIO_AUTH_TOKEN: 'tok', TWILIO_FROM_NUMBER: '+19495550000',
   GHL_APP_CLIENT_ID: 'cid', GHL_APP_CLIENT_SECRET: 'secret', GHL_SMS_CONVERSATION_PROVIDER_ID: 'prov1' });
-const { buildCrewSchedule, smsParts } = await import('../lib/crew-text.mjs');
+const { buildCrewSchedule, buildJobText, smsParts, pacificToUtc } = await import('../lib/crew-text.mjs');
+const dd = await import('../lib/daily-dispatch.mjs');
 const { sendWorkflow } = await import('../lib/effects.mjs');
 const sql = adapter(pg);
 
@@ -35,127 +36,171 @@ test('long schedules split between jobs under the Twilio limit', () => {
   assert.equal(parts.length, 2); assert.ok(parts.every(p => p.length <= 1500)); assert.ok(parts[1].startsWith('b'));
 });
 
-test('crew_text texts everyone through Twilio, logs to GHL, and a retry only redoes what failed', async () => {
+
+test('each job has its own text: day, date, that job, sign off', () => {
+  const t = buildJobText(jobs, states, '2026-10-26', 'j2');
+  assert.equal(t.text, 'MONDAY\n\nOct 26, 2026\n\n\n\n(HOURLY)\n\n(Jason)\n\n16 Burning Tree Rd, Newport Beach\n\n7:00 AM - 3:30 PM\n\n* Jose Fabian\n* Niko Reyes 4hr\n\n\n\nbuenas noches guys');
+  assert.deepEqual(t.workers.map(w => w.phone), ['+15555550102', '+15555550100']);
+  assert.equal(buildJobText(jobs, states, '2026-10-26', 'j4').text, '', 'job not on that day');
+});
+
+test('6:30 PM Pacific: next run time and which runs wait for it', () => {
+  assert.equal(new Date(pacificToUtc('2026-10-26', '18:30')).toISOString(), '2026-10-27T01:30:00.000Z');
+  assert.equal(new Date(pacificToUtc('2026-11-10', '18:30')).toISOString(), '2026-11-11T02:30:00.000Z');
+  assert.equal(new Date(dd.nextDispatchUtc(Date.parse('2026-10-26T20:00:00Z'))).toISOString(), '2026-10-27T01:30:00.000Z'); // 1 PM -> today 6:30
+  assert.equal(new Date(dd.nextDispatchUtc(Date.parse('2026-10-27T03:00:00Z'))).toISOString(), '2026-10-28T01:30:00.000Z'); // 8 PM -> tomorrow 6:30
+  assert.equal(dd.waitsForNightly('workers', { action: 'assign' }), true);
+  assert.equal(dd.waitsForNightly('workers', { action: 'remove' }), true);
+  assert.equal(dd.waitsForNightly('split_day', { action: 'split_day_assign' }), true);
+  assert.equal(dd.waitsForNightly('workers', { action: 'rapid_assign', rapidAssign: true }), false, 'Send schedule now goes right away');
+  assert.equal(dd.waitsForNightly('split_day', { action: 'split_day_assign', sendNow: true }), false);
+  assert.equal(dd.waitsForNightly('eod_sheet', { action: 'eod_sheet' }), false);
+  assert.equal(dd.waitsForNightly('workers', { action: 'eod_sheet' }), false);
+});
+
+test('net change per worker: only what still stands goes to Make', () => {
+  const a = (id, w) => ({ effect_id: id, payload: { action: 'assign', jobId: 'j', workerName: w, workerPhone: w === 'Ana' ? '+15550000001' : '+15550000002' } });
+  const r = (id, ws) => ({ effect_id: id, payload: { action: 'remove', jobId: 'j', removedWorkers: ws.map(w => ({ workerName: w, workerPhone: w === 'Ana' ? '+15550000001' : w === 'Bo' ? '+15550000002' : '+15550000003' })) } });
+  const ana = { name: 'Ana', phone: '+15550000001' }, bo = { name: 'Bo', phone: '+15550000002' };
+  let out = dd.netChanges([a('1', 'Ana'), r('2', ['Ana'])], []);
+  assert.deepEqual([out.send.length, out.drop], [0, ['1', '2']], 'assigned then removed: nothing');
+  out = dd.netChanges([r('1', ['Ana']), a('2', 'Ana')], [ana]);
+  assert.deepEqual([out.send.length, out.drop], [0, ['1', '2']], 'removed then put back: nothing');
+  out = dd.netChanges([a('1', 'Ana'), r('2', ['Ana']), a('3', 'Ana')], [ana]);
+  assert.deepEqual([out.send.map(s => s.row.effect_id), out.drop], [['3'], ['1', '2']], 'last assign wins');
+  out = dd.netChanges([r('1', ['Ana', 'Bo', 'Cy']), a('2', 'Bo')], [bo]);
+  assert.deepEqual(out.send[0].payload.removedWorkers.map(w => w.workerName), ['Ana', 'Cy'], 'unschedule run carries only who is still off');
+  const fresh = dd.refreshAssign({ action: 'assign', reportTime: '07:00', workerReportTime: '07:00' }, { reportDate: '2026-10-29', reportTime: '08:00', reportEndDate: '2026-10-29', reportEndTime: '16:00' });
+  assert.deepEqual([fresh.reportTime, fresh.workerReportTime, fresh.workerReportEndTime], ['08:00', '08:00', '16:00'], 'goes out with the times as they are now');
+});
+
+// ---------- Database: holding, Send now, the 6:30 PM run ----------
+const D = '2026-10-29', T = '2026-10-30'; // "today" and tomorrow for the run below
+const now630 = Date.parse('2026-10-30T01:30:00Z'); // Oct 29 6:30 PM Pacific
+const jobsDb = [
+  { id: 'k1', name: '1 Tomorrow St', sourceType: 'labor', contact: { name: 'Acme' }, customFields: [] },
+  { id: 'k2', name: '2 Tomorrow St', sourceType: 'demo', contact: { name: 'Beta Co' }, customFields: [] },
+  { id: 'k3', name: '3 Later Ave', sourceType: 'labor', contact: { name: 'Later Inc' }, customFields: [] }
+];
+const crew = (...ws) => ws.map(([id, name, phone]) => ({ id, name, phone }));
+const ANA = ['ca', 'Ana Lopez', '+15550000001'], BO = ['cb', 'Bo Diaz', '+15550000002'], CY = ['cc', 'Cy Ruiz', '+15550000003'], DE = ['cd', 'De Paz', '+15550000004'];
+let calls;
+function stubFetch() {
+  calls = { make: [], texts: [], ghl: 0 };
+  globalThis.fetch = async (url, init = {}) => {
+    url = String(url);
+    if (url.includes('hook.us2.make.com')) { calls.make.push(JSON.parse(init.body)); return Response.json({ ok: true }); }
+    if (url.includes('api.twilio.com')) { const b = new URLSearchParams(init.body); calls.texts.push({ to: b.get('To'), body: b.get('Body'), at: Date.now() }); return Response.json({ sid: 'SM' + calls.texts.length }, { status: 201 }); }
+    if (url.includes('/conversations/search?')) return Response.json({ conversations: [{ id: 'conv' }] });
+    if (url.includes('/contacts/search/duplicate')) return Response.json({ contact: { id: 'cx' } });
+    if (url.endsWith('/conversations/messages/inbound')) { calls.ghl++; return Response.json({ messageId: 'm' }); }
+    throw new Error('unexpected fetch ' + url);
+  };
+}
+const { default: effectHandler } = await import('../netlify/functions/workflow-effect.mjs');
+const post = body => effectHandler(new Request('https://board.test/api/workflow-effect', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://board.test' }, body: JSON.stringify(body) }));
+async function setState(jobId, data) {
+  await sql`insert into job_shared_state (job_id, version, active, data) values (${jobId}, 1, true, ${JSON.stringify(data)})
+    on conflict (job_id) do update set data = excluded.data, version = job_shared_state.version + 1`;
+}
+let reqN = 0;
+async function queue(kind, payload) {
+  const requestId = 'req-' + (++reqN);
+  await sql`insert into dispatch_requests (request_id, fingerprint, result) values (${requestId}, 'f', ${JSON.stringify({ ok: true, record: { jobId: payload.jobId } })})`;
+  return (await post({ requestId, kind, payload, effectKey: 'k' + reqN })).json();
+}
+const assignRun = (jobId, [id, name, phone], extra = {}) => ({ action: 'assign', jobId, contactId: id, workerName: name, workerPhone: phone, reportDate: T, reportTime: '07:00', ...extra });
+
+test('assign and remove wait for 6:30 PM; Send schedule now goes right away; nothing hits Make on the click', async () => {
   await real.ensureSchema(sql);
-  await sql`insert into dispatch_feed_cache (key, data, updated_at) values ('ghl-jobs', ${JSON.stringify(jobs)}, now())`;
-  for (const s of states) { const { jobId, active, ...data } = s; await sql`insert into job_shared_state (job_id, version, active, data) values (${jobId}, 1, ${active}, ${JSON.stringify(data)})`; }
-  await sql`insert into dispatch_settings (key, value) values ('ghl-oauth:QUcu2PEAxPV1sQm1GQCq', ${JSON.stringify({ access_token: 'at', refresh_token: 'rt', expiresAt: Date.now() + 3600e3, locationId: 'QUcu2PEAxPV1sQm1GQCq' })})`;
-  const texts = [], logs = []; let failMario = true;
-  globalThis.fetch = async (url, init = {}) => {
-    url = String(url);
-    if (url.includes('api.twilio.com')) { const b = new URLSearchParams(init.body); texts.push({ to: b.get('To'), from: b.get('From'), body: b.get('Body') }); return Response.json({ sid: 'SM' + texts.length, from: b.get('From') }, { status: 201 }); }
-    if (url.includes('/contacts/search/duplicate')) return Response.json({ contact: { id: 'cMario' } });
-    if (url.includes('/conversations/search?')) { const c = new URL(url).searchParams.get('contactId'); return Response.json({ conversations: c === 'c3' ? [] : [{ id: 'conv-' + c }] }); }
-    if (url.endsWith('/conversations/') && init.method === 'POST') return Response.json({ conversation: { id: 'conv-new-' + JSON.parse(init.body).contactId } });
-    if (url.endsWith('/conversations/messages/inbound')) {
-      const b = JSON.parse(init.body);
-      assert.equal(init.headers.Authorization, 'Bearer at');
-      if (b.conversationId === 'conv-cMario' && failMario) return Response.json({ message: 'boom' }, { status: 500 });
-      logs.push(b); return Response.json({ messageId: 'm' + logs.length });
-    }
-    throw new Error('unexpected fetch ' + url);
-  };
-  const payload = { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26', textWorkers: [
-    { contactId: 'c1', workerName: 'Niko Reyes', workerPhone: '+15555550100' }, { contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '+15555550101' },
-    { contactId: 'c3', workerName: 'Jose Fabian', workerPhone: '+15555550102' }, { contactId: '', workerName: 'Mario Danna', workerPhone: '+15555550103' }] };
-  await assert.rejects(sendWorkflow('crew_text', payload, 'r1:crew_text:x'), /Mario Danna: texted, GHL log failed/);
-  assert.equal(texts.length, 4);
-  assert.ok(texts.every(t => t.from === '+19495550000' && t.body.startsWith('MONDAY')));
-  assert.equal(logs.length, 3);
-  assert.deepEqual(Object.keys(logs[0]).sort(), ['altId', 'conversationId', 'conversationProviderId', 'date', 'direction', 'message', 'type']);
-  assert.equal(logs[0].type, 'SMS'); assert.equal(logs[0].direction, 'outbound');
-  assert.ok(logs.some(l => l.conversationId === 'conv-new-c3'), 'conversation made when the worker has none'); assert.equal(logs[0].conversationProviderId, 'prov1'); assert.equal(logs[0].altId, 'SM1');
-  // Retry: the day changed since, but the same text goes out and nobody is texted twice.
-  await sql`update job_shared_state set data = data || '{"crew":[]}'::jsonb where job_id = 'j2'`;
-  failMario = false;
-  await sendWorkflow('crew_text', payload, 'r1:crew_text:x');
-  assert.equal(texts.length, 4, 'no second text');
-  assert.equal(logs.length, 4); assert.equal(logs[3].conversationId, 'conv-cMario'); assert.equal(logs[3].altId, 'SM4');
+  await sql`insert into dispatch_feed_cache (key, data, updated_at) values ('ghl-jobs', ${JSON.stringify(jobsDb)}, now()) on conflict (key) do update set data = excluded.data`;
+  await sql`insert into dispatch_settings (key, value) values ('ghl-oauth:QUcu2PEAxPV1sQm1GQCq', ${JSON.stringify({ access_token: 'at', refresh_token: 'rt', expiresAt: Date.now() + 3600e3, locationId: 'QUcu2PEAxPV1sQm1GQCq' })}) on conflict (key) do nothing`;
+  await setState('k1', { reportDate: T, reportTime: '07:00', reportEndDate: T, reportEndTime: '15:30', crew: crew(ANA, BO) });
+  await setState('k2', { reportDate: T, reportTime: '06:30', reportEndDate: T, reportEndTime: '15:00', jobType: 'contract', crew: crew(CY) });
+  await setState('k3', { reportDate: '2026-11-05', reportTime: '07:00', reportEndDate: '2026-11-05', reportEndTime: '15:30', crew: crew(DE) });
+  stubFetch();
+  let r = await queue('workers', assignRun('k1', ANA)); assert.equal(r.waitsForNightly, true);
+  r = await queue('workers', assignRun('k1', BO)); assert.equal(r.waitsForNightly, true);
+  r = await queue('workers', assignRun('k1', CY)); // Cy assigned to k1 then removed again before 6:30
+  r = await queue('workers', { action: 'remove', jobId: 'k1', removedWorkers: [{ contactId: 'cc', workerName: 'Cy Ruiz', workerPhone: '+15550000003' }] });
+  r = await queue('workers', assignRun('k2', CY));
+  r = await queue('workers', assignRun('k3', DE, { reportDate: '2026-11-05' }));
+  r = await queue('crew_text', { action: 'crewText', jobId: 'k1', reportDate: T, rapidAssign: false, textWorkers: [] });
+  assert.equal(r.waitsForNightly, true);
+  assert.deepEqual([calls.make.length, calls.texts.length], [0, 0], 'nothing sent on the click');
+  const waiting = await (await effectHandler(new Request('https://board.test/api/workflow-effect?waiting=jobs'))).json();
+  assert.deepEqual(waiting.jobs.k1, { changes: 4, names: ['Ana Lopez', 'Bo Diaz', 'Cy Ruiz'] });
+  // Send schedule now (rapid) is not held.
+  r = await queue('workers', { ...assignRun('k3', DE, { reportDate: '2026-11-05' }), action: 'rapid_assign', rapidAssign: true });
+  assert.deepEqual(calls.make.map(m => m.action), ['rapid_assign']);
+  const issues = await (await effectHandler(new Request('https://board.test/api/workflow-effect'))).json();
+  assert.deepEqual(issues.issues, [], 'waiting runs are not problems');
 });
 
-test('only the workers in this assignment get texted, with the whole day in the text', async () => {
-  const texts = [];
-  globalThis.fetch = async (url, init = {}) => {
-    url = String(url);
-    if (url.includes('api.twilio.com')) { const b = new URLSearchParams(init.body); texts.push({ to: b.get('To'), body: b.get('Body') }); return Response.json({ sid: 'SMx' + texts.length }, { status: 201 }); }
-    if (url.includes('/conversations/search?')) return Response.json({ conversations: [{ id: 'conv' }] });
-    if (url.endsWith('/conversations/messages/inbound')) return Response.json({ messageId: 'm' });
-    throw new Error('unexpected fetch ' + url);
-  };
-  await sendWorkflow('crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26', textWorkers: [{ contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '(555) 555-0101' }] }, 'r2:crew_text:y');
-  assert.deepEqual(texts.map(t => t.to), ['+15555550101']);
-  assert.ok(texts[0].body.startsWith('MONDAY') && texts[0].body.includes('* Niko Reyes'));
+test('Send now on a job sends it as it sits: net Make changes and the job text to whoever lacks it', async () => {
+  stubFetch();
+  const res = await (await post({ op: 'job_send_now', jobId: 'k2' })).json();
+  assert.equal(res.ok, true, JSON.stringify(res));
+  assert.deepEqual([res.makeSent, res.texted], [1, 1]);
+  assert.deepEqual(calls.make.map(m => [m.action, m.workerName]), [['assign', 'Cy Ruiz']]);
+  assert.deepEqual(calls.texts.map(t => t.to), ['+15550000003']);
+  assert.ok(calls.texts[0].body.includes('2 Tomorrow St') && !calls.texts[0].body.includes('1 Tomorrow St'), 'that job only');
+  const again = await (await post({ op: 'job_send_now', jobId: 'k2' })).json();
+  assert.deepEqual([again.makeSent, again.texted], [0, 0], 'nothing twice');
 });
 
-test('a run without textWorkers (old board tab) texts nobody', async () => {
-  let called = false;
-  globalThis.fetch = async () => { called = true; return Response.json({}); };
-  await sendWorkflow('crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26' }, 'r3:crew_text:z');
-  assert.equal(called, false);
+test('6:30 PM run: one job every 15 seconds, tomorrow texted, later jobs Make only, canceled-out changes dropped', async () => {
+  stubFetch();
+  const starts = [];
+  const result = await dd.runNightly(sql, { now: now630, gapMs: 150, log: (...a) => starts.push(Date.now()) });
+  assert.deepEqual(result.jobs.map(j => j.jobId), ['k2', 'k1', 'k3'], "tomorrow's jobs first by start (k2 6:30, k1 7:00), then the rest");
+  // k1: Ana and Bo assigned (Cy canceled out); k2 already sent by Send now; k3: De assigned (job is next week, no text)
+  assert.deepEqual(calls.make.map(m => [m.jobId, m.action, m.workerName]), [['k1', 'assign', 'Ana Lopez'], ['k1', 'assign', 'Bo Diaz'], ['k3', 'assign', 'De Paz']]);
+  assert.deepEqual(calls.texts.map(t => t.to).sort(), ['+15550000001', '+15550000002'], "only tomorrow's crew who hadn't gotten it");
+  assert.ok(calls.texts.every(t => t.body.startsWith('FRIDAY\n\nOct 30, 2026\n\n\n\n(HOURLY)\n\n(Acme)\n\n1 Tomorrow St')));
+  assert.ok(starts[1] - starts[0] >= 140 && starts[2] - starts[1] >= 140, 'batches spaced out');
+  const left = await sql`select status, count(*)::int as n from dispatch_effects where payload->>'jobId' like 'k%' and kind = 'workers' group by status order by status`;
+  assert.deepEqual(left.map(r => [r.status, r.n]), [['cancelled', 2], ['confirmed', 5]]);
+  const waiting = await (await effectHandler(new Request('https://board.test/api/workflow-effect?waiting=jobs'))).json();
+  assert.deepEqual(waiting.jobs, {});
 });
 
-test('Assign selected waits until 12 hours before the start (Pacific); Send schedule now and late assigns go now', async () => {
-  const { crewTextDelayMs, pacificToUtc } = await import('../lib/crew-text.mjs');
-  assert.equal(new Date(pacificToUtc('2026-10-26', '07:00')).toISOString(), '2026-10-26T14:00:00.000Z'); // PDT
-  assert.equal(new Date(pacificToUtc('2026-11-10', '07:00')).toISOString(), '2026-11-10T15:00:00.000Z'); // PST
-  const now = Date.parse('2026-10-25T12:00:00Z'); // Oct 25 5:00 AM Pacific
-  assert.equal(crewTextDelayMs({ reportDate: '2026-10-26', reportTime: '07:00' }, now), Date.parse('2026-10-26T02:00:00Z') - now); // Oct 25 7 PM Pacific
-  assert.equal(crewTextDelayMs({ reportDate: '2026-10-26', reportTime: '07:00', rapidAssign: true }, now), 0);
-  assert.equal(crewTextDelayMs({ reportDate: '2026-10-25', reportTime: '10:00' }, now), 0);
-  assert.equal(crewTextDelayMs({ reportDate: '', reportTime: '' }, now), 0);
+test('the 6:30 PM run is claimed once per day', async () => {
+  assert.equal(await dd.claimNightly(sql, D), true);
+  assert.equal(await dd.claimNightly(sql, D), false);
 });
 
-test('a worker taken off the day before the held text goes out is skipped', async () => {
-  const texts = [];
-  globalThis.fetch = async (url, init = {}) => {
-    url = String(url);
-    if (url.includes('api.twilio.com')) { texts.push(new URLSearchParams(init.body).get('To')); return Response.json({ sid: 'SMr' }, { status: 201 }); }
-    if (url.includes('/conversations/search?')) return Response.json({ conversations: [{ id: 'conv' }] });
-    if (url.endsWith('/conversations/messages/inbound')) return Response.json({ messageId: 'm' });
-    throw new Error('unexpected fetch ' + url);
-  };
-  await sendWorkflow('crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26', textWorkers: [
-    { contactId: 'gone', workerName: 'Gone Guy', workerPhone: '+15555550999' }, { contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '+15555550101' }] }, 'r4:crew_text:w');
-  assert.deepEqual(texts, ['+15555550101']);
+test('a crew text retry only redoes the GHL logs that failed, nobody is texted twice', async () => {
+  await setState('k4', { reportDate: T, reportTime: '09:00', reportEndDate: T, reportEndTime: '12:00', crew: crew(['ce', 'Ed Mo', '+15550000005'], ['cf', 'Flo Re', '+15550000006']) });
+  jobsDb.push({ id: 'k4', name: '4 Retry Rd', sourceType: 'labor', contact: { name: 'Retry' }, customFields: [] });
+  await sql`update dispatch_feed_cache set data = ${JSON.stringify(jobsDb)} where key = 'ghl-jobs'`;
+  stubFetch(); let failFlo = true;
+  const base = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => { if (String(url).endsWith('/conversations/messages/inbound') && failFlo && JSON.parse(init.body).altId === 'SM2') return Response.json({ message: 'boom' }, { status: 500 }); return base(url, init); };
+  const payload = { action: 'crewText', jobId: 'k4', reportDate: T, textWorkers: [{ contactId: 'ce', workerName: 'Ed Mo', workerPhone: '+15550000005' }, { contactId: 'cf', workerName: 'Flo Re', workerPhone: '+15550000006' }] };
+  await assert.rejects(sendWorkflow('crew_text', payload, 'retry:crew_text'), /GHL log failed/);
+  assert.equal(calls.texts.length, 2);
+  failFlo = false;
+  await sendWorkflow('crew_text', payload, 'retry:crew_text');
+  assert.equal(calls.texts.length, 2, 'no second text');
+  assert.equal(calls.ghl, 2);
 });
 
-test('Send now sends only the job\'s held crew text; held Make runs and other jobs stay put', async () => {
-  const { default: handler } = await import('../netlify/functions/workflow-effect.mjs');
-  const later = new Date(Date.now() + 6 * 3600e3).toISOString();
-  const add = (id, kind, payload) => sql`insert into dispatch_effects (effect_id, request_id, kind, fingerprint, status, payload, due_at) values (${id}, ${id}, ${kind}, 'f', 'scheduled', ${JSON.stringify(payload)}, ${later})`;
-  await add('held-ct-j1', 'crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26', textWorkers: [{ contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '+15555550101' }] });
-  await add('held-ct-j3', 'crew_text', { action: 'crewText', jobId: 'j3', reportDate: '2026-10-26', textWorkers: [{ contactId: '', workerName: 'Mario Danna', workerPhone: '+15555550103' }] });
-  await add('held-make-j1', 'workers', { action: 'assign', jobId: 'j1' });
-  const pending = await (await handler(new Request('https://board.test/api/workflow-effect?crewText=pending'))).json();
-  assert.deepEqual(pending.pending.map(p => [p.jobId, p.workers]), [['j1', ['Julio Herrera']], ['j3', ['Mario Danna']]]);
-  const texts = [], makeCalls = [];
-  globalThis.fetch = async (url, init = {}) => {
-    url = String(url);
-    if (url.includes('hook.us2.make.com')) { makeCalls.push(url); return Response.json({ ok: true }); }
-    if (url.includes('api.twilio.com')) { texts.push(new URLSearchParams(init.body).get('To')); return Response.json({ sid: 'SMn' }, { status: 201 }); }
-    if (url.includes('/conversations/search?')) return Response.json({ conversations: [{ id: 'conv' }] });
-    if (url.endsWith('/conversations/messages/inbound')) return Response.json({ messageId: 'm' });
-    throw new Error('unexpected fetch ' + url);
-  };
-  const res = await handler(new Request('https://board.test/api/workflow-effect', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://board.test' }, body: JSON.stringify({ op: 'crew_text_send_now', jobId: 'j1' }) }));
-  const data = await res.json();
-  assert.equal(data.ok, true, JSON.stringify(data)); assert.deepEqual(data.sent, ['held-ct-j1']);
-  assert.deepEqual(texts, ['+15555550101']); assert.deepEqual(makeCalls, []);
-  const status = Object.fromEntries((await sql`select effect_id, status from dispatch_effects where effect_id like 'held-%'`).map(r => [r.effect_id, r.status]));
-  assert.deepEqual(status, { 'held-ct-j1': 'confirmed', 'held-ct-j3': 'scheduled', 'held-make-j1': 'scheduled' });
-  const again = await (await handler(new Request('https://board.test/api/workflow-effect', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://board.test' }, body: JSON.stringify({ op: 'crew_text_send_now', jobId: 'j1' }) }))).json();
-  assert.equal(again.nothingHeld, true);
-});
-
-test('Assign selected crew text for a job more than 12 hours out is held and listed as pending', async () => {
-  const { default: handler } = await import('../netlify/functions/workflow-effect.mjs');
-  await sql`insert into dispatch_requests (request_id, fingerprint, result) values ('req-future-1', 'f', ${JSON.stringify({ ok: true, record: { jobId: 'jf' } })})`;
-  const d = new Date(Date.now() + 3 * 86400e3).toISOString().slice(0, 10);
-  globalThis.fetch = async url => { throw new Error('nothing should be sent yet: ' + url); };
-  const post = body => handler(new Request('https://board.test/api/workflow-effect', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://board.test' }, body: JSON.stringify(body) }));
-  const res = await post({ requestId: 'req-future-1', kind: 'crew_text', effectKey: 'crew-text-x', payload: { action: 'crewText', jobId: 'jf', reportDate: d, reportTime: '07:00', triggeredBy: 'assign', rapidAssign: false, textWorkers: [{ contactId: 'c1', workerName: 'Niko Reyes', workerPhone: '+15555550100' }] } });
-  const data = await res.json();
-  assert.equal(data.scheduled, true, JSON.stringify(data));
-  const pending = await (await handler(new Request('https://board.test/api/workflow-effect?crewText=pending'))).json();
-  assert.ok(pending.pending.some(p => p.jobId === 'jf' && p.workers[0] === 'Niko Reyes'));
+test('6:30 PM trigger: only acts 6:30 to 7:59 PM Pacific, once a day, and hands off with that day\'s key', async () => {
+  process.env.URL = 'https://board.test'; process.env.SESSION_SECRET = 's3cret';
+  const { default: trigger, nightlyKey } = await import('../netlify/functions/nightly-dispatch.mjs');
+  const { default: background } = await import('../netlify/functions/nightly-dispatch-background.mjs');
+  const realNow = Date.now; const hits = [];
+  globalThis.fetch = async (url, init = {}) => { hits.push({ url: String(url), key: init.headers?.['x-nightly-key'] }); return new Response(null, { status: 202 }); };
+  try {
+    Date.now = () => Date.parse('2026-11-03T00:30:00Z'); // Nov 2 5:30 PM Pacific (PST)
+    await trigger(); assert.equal(hits.length, 0, 'too early');
+    Date.now = () => Date.parse('2026-11-03T02:30:00Z'); // Nov 2 6:30 PM Pacific
+    await trigger(); await trigger();
+    assert.equal(hits.length, 1, 'once a day');
+    assert.equal(hits[0].url, 'https://board.test/.netlify/functions/nightly-dispatch-background');
+    assert.equal(hits[0].key, nightlyKey('2026-11-02'));
+    const denied = await background(new Request('https://board.test/.netlify/functions/nightly-dispatch-background', { method: 'POST', headers: { 'x-nightly-key': 'nope' } }));
+    assert.equal(denied.status, 403);
+  } finally { Date.now = realNow; }
 });
