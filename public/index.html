@@ -4087,8 +4087,10 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
       textWorkers: assignedWorkers.map(w => ({ contactId: w.contactId || '', workerName: w.workerName, workerPhone: w.workerPhone })) },
     'Crew schedule text', 'crew_text', 'crew-text-' + (scheduleDate || 'nodate') + '-' + assignedWorkers.map(w => String(w.workerPhone || '').replace(/\D/g, '').slice(-4)).join('-').slice(0, 40))]);
   if (crewText[0].status === 'rejected') console.warn('Crew schedule text not confirmed', crewText[0].reason);
-  // Assign selected leaves the crew text waiting: show Send now on this job.
-  if (!rapid) setTimeout(() => refreshCrewTextPending(), 1500);
+  // Assign selected leaves the crew text waiting: show Send now on this job. The
+  // crew text is queued in the background, so keep checking for a little while
+  // until the server has it (it can take a few seconds after the click).
+  if (!rapid) watchCrewTextHeld(jobId);
   const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected' && !splitFailed.has(assignedWorkers[i].workerName)).map(w => w.workerName);
   if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only and nothing was sent for them. Take them off with the x and try again.`, true);
   else if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
@@ -4633,6 +4635,11 @@ document.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' '
    Make runs went out at assign time and are not touched. */
 window.crewTextPending = new Map(); // jobId -> [{ effectId, dueAt, workers }]
 let crewTextPendingAt = 0, crewTextPendingBusy = false;
+// Redraws once nobody is mid edit (a box open, typing, a hold in progress).
+function drawWhenFree(tries = 20) {
+  if (!editingDispatch()) return render();
+  if (tries > 0) setTimeout(() => drawWhenFree(tries - 1), 1500);
+}
 function crewTextHeldFor(jobId) { return window.crewTextPending.get(String(jobId)) || []; }
 function crewTextWhen(iso) {
   return new Date(iso).toLocaleString('en-US', { timeZone: BOARD_TZ, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -4643,7 +4650,8 @@ function crewTextNowTitle(jobId) {
   return `Schedule text for ${names.join(', ') || 'the new workers'} goes out ${crewTextWhen(held[0].dueAt)}. Send it now instead.`;
 }
 async function refreshCrewTextPending({ redraw = true } = {}) {
-  if (crewTextPendingBusy) return; crewTextPendingBusy = true;
+  if (crewTextPendingBusy) { await new Promise(r => setTimeout(r, 400)); if (crewTextPendingBusy) return; }
+  crewTextPendingBusy = true;
   try {
     const res = await fetch('/api/workflow-effect?crewText=pending&_=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return;
@@ -4652,9 +4660,16 @@ async function refreshCrewTextPending({ redraw = true } = {}) {
     for (const p of data.pending || []) { if (!next.has(p.jobId)) next.set(p.jobId, []); next.get(p.jobId).push(p); }
     const changed = JSON.stringify([...next]) !== JSON.stringify([...window.crewTextPending]);
     window.crewTextPending = next; crewTextPendingAt = Date.now();
-    if (changed && redraw && !editingDispatch()) render();
+    if (changed && redraw) drawWhenFree();
   } catch { /* the button just stays as it was */ }
   finally { crewTextPendingBusy = false; }
+}
+function watchCrewTextHeld(jobId, waits = [1500, 4000, 8000, 15000, 30000]) {
+  const next = waits[0]; if (next == null) return;
+  setTimeout(async () => {
+    await refreshCrewTextPending();
+    if (!crewTextHeldFor(jobId).length) watchCrewTextHeld(jobId, waits.slice(1));
+  }, next);
 }
 function crewTextNowFlow({ what, body }) {
   const back = document.getElementById('crewTextNowBackdrop');

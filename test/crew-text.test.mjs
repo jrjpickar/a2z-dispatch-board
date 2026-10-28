@@ -146,3 +146,16 @@ test('Send now sends only the job\'s held crew text; held Make runs and other jo
   const again = await (await handler(new Request('https://board.test/api/workflow-effect', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://board.test' }, body: JSON.stringify({ op: 'crew_text_send_now', jobId: 'j1' }) }))).json();
   assert.equal(again.nothingHeld, true);
 });
+
+test('Assign selected crew text for a job more than 12 hours out is held and listed as pending', async () => {
+  const { default: handler } = await import('../netlify/functions/workflow-effect.mjs');
+  await sql`insert into dispatch_requests (request_id, fingerprint, result) values ('req-future-1', 'f', ${JSON.stringify({ ok: true, record: { jobId: 'jf' } })})`;
+  const d = new Date(Date.now() + 3 * 86400e3).toISOString().slice(0, 10);
+  globalThis.fetch = async url => { throw new Error('nothing should be sent yet: ' + url); };
+  const post = body => handler(new Request('https://board.test/api/workflow-effect', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://board.test' }, body: JSON.stringify(body) }));
+  const res = await post({ requestId: 'req-future-1', kind: 'crew_text', effectKey: 'crew-text-x', payload: { action: 'crewText', jobId: 'jf', reportDate: d, reportTime: '07:00', triggeredBy: 'assign', rapidAssign: false, textWorkers: [{ contactId: 'c1', workerName: 'Niko Reyes', workerPhone: '+15555550100' }] } });
+  const data = await res.json();
+  assert.equal(data.scheduled, true, JSON.stringify(data));
+  const pending = await (await handler(new Request('https://board.test/api/workflow-effect?crewText=pending'))).json();
+  assert.ok(pending.pending.some(p => p.jobId === 'jf' && p.workers[0] === 'Niko Reyes'));
+});
