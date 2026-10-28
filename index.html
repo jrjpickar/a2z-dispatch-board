@@ -905,6 +905,14 @@
   .unschedule-btn:hover { border-color:var(--danger); color:var(--danger); background:#fff6f5; }
   .unschedule-btn:disabled { opacity:.6; cursor:default; }
   body.dark-mode .unschedule-btn { background:#26292c; border-color:#4a4f55; color:#c4c8cc; }
+  .crewtext-now-btn { margin-left:4px; border-color:#e8b49b; color:#c94f1f; }
+  .crewtext-now-btn:hover { border-color:var(--orange); color:var(--orange-dark); background:var(--orange-tint-soft); }
+  body.dark-mode .crewtext-now-btn { border-color:#7a4a33; color:#ffb48f; }
+  .sent-home-card.crewtext-now-card { border-top-color: var(--orange); }
+  .crewtext-now-card .unsched-keep { background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%); }
+  .hold-btn.crewtext-go { color: var(--orange-dark); border-color: #e8b49b; }
+  .hold-btn.crewtext-go::before { background: rgba(232,98,44,.28); }
+  body.dark-mode .hold-btn.crewtext-go { color: #ffb48f; border-color: #7a4a33; }
   .logistics-resource-list { list-style:none; margin:0; padding:0; max-height:650px; overflow:auto; }
   .logistics-resource { padding:12px 15px; border-bottom:1px solid var(--stripe); }
   .logistics-resource:nth-child(even){background:var(--stripe)} .logistics-resource-top{display:flex; justify-content:space-between; gap:8px}.logistics-resource-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin-top:3px}
@@ -2321,6 +2329,17 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
     </div>
   </div>
 </div>
+<!-- Send now (job row): sends the crew schedule text that is waiting for its 12 hour
+     mark right away. Hold to confirm, like Unschedule. Make is not touched. -->
+<div class="sent-home-backdrop" id="crewTextNowBackdrop" hidden>
+  <div class="sent-home-card crewtext-now-card" role="dialog" aria-modal="true" aria-labelledby="crewTextNowTitle">
+    <h2 id="crewTextNowTitle">Send the schedule text now?</h2>
+    <div class="sent-home-job" id="crewTextNowWhat"></div>
+    <p class="unsched-body" id="crewTextNowBody"></p>
+    <div class="unsched-actions"><button type="button" class="btn-primary unsched-keep crewtext-now-cancel">Keep waiting</button><button type="button" class="unsched-go crewtext-go hold-btn" id="crewTextNowConfirm" title="Hold for 5 seconds to send the schedule text now">Send now</button></div>
+    <p class="hold-hint">Hold <b>Send now</b> for 5 seconds.</p>
+  </div>
+</div>
 <!-- Remove a worker from a job (the x on a crew chip): confirm first, with the
      option to skip the removal text (the worker webhook is then not hit). -->
 <div class="sent-home-backdrop" id="removeWorkerBackdrop" hidden>
@@ -3125,6 +3144,7 @@ async function loadDashboard({ fresh = true, draw = true } = {}) {
     if (data.serverTime && !sharedSince) sharedSince = data.serverTime;
 
     dashboardData.jobs = Array.isArray(data.jobs) ? data.jobs : (Array.isArray(data) ? data : []);
+    if (!crewTextPendingAt) refreshCrewTextPending();
 
     let normalizedShared;
     if (typeof data.sharedState === 'string') {
@@ -3839,7 +3859,7 @@ function renderJobsTable(allJobs) {
           ${closedOnBoard ? `<span class="status-tag closed">${/cancel/.test(closedRec.status || '') ? 'Cancelled' : 'Completed'}</span>
           <div class="job-closed-note">Closed on the board${closedRec.closedBy ? ' by ' + escapeAttr(closedRec.closedBy) : ''}${closedRec.closedAt ? ' ' + escapeAttr(new Date(closedRec.closedAt).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' })) : ''}, but GHL still shows it as an active job.</div>
           <div class="job-stage-actions"><button type="button" class="job-stage-btn reopen" data-job-id="${jobId}" title="Undo Completed/Cancelled so crew and times can be edited again">Reopen job</button></div>`
-          : `<div class="status-line"><span class="status-tag ${statusClass}">${statusLabel}</span>${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length) ? `<button type="button" class="unschedule-btn job-unschedule" data-job-id="${jobId}" title="Clear this job's times and take the crew off. It moves to Unscheduled.">Unschedule</button>` : ''}</div>`}
+          : `<div class="status-line"><span class="status-tag ${statusClass}">${statusLabel}</span>${!terminalLocally && (hasSavedJobTimes(j) || crew.length || overrideCrew.length) ? `<button type="button" class="unschedule-btn job-unschedule" data-job-id="${jobId}" title="Clear this job's times and take the crew off. It moves to Unscheduled.">Unschedule</button>` : ''}${!terminalLocally && crewTextHeldFor(jobId).length ? `<button type="button" class="unschedule-btn crewtext-now-btn job-crewtext-now" data-job-id="${jobId}" title="${escapeAttr(crewTextNowTitle(jobId))}">Send now</button>` : ''}</div>`}
           ${terminalLocally || closedOnBoard ? '' : `<div class="job-stage-actions">
             <button type="button" class="job-stage-btn edit" data-job-id="${jobId}">${needsProjectConfiguration(j) ? 'Configure project' : 'Edit Details'}</button>
             ${isHourlyJob(j) ? '' : `<button type="button" class="job-stage-btn schedule${(psSchedules[jobId] || {}).sentAt ? ' sent' : ''}" data-job-id="${jobId}" title="Project Schedule for this contract job">Project Schedule</button>`}
@@ -4067,6 +4087,8 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
       textWorkers: assignedWorkers.map(w => ({ contactId: w.contactId || '', workerName: w.workerName, workerPhone: w.workerPhone })) },
     'Crew schedule text', 'crew_text', 'crew-text-' + (scheduleDate || 'nodate') + '-' + assignedWorkers.map(w => String(w.workerPhone || '').replace(/\D/g, '').slice(-4)).join('-').slice(0, 40))]);
   if (crewText[0].status === 'rejected') console.warn('Crew schedule text not confirmed', crewText[0].reason);
+  // Assign selected leaves the crew text waiting: show Send now on this job.
+  if (!rapid) setTimeout(() => refreshCrewTextPending(), 1500);
   const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected' && !splitFailed.has(assignedWorkers[i].workerName)).map(w => w.workerName);
   if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only and nothing was sent for them. Take them off with the x and try again.`, true);
   else if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
@@ -4603,6 +4625,75 @@ document.addEventListener('keydown', e => {
   e.preventDefault(); if (!e.repeat) startHold(btn);
 }, true);
 document.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { if (e.target.closest?.('.hold-btn')) e.preventDefault(); endHold(true); } }, true);
+
+/* ---------- Crew schedule text: Send now ----------
+   Assign selected holds the crew text on the server until 12 hours before the start.
+   Jobs with one still waiting show Send now next to Unschedule; holding it in the box
+   sends that job's waiting crew text(s) right away. Only the crew text is sent: the
+   Make runs went out at assign time and are not touched. */
+window.crewTextPending = new Map(); // jobId -> [{ effectId, dueAt, workers }]
+let crewTextPendingAt = 0, crewTextPendingBusy = false;
+function crewTextHeldFor(jobId) { return window.crewTextPending.get(String(jobId)) || []; }
+function crewTextWhen(iso) {
+  return new Date(iso).toLocaleString('en-US', { timeZone: BOARD_TZ, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+function crewTextNowTitle(jobId) {
+  const held = crewTextHeldFor(jobId); if (!held.length) return '';
+  const names = [...new Set(held.flatMap(h => h.workers))];
+  return `Schedule text for ${names.join(', ') || 'the new workers'} goes out ${crewTextWhen(held[0].dueAt)}. Send it now instead.`;
+}
+async function refreshCrewTextPending({ redraw = true } = {}) {
+  if (crewTextPendingBusy) return; crewTextPendingBusy = true;
+  try {
+    const res = await fetch('/api/workflow-effect?crewText=pending&_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const next = new Map();
+    for (const p of data.pending || []) { if (!next.has(p.jobId)) next.set(p.jobId, []); next.get(p.jobId).push(p); }
+    const changed = JSON.stringify([...next]) !== JSON.stringify([...window.crewTextPending]);
+    window.crewTextPending = next; crewTextPendingAt = Date.now();
+    if (changed && redraw && !editingDispatch()) render();
+  } catch { /* the button just stays as it was */ }
+  finally { crewTextPendingBusy = false; }
+}
+function crewTextNowFlow({ what, body }) {
+  const back = document.getElementById('crewTextNowBackdrop');
+  document.getElementById('crewTextNowWhat').textContent = what;
+  document.getElementById('crewTextNowBody').textContent = body;
+  back.hidden = false;
+  back.querySelector('.crewtext-now-cancel').focus();
+  return new Promise(resolve => {
+    const done = ok => { back.hidden = true; back.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey, true); resolve(ok); };
+    const onClick = e => {
+      if (e.target === back || e.target.closest('.crewtext-now-cancel')) return done(false);
+      const go = e.target.closest('#crewTextNowConfirm');
+      if (go && holdDone(go)) done(true);
+    };
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
+    back.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey, true);
+  });
+}
+async function sendCrewTextNow(jobId, btn) {
+  const job = (dashboardData.jobs || []).find(j => j.id === jobId) || {};
+  const held = crewTextHeldFor(jobId);
+  if (!held.length) { showToast('No schedule text is waiting for this job.'); return; }
+  const names = [...new Set(held.flatMap(h => h.workers))];
+  const ok = await crewTextNowFlow({ what: [job.name, getClientName(job)].filter(Boolean).join(' · '),
+    body: `The schedule text for ${names.join(', ') || 'the new workers'} is set to go out ${crewTextWhen(held[0].dueAt)} Pacific (12 hours before the start). This sends it now instead. Only the schedule text goes out; nothing is sent to Make.` });
+  if (!ok) return;
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    const res = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'crew_text_send_now', jobId }) }, 60000);
+    const data = await res.json().catch(() => ({}));
+    if (data.nothingHeld) showToast('That schedule text already went out.');
+    else if (!res.ok || data.ok !== true) showToast(data.error || `Schedule text not confirmed (HTTP ${res.status}). Check Admin > Make / GHL problems.`, true);
+    else showToast(names.length === 1 ? `Schedule text sent to ${names[0]}.` : `Schedule text sent to ${names.length} workers.`);
+  } catch (error) { showToast(`Schedule text not confirmed: ${error.message}. Check Admin > Make / GHL problems.`, true); }
+  window.crewTextPending.delete(String(jobId));
+  render();
+  refreshCrewTextPending();
+}
 
 /* Unschedule confirmation, built in the page (browser pop ups are blocked in some
    frames, like the sandbox). Resolves true when confirmed, false when cancelled. */
@@ -5223,6 +5314,9 @@ document.getElementById('jobsBody').addEventListener('click', (e) => {
     assignCrew(jobId, workers, confirmBtn, { rapid: confirmBtn.classList.contains('crew-assign-rapid'), noText: !!wrap.querySelector('.crew-no-text')?.checked });
     return;
   }
+
+  const crewTextNowBtn = e.target.closest('.job-crewtext-now');
+  if (crewTextNowBtn) { sendCrewTextNow(crewTextNowBtn.dataset.jobId, crewTextNowBtn); return; }
 
   const unscheduleBtn = e.target.closest('.job-unschedule');
   if (unscheduleBtn) { resetJobDay(unscheduleBtn.dataset.jobId, unscheduleBtn, null, { unschedule: true }); return; }
@@ -7874,7 +7968,7 @@ function runSideEffect(url, payload, label, kindOverride, effectKey) {
   return Promise.resolve({ ok: true, optimistic: true });
 }
 function editingDispatch() {
-  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || document.querySelector('#jobsBody .crew-assign-panel.open') || document.querySelector('.hold-btn.holding') || !document.getElementById('unschedBackdrop')?.hidden || !document.getElementById('removeWorkerBackdrop')?.hidden || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && document.activeElement.type !== 'search' && !document.activeElement.closest('#signinBackdrop')) ||
+  return stateMutations > 0 || window.psDragging || document.querySelector('.overlay.open') || document.querySelector('#jobsBody .crew-assign-panel.open') || document.querySelector('.hold-btn.holding') || !document.getElementById('unschedBackdrop')?.hidden || !document.getElementById('crewTextNowBackdrop')?.hidden || !document.getElementById('removeWorkerBackdrop')?.hidden || (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && document.activeElement.type !== 'search' && !document.activeElement.closest('#signinBackdrop')) ||
     Object.values(window.jobTimesLocked || {}).some(v => v === false) || Object.values(window.logisticsScheduleOverride || {}).some(v => v.locked === false);
 }
 /* Live updates, light on Netlify:
@@ -7928,6 +8022,8 @@ async function pollSharedState() {
     clearPersistentIssue('read');
     if (jobRecords.length) render();
     if (moveRecords.length && logisticsOpen) renderLogistics();
+    // Send now buttons: the waiting crew texts, checked every 2 minutes at most.
+    if (Date.now() - crewTextPendingAt > 120000) refreshCrewTextPending();
   } catch { showPersistentIssue('read', 'Live updates paused. Showing the last confirmed data. Retrying automatically.'); }
   finally { sharedPollBusy = false; }
 }

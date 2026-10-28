@@ -118,3 +118,31 @@ test('a worker taken off the day before the held text goes out is skipped', asyn
     { contactId: 'gone', workerName: 'Gone Guy', workerPhone: '+15555550999' }, { contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '+15555550101' }] }, 'r4:crew_text:w');
   assert.deepEqual(texts, ['+15555550101']);
 });
+
+test('Send now sends only the job\'s held crew text; held Make runs and other jobs stay put', async () => {
+  const { default: handler } = await import('../netlify/functions/workflow-effect.mjs');
+  const later = new Date(Date.now() + 6 * 3600e3).toISOString();
+  const add = (id, kind, payload) => sql`insert into dispatch_effects (effect_id, request_id, kind, fingerprint, status, payload, due_at) values (${id}, ${id}, ${kind}, 'f', 'scheduled', ${JSON.stringify(payload)}, ${later})`;
+  await add('held-ct-j1', 'crew_text', { action: 'crewText', jobId: 'j1', reportDate: '2026-10-26', textWorkers: [{ contactId: 'c2', workerName: 'Julio Herrera', workerPhone: '+15555550101' }] });
+  await add('held-ct-j3', 'crew_text', { action: 'crewText', jobId: 'j3', reportDate: '2026-10-26', textWorkers: [{ contactId: '', workerName: 'Mario Danna', workerPhone: '+15555550103' }] });
+  await add('held-make-j1', 'workers', { action: 'assign', jobId: 'j1' });
+  const pending = await (await handler(new Request('https://board.test/api/workflow-effect?crewText=pending'))).json();
+  assert.deepEqual(pending.pending.map(p => [p.jobId, p.workers]), [['j1', ['Julio Herrera']], ['j3', ['Mario Danna']]]);
+  const texts = [], makeCalls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    url = String(url);
+    if (url.includes('hook.us2.make.com')) { makeCalls.push(url); return Response.json({ ok: true }); }
+    if (url.includes('api.twilio.com')) { texts.push(new URLSearchParams(init.body).get('To')); return Response.json({ sid: 'SMn' }, { status: 201 }); }
+    if (url.includes('/conversations/search?')) return Response.json({ conversations: [{ id: 'conv' }] });
+    if (url.endsWith('/conversations/messages/inbound')) return Response.json({ messageId: 'm' });
+    throw new Error('unexpected fetch ' + url);
+  };
+  const res = await handler(new Request('https://board.test/api/workflow-effect', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://board.test' }, body: JSON.stringify({ op: 'crew_text_send_now', jobId: 'j1' }) }));
+  const data = await res.json();
+  assert.equal(data.ok, true, JSON.stringify(data)); assert.deepEqual(data.sent, ['held-ct-j1']);
+  assert.deepEqual(texts, ['+15555550101']); assert.deepEqual(makeCalls, []);
+  const status = Object.fromEntries((await sql`select effect_id, status from dispatch_effects where effect_id like 'held-%'`).map(r => [r.effect_id, r.status]));
+  assert.deepEqual(status, { 'held-ct-j1': 'confirmed', 'held-ct-j3': 'scheduled', 'held-make-j1': 'scheduled' });
+  const again = await (await handler(new Request('https://board.test/api/workflow-effect', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://board.test' }, body: JSON.stringify({ op: 'crew_text_send_now', jobId: 'j1' }) }))).json();
+  assert.equal(again.nothingHeld, true);
+});
