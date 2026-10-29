@@ -108,7 +108,10 @@ async function saveDoc(request, session, url, generate) {
   const row = normalizeJobLogRow(body.row || {}) || {};
   const returnUrl = `${url.origin}/api/job-log?pdf=1&docId=${encodeURIComponent(docId)}`;
   const payload = docPayload(doc, { docId, row, generatedBy: by, returnUrl });
-  try { await sendWorkflow('job_log_pdf', payload, `joblogpdf-${Date.now().toString(36)}`, { timeoutMs: 40000 }); }
+  // eventId = the job log row's own eventId, so the .docx Make sends back (?pdf=1&eventId=...)
+  // lands on the same row as the original.
+  const eventId = /^event:(.+)$/.exec(docId)?.[1] || `joblogedit-${Date.now().toString(36)}`;
+  try { await sendWorkflow('job_log_pdf', payload, eventId, { timeoutMs: 45000 }); }
   catch (error) { console.error('Job log PDF webhook failed', error); return json({ ok: false, saved: true, error: `Saved, but Make did not take it: ${String(error.message || error).replace(/^Webhook \S+ \([^)]*\): /, '')}` }, 502); }
   const [done] = await sql`update dispatch_job_log_doc set generated_at = now(), generated_by = ${by} where doc_id = ${docId} returning generated_at`;
   return json({ ok: true, docId, doc, generatedAt: done?.generated_at || new Date().toISOString() });

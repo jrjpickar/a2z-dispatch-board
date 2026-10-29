@@ -119,27 +119,24 @@ Passing the job log webhook bundle straight through works: it already has all of
 
 Until one of the two is set the tab says the job log is not connected yet.
 
-## Daily Job Log PDF (EOD Done > Completed job log > Edit job log > Generate PDF)
+## Daily Job Log (EOD Done > Completed job log > Edit job log > Generate PDF)
 
-Each Completed job log row has **Edit job log**. It opens the Daily Job Log (same layout as jobLogTemplateForAccountingV5.docx) filled from the row: date, week ending, customer (contact company name), job site address, employees and hours, description of work. Dispatch can change anything, check tools, add tickets, receipts and notes, then **Save** (kept on the board) or **Generate PDF**.
+Each Completed job log row has **Edit job log**: the Daily Job Log (jobLogTemplateForAccountingV5.docx layout) filled from the row. Dispatch edits it, then **Save** (kept on the board) or **Generate PDF**.
 
-**Generate PDF** posts JSON to `https://hook.us2.make.com/6i4gimll9ejpfujhvh7tasv3cwiqpjkj` (override with `JOB_LOG_PDF_WEBHOOK`). The fields the V5 template uses:
+It all runs through the existing **scheduleForInvoices** scenario (the job log webhook). Import `scheduleForInvoices (board job log).blueprint.json`; it is the current scenario plus a router after `confirmToDispatch`:
 
-- `reportEndDate`, `customerName`, `siteAddress`, `totalHours`
-- `employees`: array for the `{{#employees}}...{{/employees}}` row loop. Each item has `name`, `hours` and `scopeOfWork` (the description, on the first row only, like the old PDFs; blank on the rest).
-- `specialTools`: the notes box. Notes, then "Tools used: ..." with the tools checked on the board.
+- Route 1 (skipped for board edits): `workersToJson` > `pushRowToBoard` (POST the row to `/api/job-log`) > the existing `tenSleep` > `postToSlack`.
+- Route 2: `sendDocxToBoard` posts the filled .docx (`{{368.data}}`) to `/api/job-log?pdf=1&eventId={{6.eventId}}`. It shows as **Word .docx** on the row.
+- Both HTTP modules have an Ignore error handler, so a board problem never stops the sheet, Drive, data store or Slack steps.
+- Before turning it on: replace `PASTE_JOB_LOG_PUSH_SECRET` in both headers with `JOB_LOG_PUSH_SECRET`, and change `dashboardtestdeploys.netlify.app` if the board lives elsewhere.
 
-Also sent, for any tag you add later: `weekEnding`, `superintendent`, `scopeOfWork`, `employeeOne`..`employeeTwenty` and `hoursOne`..`hoursTwenty` (V4 style), one key per tool checkbox (`toolWheelbarrow`, `toolDemoHammerLarge`, ... set to ☒ or ☐), `toolsUsedText`, `notes`, `disposalTickets`, `materialReceipts`, `ticket1Number`..`ticket4Amount`, `receipt1Vendor`..`receipt4Amount`, `disposalTotal`, `receiptsTotal`, `docId`, `jobId`, `generatedBy`, `generatedAt`, `eventId`, and **`pdfReturnUrl`**.
+**Generate PDF** posts to `JOB_LOG_PDF_WEBHOOK` (default `https://hook.us2.make.com/6i4gimll9ejpfujhvh7tasv3cwiqpjkj`), which must be scheduleForInvoices' webhook. The body uses the same fields a normal job log run sends, so the existing modules fill the template unchanged: `action` = `job_log_edit`, `eventId` (the row's own, so the new .docx replaces the old one on that row), `jobId`, `reportEndDate`, `clientName`, `jobAddress`, `scopeOfWork`, `toolsRequired` (notes, then "Tools used: ..."), `assignedWorkers` (`workerName`, `hoursWorked`), `dayOfWeek`, `weekRange`. A board edit also updates `invoiceLink` in the data store (new Drive doc) but does not push a row or post to Slack.
 
-Scenario:
+Also sent, for tags added later: `weekEnding`, `superintendent`, `employees` (name, hours, scopeOfWork), `employeeOne`..`employeeTwenty`, `hoursOne`..`hoursTwenty`, one ☒/☐ key per tool (`toolWheelbarrow`, ...), `notes`, `disposalTickets`, `materialReceipts`, `ticket1Number`..`receipt4Amount`, `totalHours`, `pdfReturnUrl`.
 
-1. **Custom webhook**
-2. **Webhook response** right away: status 200, body `{"ok":true}` (the board waits up to 40 seconds for it, not for the PDF)
-3. **Microsoft Word Templates: Fill out a document** with the V5 template, mapping each tag to the field of the same name (`employees` to the `employees` array)
-4. **HTTP: Make a request** to send the filled Word file back: URL `{{1.pdfReturnUrl}}`, method POST, header `x-make-secret` = `JOB_LOG_PUSH_SECRET`, body content type Custom `application/octet-stream` (or the Word type), body = the document data. Shows as **Word .docx** on the row.
-5. Optional: convert to PDF the way you do now, then the same HTTP module with the PDF data. Shows as **View PDF**.
+A PDF is optional: convert the .docx (for example Google Drive upload with convert, then export as PDF) and post it to the same `?pdf=1&eventId=...` URL. It shows as **View PDF**.
 
-The board tells a PDF from a .docx by the file itself, so both go to the same `pdfReturnUrl`. A row keeps one of each; Generate again and the new files replace the old ones. Add `&name=Yorba%20Job%20Log` to the URL to name the file. 5 MB max per file.
+The DD to GHL calendar scenario (worker webhook, EOD sheet route) needs no change.
 
 ## Job hours webhook (retired)
 

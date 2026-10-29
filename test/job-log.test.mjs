@@ -155,6 +155,10 @@ test('board saves the job log doc, Generate PDF posts it to the job_log_pdf webh
   const payload = sent[0][1];
   assert.equal(payload.customerName, 'Acme Co'); assert.equal(payload.employeeTwo, 'Bo'); assert.equal(payload.totalHours, '12'); assert.equal(payload.jobId, 'd1');
   assert.equal(payload.pdfReturnUrl, 'https://x.test/api/job-log?pdf=1&docId=event%3Aev-d1');
+  // Same fields the job log scenario (scheduleForInvoices) already maps, and the row's own eventId.
+  assert.equal(payload.action, 'job_log_edit'); assert.equal(payload.eventId, 'ev-d1'); assert.equal(payload.weekRange, '10/26-11/01');
+  assert.deepEqual(payload.assignedWorkers, [{ workerName: 'Ana', hoursWorked: 8, sentHome: false }, { workerName: 'Bo', hoursWorked: 4, sentHome: false }]);
+  assert.equal(payload.clientName, 'Acme Co'); assert.equal(payload.jobAddress, '1 Main'); assert.equal(payload.toolsRequired, 'ok');
   globalThis.fetch = prev;
   const back = await handler(new Request(payload.pdfReturnUrl, { method: 'POST', headers: { 'content-type': 'application/pdf', 'x-make-secret': 's3cret' }, body: Buffer.from('%PDF-1.7\n') }));
   assert.equal((await back.json()).attachedTo, 'event:ev-d1');
