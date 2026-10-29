@@ -792,6 +792,12 @@
   .eod-status.closed { background: var(--grey-light); color: var(--ink-soft); border: 1px solid var(--grey); }
   .eod-muted { color: var(--ink-soft); font-size: 12px; }
   body.dark-mode .eod-status.done { background: #183324; color: #8fd4a8; border-color: #2f5e41; }
+  .board-view-toggle.eod-sub-toggle { display: inline-flex; margin: 0 0 8px; }
+  #jobLogSection .eod-done-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 760px) { #jobLogSection .eod-done-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } #jobLogSection .eod-stat:last-child { grid-column: auto; } }
+  .job-log-scope { max-width: 320px; font-size: 12px; color: var(--ink-soft); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .job-log-msg { padding: 18px; font-size: 13px; color: var(--ink-soft); }
+  .job-log-msg.err { color: var(--danger); }
   .sent-home-backdrop { position: fixed; inset: 0; z-index: 900; background: rgba(20,21,23,.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
   .sent-home-backdrop[hidden] { display: none; }
   .sent-home-card.unsched-card { border-top-color: var(--danger); }
@@ -1880,7 +1886,10 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
     </div>
     <div class="eod-done-section" id="eodDoneDispatchView" hidden>
       <div class="psv-head">
-        <div><p id="eodDoneSub">Jobs with an EOD sheet sent for the day, and the day's jobs still waiting on one.</p></div>
+        <div>
+          <div class="board-view-toggle eod-sub-toggle" role="group" aria-label="EOD Done section"><button type="button" id="eodSheetsTabBtn" aria-pressed="true">EOD sheets</button><button type="button" id="jobLogTabBtn" aria-pressed="false">Completed job log</button></div>
+          <p id="eodDoneSub">Jobs with an EOD sheet sent for the day, and the day's jobs still waiting on one.</p>
+        </div>
         <div class="completed-tools">
           <button type="button" class="btn-ghost eod-day-btn" id="eodDonePrev" aria-label="Previous day">&lsaquo;</button>
           <input type="date" id="eodDoneDate" aria-label="Day">
@@ -1891,10 +1900,30 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
             <option value="waiting">Still needs EOD</option>
             <option value="all">All jobs that day</option>
           </select>
+          <select id="jobLogRange" aria-label="Range" hidden>
+            <option value="1">That day</option>
+            <option value="7">7 days to that day</option>
+            <option value="30">30 days to that day</option>
+          </select>
+          <select id="jobLogAction" aria-label="Log type" hidden>
+            <option value="all">EOD sheets and completed</option>
+            <option value="complete">Completed only</option>
+            <option value="eod_sheet">EOD sheets only</option>
+          </select>
+          <button type="button" class="btn-ghost eod-day-btn" id="jobLogRefresh" hidden>Refresh</button>
+        </div>
+      </div>
+      <div id="jobLogSection" hidden>
+        <div class="eod-done-stats" id="jobLogStats"></div>
+        <div class="jobs-table-wrap completed-wrap">
+          <table class="jobs" id="jobLogTable">
+            <thead><tr><th>Date</th><th>Job</th><th>Logged as</th><th>Shift</th><th>Crew</th><th>Hours</th><th>Job value</th><th>Scope of work</th></tr></thead>
+            <tbody id="jobLogBody"></tbody>
+          </table>
         </div>
       </div>
       <div class="eod-done-stats" id="eodDoneStats"></div>
-      <div class="jobs-table-wrap completed-wrap">
+      <div class="jobs-table-wrap completed-wrap" id="eodDoneTableWrap">
         <table class="jobs" id="eodDoneTable">
           <thead><tr><th>Job</th><th>Shift</th><th>EOD sent</th><th>Crew hours</th><th>Total hours</th><th>Loads</th><th>EOD cost</th><th>Status</th></tr></thead>
           <tbody id="eodDoneBody"></tbody>
@@ -2829,6 +2858,11 @@ function getToolsRequired(job) {
 
 function getClientName(job) {
   return (job.contact && job.contact.name) || job.clientName || '';
+}
+// Client as it goes on the job log and EOD sheet: the GHL contact's company name,
+// falling back to the contact's own name when the company field is blank.
+function getClientCompany(job) {
+  return String((job.contact && job.contact.companyName) || job.companyName || '').trim() || getClientName(job);
 }
 
 function getClientPhone(job) {
@@ -4415,7 +4449,7 @@ function buildJobLogPayload(job, action, date, crewHours = []) {
   const value = Number(getOpportunityValue(job));
   return {
     jobId: job.id || '', action, ...jobWeekFields(date || getReportDate(job) || localIsoDate()), ...(date ? { date } : {}), dayOfWeek: jobDayOfWeek(date || getReportDate(job) || localIsoDate()),
-    jobAddress: job.name || '', clientName: getClientName(job), clientPhone: toE164(getClientPhone(job)),
+    jobAddress: job.name || '', clientName: getClientCompany(job), contactName: getClientName(job), clientPhone: toE164(getClientPhone(job)),
     scopeOfWork: getScopeOfWork(job) || '', toolsRequired: getToolsRequired(job) || '',
     monetaryValue: Number.isFinite(value) ? value : 0,
     hoursWorked: Math.round(assignedWorkers.reduce((sum, w) => sum + w.hoursWorked, 0) * 100) / 100,
@@ -4770,7 +4804,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
       // EOD flow sends the eod_sheet event plus the job log -- no separate
       // "remove" call. The crew being released rides along in removedWorkers so
       // Make can handle any release notifications inside the eod_sheet route.
-      const sheetPayload = { ...eodSheet, ...jobWeekFields(eodSheet.date), dayOfWeek: jobDayOfWeek(eodSheet.date), action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientName(job), nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day', crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
+      const sheetPayload = { ...eodSheet, ...jobWeekFields(eodSheet.date), dayOfWeek: jobDayOfWeek(eodSheet.date), action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name || '', clientName: getClientCompany(job), contactName: getClientName(job), nightWork: getNightWork(job), shiftType: getNightWork(job) ? 'night' : 'day', crew: crewBeforeReset.map(w => w.name).filter(Boolean), removedWorkers };
       try { await runSideEffect(CONFIG.EOD_SHEET_URL, sanitizeEodPayload(sheetPayload), 'EOD sheet', 'eod_sheet'); }
       catch (error) { problems.push(error.message); }
       try { await runSideEffect(CONFIG.JOB_LOG_URL, jobLogPayload, 'Job log', 'job_log'); }
@@ -5138,7 +5172,7 @@ function closeEodSheet() {
 }
 
 function fillEodDefaults(job) {
-  document.getElementById('eodJobName').value = cleanEodText([getClientName(job), job.name].filter(Boolean).join(' - '));
+  document.getElementById('eodJobName').value = cleanEodText([getClientCompany(job), job.name].filter(Boolean).join(' - '));
   document.getElementById('eodDate').value = (typeof getReportDate === 'function' && getReportDate(job)) || localIsoDate();
 }
 
@@ -5990,7 +6024,7 @@ function eodDoneRows(day) {
     rows.set(r.jobId, {
       id: r.jobId, job, done: true,
       name: (job && job.name) || r.closedJobName || r.jobAddress || r.changeOrderName || '',
-      client: (job && getClientName(job)) || r.closedClientName || r.clientName || '',
+      client: (job && getClientCompany(job)) || r.closedClientName || r.clientName || '',
       contract: job ? !isHourlyJob(job) : r.jobType === 'contract',
       sheets: Array.isArray(r.eodLog?.[day]) ? r.eodLog[day] : [],
       status: closed ? (/cancel/.test(r.status || '') ? 'Cancelled' : 'Completed') : 'Open'
@@ -5998,7 +6032,7 @@ function eodDoneRows(day) {
   }
   for (const job of dashboardData.jobs || []) {
     if (rows.has(job.id) || isClosedOnBoard(job) || getReportDate(job) !== day) continue;
-    rows.set(job.id, { id: job.id, job, done: false, name: job.name || '', client: getClientName(job), contract: !isHourlyJob(job), sheets: [],
+    rows.set(job.id, { id: job.id, job, done: false, name: job.name || '', client: getClientCompany(job), contract: !isHourlyJob(job), sheets: [],
       crewNow: getCrew(job).filter(w => w && w.name).map(w => w.name), reportTime: getReportTime(job), reportEndTime: getReportEndTime(job), status: 'Open' });
   }
   return [...rows.values()];
@@ -6012,6 +6046,7 @@ function renderEodDoneView() {
   const day = dateInput.value;
   const isToday = day === today;
   document.getElementById('eodDoneToday').hidden = isToday;
+  if (eodSubTab === 'log') return renderJobLogView(day, isToday);
   const nice = new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' });
   document.getElementById('eodDoneSub').textContent = `${isToday ? 'Today, ' : ''}${nice}. Jobs with an EOD sheet sent for the day, and the day's jobs still waiting on one.`;
   const all = eodDoneRows(day);
@@ -6060,6 +6095,116 @@ document.getElementById('eodDoneFilter').addEventListener('change', renderEodDon
 document.getElementById('eodDonePrev').addEventListener('click', () => { const i = document.getElementById('eodDoneDate'); i.value = eodShiftDay(i.value || localIsoDate(), -1); renderEodDoneView(); });
 document.getElementById('eodDoneNext').addEventListener('click', () => { const i = document.getElementById('eodDoneDate'); i.value = eodShiftDay(i.value || localIsoDate(), 1); renderEodDoneView(); });
 document.getElementById('eodDoneToday').addEventListener('click', () => { document.getElementById('eodDoneDate').value = localIsoDate(); renderEodDoneView(); });
+
+/* ---------- Completed job log (EOD Done > Completed job log) ---------- */
+// Reads the job log back from Make (GET /api/job-log, which posts { action: "read",
+// from, to } to JOB_LOG_READ_WEBHOOK). Same day picker and search box as EOD sheets;
+// the range select widens it to 7 or 30 days ending on the picked day.
+let eodSubTab = (() => { try { return localStorage.getItem('a2zEodSubTab') === 'log' ? 'log' : 'sheets'; } catch { return 'sheets'; } })();
+const jobLogCache = new Map();
+function applyEodSubTab() {
+  const log = eodSubTab === 'log';
+  document.getElementById('eodSheetsTabBtn').setAttribute('aria-pressed', String(!log));
+  document.getElementById('jobLogTabBtn').setAttribute('aria-pressed', String(log));
+  document.getElementById('jobLogSection').hidden = !log;
+  document.getElementById('eodDoneStats').hidden = log;
+  document.getElementById('eodDoneTableWrap').hidden = log;
+  document.getElementById('eodDoneFilter').hidden = log;
+  for (const id of ['jobLogRange', 'jobLogAction', 'jobLogRefresh']) document.getElementById(id).hidden = !log;
+}
+function jobLogRangeFor(day) {
+  const span = Number(document.getElementById('jobLogRange').value) || 1;
+  return { from: eodShiftDay(day, 1 - span), to: day, span };
+}
+async function loadJobLog(from, to, fresh = false) {
+  const key = `${from}|${to}`;
+  const entry = jobLogCache.get(key);
+  if (entry?.loading) return;
+  jobLogCache.set(key, { ...(entry || {}), loading: true, error: '' });
+  renderEodDoneView();
+  try {
+    const res = await fetchWithTimeout(`/api/job-log?from=${from}&to=${to}${fresh ? '&fresh=1' : ''}`, { headers: { Accept: 'application/json' } }, 30000);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.ok) throw new Error(body.error || `Job log could not load (HTTP ${res.status}).`);
+    jobLogCache.set(key, { rows: body.rows || [], at: Date.now() });
+  } catch (error) {
+    const message = error.name === 'AbortError' ? 'Job log took too long. Try Refresh.' : error.message;
+    jobLogCache.set(key, { ...(jobLogCache.get(key) || {}), loading: false, error: message });
+    if (jobLogCache.get(key).rows && typeof showToast === 'function') showToast(message);
+  }
+  renderEodDoneView();
+}
+function jobLogTime(t) {
+  const v = String(t || '').trim();
+  if (!v) return '';
+  return /[ap]\.?m/i.test(v) ? v.toUpperCase() : (eodTime12(v) || v);
+}
+function jobLogDay(ymd) {
+  return ymd ? new Date(ymd + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }) : 'N/A';
+}
+function renderJobLogView(day, isToday) {
+  const { from, to, span } = jobLogRangeFor(day);
+  const nice = new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' });
+  document.getElementById('eodDoneSub').textContent = span === 1
+    ? `${isToday ? 'Today, ' : ''}${nice}. Everything sent to the completed job log that day.`
+    : `${jobLogDay(from)} to ${jobLogDay(to)}. Everything sent to the completed job log.`;
+  const entry = jobLogCache.get(`${from}|${to}`);
+  const refreshBtn = document.getElementById('jobLogRefresh');
+  refreshBtn.disabled = !!entry?.loading; refreshBtn.textContent = entry?.loading ? 'Loading...' : 'Refresh';
+  // Load on first view, and refresh quietly after 5 minutes when looking at today.
+  if (!entry || (!entry.loading && !entry.error && to >= localIsoDate() && Date.now() - (entry.at || 0) > 5 * 60 * 1000)) loadJobLog(from, to);
+  const statsEl = document.getElementById('jobLogStats'), body = document.getElementById('jobLogBody');
+  const countEl = document.getElementById('jobSearchCount');
+  const msg = (text, err) => { statsEl.innerHTML = ''; body.innerHTML = `<tr class="job-group-empty-row"><td colspan="8" class="job-log-msg${err ? ' err' : ''}">${escapeAttr(text)}</td></tr>`; if (countEl) countEl.textContent = ''; };
+  if (!entry?.rows) return msg(entry?.error || 'Loading the job log from Make...', !!entry?.error);
+  const actionFilter = document.getElementById('jobLogAction').value;
+  const words = document.getElementById('jobSearch').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const all = entry.rows.filter(r => actionFilter === 'all' || r.action === actionFilter);
+  const rows = all.filter(r => { const hay = [r.jobAddress, r.clientName, r.jobId, r.submittedBy, ...(r.workers || []).map(w => w.name)].join(' ').toLowerCase(); return words.every(w => hay.includes(w)); })
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.loggedAt).localeCompare(String(a.loggedAt)) || String(a.jobAddress).localeCompare(String(b.jobAddress)));
+  if (countEl) countEl.textContent = words.length ? `${rows.length} of ${all.length}` : '';
+  const completed = rows.filter(r => r.action === 'complete'), sheets = rows.filter(r => r.action === 'eod_sheet');
+  const hours = sheets.reduce((t, r) => t + (Number(r.hoursWorked) || 0), 0);
+  const value = completed.reduce((t, r) => t + (Number(r.monetaryValue) || 0), 0);
+  statsEl.innerHTML = [
+    ['done', new Set(completed.map(r => r.jobId || r.jobAddress)).size, 'Jobs completed'],
+    ['', sheets.length, sheets.length === 1 ? 'EOD sheet' : 'EOD sheets'],
+    ['', eodHours(hours), 'Crew hours'],
+    ['', formatCurrency(value), 'Completed value']
+  ].map(([cls, n, label]) => `<div class="eod-stat ${cls}"><b>${escapeAttr(String(n))}</b><span>${label}</span></div>`).join('');
+  body.innerHTML = rows.length ? rows.map(r => {
+    const link = r.jobId ? getGhlOpportunityLink({ id: r.jobId }) : '';
+    const tag = r.action === 'complete' ? '<span class="eod-status done">Completed</span>'
+      : r.action === 'eod_sheet' ? '<span class="eod-status closed">EOD sheet</span>'
+      : `<span class="eod-status closed">${escapeAttr(r.action || 'N/A')}</span>`;
+    const shift = r.reportTime ? `<span class="mono">${escapeAttr(jobLogTime(r.reportTime))}${r.reportEndTime ? ' to ' + escapeAttr(jobLogTime(r.reportEndTime)) : ''}</span>` : '<span class="eod-muted">N/A</span>';
+    const crew = (r.workers || []).length ? `<div class="eod-crew-list">${r.workers.map(w => `<div class="eod-crew-item"><span>${escapeAttr(w.name)}${w.sentHome ? '<span class="eod-sent-home">Sent home</span>' : ''}</span>${w.hours == null ? '' : `<span class="mono">${eodHours(w.hours)} h</span>`}</div>`).join('')}</div>` : '<span class="eod-muted">No crew listed</span>';
+    return `<tr>
+      <td data-label="Date"><span class="mono">${escapeAttr(jobLogDay(r.date))}</span>${r.submittedBy ? `<div class="eod-muted">by ${escapeAttr(r.submittedBy)}</div>` : ''}</td>
+      <td data-label="Job"><div class="eod-job-name">${escapeAttr(r.jobAddress || 'N/A')}</div><div class="eod-job-client">${escapeAttr(r.clientName || '')}</div>${link ? `<a class="job-id" href="${link}" target="_blank" rel="noopener" title="Open in GHL">${escapeAttr(String(r.jobId).slice(-8))}</a>` : ''}</td>
+      <td data-label="Logged as">${tag}</td>
+      <td data-label="Shift">${shift}</td>
+      <td data-label="Crew">${crew}</td>
+      <td data-label="Hours">${r.action === 'complete' && !r.hoursWorked ? '<span class="eod-muted">N/A</span>' : `<span class="eod-big">${eodHours(r.hoursWorked)}</span>`}</td>
+      <td data-label="Job value"><span class="opp-value">${formatCurrency(Number(r.monetaryValue) || 0)}</span></td>
+      <td data-label="Scope of work">${r.scopeOfWork ? `<div class="job-log-scope" title="${escapeAttr(r.scopeOfWork)}">${escapeAttr(r.scopeOfWork)}</div>` : '<span class="eod-muted">N/A</span>'}</td>
+    </tr>`;
+  }).join('') : `<tr class="job-group-empty-row"><td colspan="8" class="completed-empty">${all.length ? 'Nothing matches.' : span === 1 ? 'Nothing in the job log for this day.' : 'Nothing in the job log for these days.'}</td></tr>`;
+}
+for (const [id, tab] of [['eodSheetsTabBtn', 'sheets'], ['jobLogTabBtn', 'log']]) {
+  document.getElementById(id).addEventListener('click', () => {
+    eodSubTab = tab;
+    try { localStorage.setItem('a2zEodSubTab', tab); } catch {}
+    applyEodSubTab(); renderEodDoneView();
+  });
+}
+document.getElementById('jobLogRange').addEventListener('change', renderEodDoneView);
+document.getElementById('jobLogAction').addEventListener('change', renderEodDoneView);
+document.getElementById('jobLogRefresh').addEventListener('click', () => {
+  const { from, to } = jobLogRangeFor(document.getElementById('eodDoneDate').value || localIsoDate());
+  loadJobLog(from, to, true);
+});
+applyEodSubTab();
 
 // The same search box serves EOD Done (it stays put when you switch views).
 document.getElementById('jobSearch').addEventListener('input', () => { renderJobs(dashboardData.jobs || []); renderEodDoneView(); });

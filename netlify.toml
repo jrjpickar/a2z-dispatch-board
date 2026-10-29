@@ -155,3 +155,8 @@
   from = "/api/logistics-reminder-now"
   to = "/.netlify/functions/logistics-reminder-now"
   status = 200
+
+[[redirects]]
+  from = "/api/job-log"
+  to = "/.netlify/functions/job-log"
+  status = 200

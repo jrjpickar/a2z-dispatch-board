@@ -6,7 +6,7 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const date = '2026-10-29';
 function payloadContext() {
   const context = vm.createContext({ dashboardData: { labor: [] }, getOpportunityValue: () => 0,
-    getClientName: () => 'Customer', getClientPhone: () => '', getScopeOfWork: () => 'Cleanup', getToolsRequired: () => '',
+    getClientName: () => 'Customer', getClientCompany: () => 'Customer', getClientPhone: () => '', getScopeOfWork: () => 'Cleanup', getToolsRequired: () => '',
     getReportDate: () => date, getReportTime: () => '08:00', getReportEndDate: () => '', getReportEndTime: () => '16:00', localIsoDate: () => date });
   vm.runInContext(html.slice(html.indexOf('function toE164('), html.indexOf('// Scope of work, edited')), context);
   return context;
@@ -33,7 +33,7 @@ test('completion after EOD queues only the stage update, never a second empty ac
   const effects = [];
   const context = vm.createContext({ getSharedState: () => ({ eodSubmittedDates: [date] }), localIsoDate: () => date,
     dashboardData: { jobs: [{ id: 'j1' }] }, getNightWork: () => false, getReportDate: () => '', getReportTime: () => '', getReportEndDate: () => '', getReportEndTime: () => '',
-    getCrew: () => [], getClientName: () => '', getOpportunityValue: () => 0,
+    getCrew: () => [], getClientName: () => '', getClientCompany: () => '', getOpportunityValue: () => 0,
     CONFIG: { SHARED_STATE_SYNC_URL: '/api/shared-state' }, commitState: async () => {},
     queueClose: async args => effects.push(...args.effects), lastCommittedRequests: new Map([['j1', 'req-123']]), render: () => {}, showToast: () => {}, console });
   vm.runInContext(html.slice(html.indexOf('async function setJobStage('), html.indexOf('/* ---------- Undo window', html.indexOf('async function setJobStage('))), context);

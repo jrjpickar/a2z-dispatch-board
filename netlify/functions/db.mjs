@@ -71,6 +71,11 @@ async function createSchema(sql) {
     job_id text primary key, pending boolean not null default true, last_error text,
     updated_at timestamptz not null default now()
   )`;
+  // Completed job log rows pushed from Make (POST /api/job-log), read by EOD Done.
+  await sql`create table if not exists dispatch_job_log (
+    row_key text primary key, day text not null, data jsonb not null, updated_at timestamptz not null default now()
+  )`;
+  await sql`create index if not exists dispatch_job_log_day on dispatch_job_log (day)`;
   await sql`create table if not exists dispatch_roster_cache (
     kind text primary key, data jsonb not null, updated_at timestamptz not null default now()
   )`;

@@ -77,6 +77,38 @@ Google Sheets fields (top level, named to match the values batchUpdate placehold
 
 **Crew hours (no pay rates).** The EOD sheet lists every worker on the job plus anyone sent home from it that day. Each starts at 8 hours, and dispatch can change any of them. A worker sent home shows the hours picked on **Worker sent home**. They are in `crewHours` (`workerName`, `hoursWorked`, `sentHome`, `contactId`, `workerPhone`) and on the workbook under CREW HOURS, where Markup % and Total price to customer used to be.
 
+## Completed job log (EOD Done > Completed job log)
+
+Make sends the job log rows to the board, the board saves them, and the Completed job log tab reads them from there (fast, no waiting on Make).
+
+**Netlify:** add `JOB_LOG_PUSH_SECRET` (any long random string, its own value, not one another app uses).
+
+**Make, HTTP > Make a request** (add it in the job log scenario right after the sheet row is added, so every new row also lands on the board):
+
+- URL: `https://<dispatch board site>/api/job-log`
+- Method: POST
+- Header: `x-make-secret` = the `JOB_LOG_PUSH_SECRET` value
+- Body content type: JSON (or Custom with content type `application/json`)
+- Body: one row, an array of rows, or `{ "rows": [...] }`
+- Parse response: yes. The board answers `{ "ok": true, "saved": 1, "skipped": 0 }`.
+
+Each row needs these fields (any capitalization or spacing works, so sheet headers like `Job ID` or `Hours Worked` are fine):
+
+- `jobId`, `action` (`eod_sheet` or `complete`)
+- `date` (the work day; `reportDate` is used if there is no `date`; `YYYY-MM-DD` or `M/D/YYYY`). Rows with no date are skipped.
+- `jobAddress`, `clientName`, `scopeOfWork`, `monetaryValue`, `hoursWorked`
+- `reportTime`, `reportEndTime`
+- `assignedWorkers`: the array from the job log payload (`workerName`, `hoursWorked`, `sentHome`), its JSON text, or a plain `Ana Lopez, Bob Ray` list
+- optional: `eventId` or `rowId` (the same id sent again updates that row instead of adding a copy), `loggedAt` (timestamp, sorts same day rows), `submittedBy`
+
+Passing the job log webhook bundle straight through works: it already has all of these plus `eventId`.
+
+**Backfill / resync (run once, or whenever the sheet was edited by hand):** Google Sheets Search Rows > Array aggregator > the same HTTP module with body `{ "replaceFrom": "2026-01-01", "replaceTo": "2026-10-31", "rows": [aggregated rows] }`. The board clears that date range first, then saves the rows, so it matches the sheet exactly. Send 4 MB or less per call (split by month if needed).
+
+**Other option (pull):** if `JOB_LOG_READ_WEBHOOK` is set, the board asks Make instead, posting `{ "action": "read", "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }` and expecting a Webhook response with the rows as a JSON array. Leave it unset to use the pushed rows.
+
+Until one of the two is set the tab says the job log is not connected yet.
+
 ## Job hours webhook (retired)
 
 The board no longer posts to `https://hook.us2.make.com/swmlb2j1ef0k89fesawlizhmur714kqo` (`JOB_HOURS_WEBHOOK` is no longer read). The day's total crew hours now go on the job log as `hoursWorked` (see Complete EOD Sheet above). You can turn that scenario off in Make. Any old Job hours runs still listed under Admin > Make / GHL problems can't be retried; press Resolve on them.
