@@ -797,6 +797,38 @@
   @media (max-width: 760px) { #jobLogSection .eod-done-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } #jobLogSection .eod-stat:last-child { grid-column: auto; } }
   .job-log-scope { max-width: 320px; font-size: 12px; color: var(--ink-soft); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .job-log-msg { padding: 18px; font-size: 13px; color: var(--ink-soft); }
+  /* Daily Job Log editor (EOD Done > Completed job log > Edit job log) */
+  .jld-backdrop { position: fixed; inset: 0; z-index: 950; background: rgba(20,21,23,.6); display: flex; justify-content: center; align-items: flex-start; padding: 24px 16px; overflow: auto; }
+  .jld-backdrop[hidden] { display: none; }
+  .jld-page { width: 100%; max-width: 860px; background: #fff; color: #1b1c1e; border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 28px 32px 20px; font-family: 'Inter', system-ui, sans-serif; }
+  .jld-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid var(--orange); padding-bottom: 10px; margin-bottom: 16px; }
+  .jld-brand { font: 700 12px 'Inter', sans-serif; color: var(--orange); letter-spacing: .06em; }
+  .jld-title { text-align: right; } .jld-title h2 { margin: 0; font: 800 26px 'Inter', sans-serif; letter-spacing: .01em; } .jld-title small { font-style: italic; color: #555; font-size: 11px; }
+  .jld-grid { display: grid; grid-template-columns: 1.6fr 1fr; border: 1px solid #222; }
+  .jld-cell { padding: 8px 10px; border-right: 1px solid #222; border-bottom: 1px solid #222; min-width: 0; }
+  .jld-cell:nth-child(2n) { border-right: 0; } .jld-grid .jld-cell:nth-last-child(-n+2) { border-bottom: 0; }
+  .jld-label { display: block; font: 700 10px 'Inter', sans-serif; text-transform: uppercase; margin-bottom: 4px; } .jld-label i { font-weight: 400; color: #666; text-transform: none; }
+  .jld-page input, .jld-page textarea { width: 100%; border: 0; border-bottom: 1px solid #999; border-radius: 0; background: transparent; color: #1b1c1e; font: 14px 'Inter', sans-serif; padding: 4px 2px; }
+  .jld-page input:focus, .jld-page textarea:focus { outline: none; border-bottom-color: var(--orange); background: #fff7ef; }
+  .jld-page textarea { border: 1px solid #bbb; resize: vertical; min-height: 70px; }
+  .jld-band { background: var(--orange); color: #fff; font: 700 12px 'Inter', sans-serif; padding: 4px 12px; margin: 18px 0 8px; text-transform: uppercase; } .jld-band i { font-weight: 400; font-size: 10px; text-transform: none; }
+  .jld-table { width: 100%; border-collapse: collapse; } .jld-table th { background: #e8e8e8; font: 700 10px 'Inter', sans-serif; text-align: left; padding: 6px 8px; border: 1px solid #222; text-transform: uppercase; }
+  .jld-table td { border: 1px solid #222; padding: 2px 6px; vertical-align: top; } .jld-table td input { border-bottom: 0; }
+  .jld-x { border: 0; background: none; color: #999; cursor: pointer; font-size: 16px; padding: 4px; } .jld-x:hover { color: var(--danger); }
+  .jld-add { margin-top: 6px; border: 1px dashed #999; background: none; color: #555; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .jld-total { display: flex; align-items: center; gap: 14px; border: 1px solid #222; border-top: 0; background: #e8e8e8; padding: 6px 10px; font: 700 12px 'Inter', sans-serif; }
+  .jld-total b { font-size: 18px; background: #fff; border: 1px solid #222; padding: 2px 12px; min-width: 60px; text-align: center; } .jld-total span { font: italic 400 10px 'Inter', sans-serif; color: #555; margin-left: auto; }
+  .jld-tools { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); border: 1px solid #222; }
+  .jld-tools > div { padding: 8px 10px; border-right: 1px solid #222; } .jld-tools > div:last-child { border-right: 0; }
+  .jld-tools label { display: flex; gap: 6px; align-items: flex-start; font-size: 12px; margin: 4px 0; cursor: pointer; } .jld-tools input[type=checkbox] { width: auto; margin-top: 2px; accent-color: var(--orange); }
+  .jld-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } .jld-sub { font: 700 10px 'Inter', sans-serif; text-transform: uppercase; margin: 0 0 4px; }
+  .jld-foot { position: sticky; bottom: -20px; background: #fff; box-shadow: 0 20px 0 #fff; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-top: 1px solid #ddd; margin-top: 18px; padding: 12px 0 4px; }
+  .jld-status { margin-right: auto; font-size: 12px; color: #555; } .jld-status.err { color: var(--danger); }
+  .jld-foot .btn-ghost { color: #555; border-color: #ccc; } .jld-foot a.btn-ghost { text-decoration: none; display: inline-flex; align-items: center; }
+  .job-log-edit { display: inline-block; margin-top: 6px; margin-right: 8px; padding: 3px 9px; border: 1px solid var(--orange); border-radius: 999px; background: none; color: var(--orange-dark); font: 600 11px 'Inter', sans-serif; cursor: pointer; }
+  .job-log-edit:hover { background: var(--orange); color: #fff; }
+  .job-log-edited { display: block; margin-top: 4px; font: 600 10px 'IBM Plex Mono', monospace; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+  @media (max-width: 760px) { .jld-page { padding: 18px 14px; } .jld-grid, .jld-two { grid-template-columns: 1fr; } .jld-cell { border-right: 0; } .jld-tools { grid-template-columns: 1fr 1fr; } .jld-tools > div { border-bottom: 1px solid #222; } }
   .job-log-pdf { display: inline-block; margin-top: 6px; font: 600 12px 'Inter', sans-serif; color: var(--orange-dark); text-decoration: underline; }
   body.dark-mode .job-log-pdf { color: var(--orange); }
   .job-log-msg.err { color: var(--danger); }
@@ -2382,6 +2414,50 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
     <div class="unsched-actions"><button type="button" class="btn-primary unsched-keep remove-worker-cancel">Keep</button><button type="button" class="unsched-go" id="removeWorkerConfirm">Remove</button></div>
   </div>
 </div>
+<!-- Daily Job Log editor: the jobLogTemplateForAccountingV4 layout, filled from the
+     job log row, edited here, saved on the board. Generate PDF sends it to Make
+     (job_log_pdf), which fills the Word template and posts the PDF back. -->
+<div class="jld-backdrop" id="jldBackdrop" hidden>
+  <div class="jld-page" role="dialog" aria-modal="true" aria-labelledby="jldTitle">
+    <div class="jld-head"><div class="jld-brand">A2Z CONSTRUCTION SERVICES<br><span style="font-weight:600">CONSTRUCTION · DEMOLITION · LABOR</span></div><div class="jld-title"><h2 id="jldTitle">DAILY JOB LOG</h2><small>Registro diario de trabajo</small></div></div>
+    <div class="jld-grid">
+      <div class="jld-cell"><label class="jld-label" for="jldDate">Date / <i>Fecha</i></label><input type="date" id="jldDate"></div>
+      <div class="jld-cell"><label class="jld-label" for="jldWeekEnding">Week ending / <i>Semana termina</i></label><input type="date" id="jldWeekEnding"></div>
+      <div class="jld-cell"><label class="jld-label" for="jldCustomer">Customer / GC / <i>Cliente / Contratista</i></label><input id="jldCustomer" maxlength="200"></div>
+      <div class="jld-cell"><label class="jld-label" for="jldSuper">Superintendent / <i>Superintendente</i></label><input id="jldSuper" maxlength="120"></div>
+      <div class="jld-cell"><label class="jld-label" for="jldAddress">Job site address / <i>Direccion del trabajo</i></label><input id="jldAddress" maxlength="200"></div>
+      <div class="jld-cell"></div>
+    </div>
+    <div class="jld-band">Labor hours &amp; work performed / <i>Horas de trabajo y trabajo realizado</i></div>
+    <div class="jld-two" style="grid-template-columns:1.1fr 1fr">
+      <div>
+        <table class="jld-table"><thead><tr><th>Employee name</th><th style="width:90px">Hours</th><th style="width:30px"></th></tr></thead><tbody id="jldEmployees"></tbody></table>
+        <button type="button" class="jld-add" id="jldAddEmployee">+ Add employee</button>
+      </div>
+      <div><label class="jld-label" for="jldWork">Description of work done / <i>Descripcion del trabajo realizado</i></label><textarea id="jldWork" rows="8" maxlength="2000"></textarea></div>
+    </div>
+    <div class="jld-total" style="margin-top:8px;border-top:1px solid #222">TOTAL HOURS WORKED <b id="jldTotal">0</b><span>Reminder: 4-hour or 8-hour minimum per employee</span></div>
+    <div class="jld-band">Tools &amp; equipment used / <i>Herramientas y equipo usado</i></div>
+    <div class="jld-tools" id="jldTools"></div>
+    <div style="margin-top:6px"><label class="jld-label" for="jldToolsOther">Other tools / <i>Otro</i></label><input id="jldToolsOther" maxlength="200"></div>
+    <div class="jld-band">Expenses &amp; receipts / <i>Gastos y recibos</i></div>
+    <div class="jld-two">
+      <div><p class="jld-sub">Disposal tickets</p><table class="jld-table"><thead><tr><th>Ticket #</th><th>Disposal site</th><th style="width:90px">Amount $</th></tr></thead><tbody id="jldDisposal"></tbody></table></div>
+      <div><p class="jld-sub">Material receipts</p><table class="jld-table"><thead><tr><th>Vendor</th><th>What was purchased</th><th style="width:90px">Amount $</th></tr></thead><tbody id="jldReceipts"></tbody></table></div>
+    </div>
+    <div class="jld-band" style="background:#e8e8e8;color:#1b1c1e">Notes / issues / photos attached / <i>Notas / Problemas / Fotos adjuntas</i></div>
+    <textarea id="jldNotes" rows="4" maxlength="3000"></textarea>
+    <div class="jld-foot">
+      <span class="jld-status" id="jldStatus"></span>
+      <a class="btn-ghost" id="jldViewPdf" target="_blank" rel="noopener" hidden>View PDF</a>
+      <a class="btn-ghost" id="jldDocx" download hidden>Word .docx</a>
+      <button type="button" class="btn-ghost" id="jldClose">Close</button>
+      <button type="button" class="btn-ghost" id="jldSave">Save</button>
+      <button type="button" class="btn-primary" id="jldGenerate">Generate PDF</button>
+    </div>
+  </div>
+</div>
+
 <div class="sent-home-backdrop" id="sentHomeBackdrop" hidden>
   <div class="sent-home-card" role="dialog" aria-modal="true" aria-labelledby="sentHomeTitle">
     <h2 id="sentHomeTitle">Worker sent home</h2>
@@ -6184,7 +6260,7 @@ function renderJobLogView(day, isToday) {
     return `<tr>
       <td data-label="Date"><span class="mono">${escapeAttr(jobLogDay(r.date))}</span>${r.submittedBy ? `<div class="eod-muted">by ${escapeAttr(r.submittedBy)}</div>` : ''}</td>
       <td data-label="Job"><div class="eod-job-name">${escapeAttr(r.jobAddress || 'N/A')}</div><div class="eod-job-client">${escapeAttr(r.clientName || '')}</div>${link ? `<a class="job-id" href="${link}" target="_blank" rel="noopener" title="Open in GHL">${escapeAttr(String(r.jobId).slice(-8))}</a>` : ''}</td>
-      <td data-label="Logged as">${tag}${r.pdfId || r.pdfUrl ? `<div><a class="job-log-pdf" href="${r.pdfId ? '/api/job-log?pdf=' + encodeURIComponent(r.pdfId) : escapeAttr(r.pdfUrl)}" target="_blank" rel="noopener">View PDF</a></div>` : ''}</td>
+      <td data-label="Logged as">${tag}<div>${r.docId ? `<button type="button" class="job-log-edit" data-doc-id="${escapeAttr(r.docId)}">Edit job log</button>` : ''}${r.pdfId || r.pdfUrl ? `<a class="job-log-pdf" href="${r.pdfId ? '/api/job-log?pdf=' + encodeURIComponent(r.pdfId) : escapeAttr(r.pdfUrl)}" target="_blank" rel="noopener">View PDF</a>` : ''}${r.docxId ? ` <a class="job-log-pdf" href="/api/job-log?pdf=${encodeURIComponent(r.docxId)}" download>Word .docx</a>` : ''}</div>${r.docGeneratedAt ? `<span class="job-log-edited">PDF sent ${escapeAttr(new Date(r.docGeneratedAt).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' }))}</span>` : r.docEdited ? '<span class="job-log-edited">Edited</span>' : ''}</td>
       <td data-label="Shift">${shift}</td>
       <td data-label="Crew">${crew}</td>
       <td data-label="Hours">${r.action === 'complete' && !r.hoursWorked ? '<span class="eod-muted">N/A</span>' : `<span class="eod-big">${eodHours(r.hoursWorked)}</span>`}</td>
@@ -6207,6 +6283,147 @@ document.getElementById('jobLogRefresh').addEventListener('click', () => {
   loadJobLog(from, to, true);
 });
 applyEodSubTab();
+
+/* ---------- Daily Job Log editor ---------- */
+// Opens from a Completed job log row. Starts from the row (crew, hours, scope, company
+// name) or the saved edits, and mirrors jobLogTemplateForAccountingV4.docx. Save keeps it
+// on the board; Generate PDF saves and sends it to Make (job_log_pdf), which fills the
+// Word template and posts the PDF back, so View PDF shows up on the row.
+const JLD_TOOLS = [
+  ['Hand tools', ['Pry Bar / Sledgehammer', 'Shovels / Picks', 'Wheelbarrow', 'Hand Saws', 'Crowbar', 'Hammer / Mallet', 'Tape Measure / Levels', 'Brooms / Dustpans', 'Buckets']],
+  ['Power tools', ['Skill Saw', 'Sawzall / Recip Saw', 'Chipping Hammer (small)', 'Demo Hammer (large)', 'Quickie Saw / Cut-off Saw', 'Chain Saw', 'Grinder', 'Drill / Hammer Drill', 'Generator', 'Pressure Washer', 'Shop Vac', 'Fan Blowers', 'Water Pump', 'Weed Cutter', 'Compactor (plate)']],
+  ['Heavy equipment', ['Trash Truck / Dump Truck', 'Bobcat / Skid Steer', 'Backhoe', 'Mini-Excavator', 'Excavator', 'Breaker / Hoe Ram', 'Compactor (rolling)', 'Boom Lift / Scissor Lift', 'Forklift']],
+  ['Blades / consumables', ['Diamond Blades', 'Saw Blades / Wood Blades', 'Drill Bits', 'Dust Masks / Respirators', 'Plastic Sheeting', "Tape (Duct / Painter's)"]]
+];
+let jldRow = null, jldBusy = false, jldDirty = false;
+const jldEl = id => document.getElementById(id);
+function jldWeekEnding(ymd) {
+  const d = new Date(String(ymd || '') + 'T12:00:00Z');
+  if (isNaN(d)) return '';
+  d.setUTCDate(d.getUTCDate() + ((7 - d.getUTCDay()) % 7));
+  return d.toISOString().slice(0, 10);
+}
+function jldDocFromRow(r) {
+  const employees = (r.workers || []).slice(0, 20).map(w => ({ name: w.name, hours: w.hours ?? '', sentHome: !!w.sentHome }));
+  return { date: r.date || '', weekEnding: jldWeekEnding(r.date), customer: r.clientName || '', superintendent: '', siteAddress: r.jobAddress || '',
+    employees, workDone: r.scopeOfWork || '', totalHours: r.hoursWorked || 0, tools: [], toolsOther: '', disposal: [], receipts: [], notes: '' };
+}
+function jldEmployeeRow(e = {}) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><input class="jld-emp-name" maxlength="80" placeholder="Name"></td><td><input class="jld-emp-hours" type="number" min="0" max="24" step="0.25" inputmode="decimal"></td><td><button type="button" class="jld-x" title="Remove" aria-label="Remove employee">&times;</button></td>`;
+  tr.querySelector('.jld-emp-name').value = e.name || '';
+  tr.querySelector('.jld-emp-hours').value = e.hours ?? '';
+  if (e.sentHome) tr.dataset.sentHome = '1';
+  return tr;
+}
+function jldMoneyRows(id, list, keys) {
+  jldEl(id).innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const r = list[i] || {}, tr = document.createElement('tr');
+    tr.innerHTML = keys.map(k => `<td><input data-k="${k}" ${k === 'amount' ? 'type="number" min="0" step="0.01" inputmode="decimal"' : 'maxlength="120"'}></td>`).join('');
+    keys.forEach(k => { tr.querySelector(`[data-k="${k}"]`).value = r[k] ?? ''; });
+    jldEl(id).append(tr);
+  }
+}
+function jldTotal() {
+  const hours = [...document.querySelectorAll('#jldEmployees .jld-emp-hours')].map(i => i.value).filter(v => v !== '').map(Number).filter(Number.isFinite);
+  const total = Math.round(hours.reduce((t, h) => t + h, 0) * 100) / 100;
+  jldEl('jldTotal').textContent = hours.length ? String(total) : String(jldRow?._fallbackTotal || 0);
+}
+function jldFill(doc) {
+  jldEl('jldDate').value = doc.date || ''; jldEl('jldWeekEnding').value = doc.weekEnding || '';
+  jldEl('jldCustomer').value = doc.customer || ''; jldEl('jldSuper').value = doc.superintendent || ''; jldEl('jldAddress').value = doc.siteAddress || '';
+  jldEl('jldWork').value = doc.workDone || ''; jldEl('jldNotes').value = doc.notes || ''; jldEl('jldToolsOther').value = doc.toolsOther || '';
+  const body = jldEl('jldEmployees'); body.innerHTML = '';
+  (doc.employees.length ? doc.employees : [{}]).forEach(e => body.append(jldEmployeeRow(e)));
+  const checked = new Set(doc.tools || []);
+  jldEl('jldTools').innerHTML = JLD_TOOLS.map(([group, items]) => `<div><p class="jld-sub">${escapeAttr(group)}</p>${items.map(t => `<label><input type="checkbox" value="${escapeAttr(t)}"${checked.has(t) ? ' checked' : ''}>${escapeAttr(t)}</label>`).join('')}</div>`).join('');
+  jldMoneyRows('jldDisposal', doc.disposal || [], ['ticket', 'site', 'amount']);
+  jldMoneyRows('jldReceipts', doc.receipts || [], ['vendor', 'purchased', 'amount']);
+  jldRow._fallbackTotal = doc.totalHours || 0;
+  jldTotal();
+}
+function jldRead() {
+  const rows = (id, keys) => [...jldEl(id).querySelectorAll('tr')].map(tr => Object.fromEntries(keys.map(k => [k, tr.querySelector(`[data-k="${k}"]`).value.trim()])));
+  return {
+    date: jldEl('jldDate').value, weekEnding: jldEl('jldWeekEnding').value, customer: jldEl('jldCustomer').value.trim(), superintendent: jldEl('jldSuper').value.trim(),
+    siteAddress: jldEl('jldAddress').value.trim(), workDone: jldEl('jldWork').value, notes: jldEl('jldNotes').value, toolsOther: jldEl('jldToolsOther').value.trim(),
+    employees: [...jldEl('jldEmployees').querySelectorAll('tr')].map(tr => ({ name: tr.querySelector('.jld-emp-name').value.trim(), hours: tr.querySelector('.jld-emp-hours').value, sentHome: tr.dataset.sentHome === '1' })),
+    totalHours: Number(jldEl('jldTotal').textContent) || 0,
+    tools: [...jldEl('jldTools').querySelectorAll('input:checked')].map(i => i.value),
+    disposal: rows('jldDisposal', ['ticket', 'site', 'amount']), receipts: rows('jldReceipts', ['vendor', 'purchased', 'amount'])
+  };
+}
+function jldSetStatus(msg, err) { const el = jldEl('jldStatus'); el.textContent = msg || ''; el.classList.toggle('err', !!err); }
+function jldStamp(at, by, verb) {
+  if (!at) return '';
+  const d = new Date(at);
+  return `${verb} ${d.toLocaleString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}${by ? ' by ' + by : ''}`;
+}
+async function openJobLogDoc(docId) {
+  const entry = [...jobLogCache.values()].flatMap(e => e.rows || []).find(r => r.docId === docId);
+  if (!entry) return showToast('That job log row is gone. Refresh and try again.', true);
+  jldRow = entry; jldDirty = false;
+  const pdfLink = jldEl('jldViewPdf');
+  pdfLink.hidden = !(entry.pdfId || entry.pdfUrl);
+  if (!pdfLink.hidden) pdfLink.href = entry.pdfId ? '/api/job-log?pdf=' + encodeURIComponent(entry.pdfId) : entry.pdfUrl;
+  jldEl('jldDocx').hidden = !entry.docxId;
+  if (entry.docxId) jldEl('jldDocx').href = '/api/job-log?pdf=' + encodeURIComponent(entry.docxId);
+  jldFill(jldDocFromRow(entry));
+  jldEl('jldBackdrop').hidden = false;
+  document.body.style.overflow = 'hidden';
+  jldSetStatus('Loading saved edits...');
+  try {
+    const res = await fetchWithTimeout('/api/job-log?doc=' + encodeURIComponent(docId), { headers: { Accept: 'application/json' } }, 20000);
+    const body = await res.json().catch(() => ({}));
+    if (jldRow !== entry) return;
+    if (!res.ok || !body.ok) throw new Error(body.error || `Could not load (HTTP ${res.status})`);
+    if (body.doc) jldFill({ ...jldDocFromRow(entry), ...body.doc });
+    jldSetStatus(body.generatedAt ? jldStamp(body.generatedAt, body.generatedBy, 'PDF requested') : body.savedAt ? jldStamp(body.savedAt, body.savedBy, 'Saved') : 'Filled from the job log. Edit anything, then Save or Generate PDF.');
+  } catch (error) { if (jldRow === entry) jldSetStatus(error.message + ' Showing the job log values.', true); }
+}
+function closeJobLogDoc(force) {
+  if (!force && jldDirty && !confirm('Close without saving your changes?')) return;
+  jldEl('jldBackdrop').hidden = true; document.body.style.overflow = ''; jldRow = null;
+}
+async function saveJobLogDoc(generate) {
+  if (!jldRow || jldBusy) return;
+  const doc = jldRead();
+  if (doc.employees.some(e => e.hours !== '' && !(Number(e.hours) >= 0 && Number(e.hours) <= 24))) return jldSetStatus('Hours must be between 0 and 24.', true);
+  jldBusy = true;
+  for (const id of ['jldSave', 'jldGenerate']) jldEl(id).disabled = true;
+  jldSetStatus(generate ? 'Sending to Make...' : 'Saving...');
+  const row = jldRow;
+  try {
+    const res = await fetchWithTimeout('/api/job-log?' + (generate ? 'generate=1' : 'doc=1'), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ docId: row.docId, doc, row: { jobId: row.jobId, action: row.action, date: row.date, rowId: row.rowId, jobAddress: row.jobAddress } }) }, 50000);
+    const body = await res.json().catch(() => ({}));
+    if (body.saved || body.ok) { jldDirty = false; row.docEdited = true; }
+    if (!res.ok || !body.ok) throw new Error(body.error || `Could not save (HTTP ${res.status})`);
+    if (generate) { row.docGeneratedAt = body.generatedAt; jldSetStatus('Sent to Make. The PDF / Word file shows up on this row once Make sends it back. Hit Refresh in a minute.'); }
+    else jldSetStatus(jldStamp(new Date().toISOString(), '', 'Saved'));
+    showToast(generate ? 'Job log sent to Make for the PDF.' : 'Job log saved.');
+    renderEodDoneView();
+  } catch (error) {
+    jldSetStatus(error.name === 'AbortError' ? 'Make took too long to answer. Your edits may be saved; try again.' : error.message, true);
+  } finally {
+    jldBusy = false;
+    for (const id of ['jldSave', 'jldGenerate']) jldEl(id).disabled = false;
+  }
+}
+document.getElementById('jobLogBody').addEventListener('click', e => { const b = e.target.closest('.job-log-edit'); if (b) openJobLogDoc(b.dataset.docId); });
+jldEl('jldAddEmployee').addEventListener('click', () => {
+  if (jldEl('jldEmployees').children.length >= 20) return jldSetStatus('The job log has room for 20 employees.', true);
+  const tr = jldEmployeeRow(); jldEl('jldEmployees').append(tr); tr.querySelector('input').focus(); jldDirty = true;
+});
+jldEl('jldEmployees').addEventListener('click', e => { const x = e.target.closest('.jld-x'); if (x) { x.closest('tr').remove(); jldTotal(); jldDirty = true; } });
+jldEl('jldBackdrop').addEventListener('input', e => { jldDirty = true; if (e.target.matches('.jld-emp-hours')) jldTotal(); if (e.target.id === 'jldDate') jldEl('jldWeekEnding').value = jldWeekEnding(e.target.value); });
+jldEl('jldBackdrop').addEventListener('change', () => { jldDirty = true; });
+jldEl('jldBackdrop').addEventListener('mousedown', e => { if (e.target.id === 'jldBackdrop') closeJobLogDoc(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !jldEl('jldBackdrop').hidden) closeJobLogDoc(); });
+jldEl('jldClose').addEventListener('click', () => closeJobLogDoc());
+jldEl('jldSave').addEventListener('click', () => saveJobLogDoc(false));
+jldEl('jldGenerate').addEventListener('click', () => saveJobLogDoc(true));
 
 // The same search box serves EOD Done (it stays put when you switch views).
 document.getElementById('jobSearch').addEventListener('input', () => { renderJobs(dashboardData.jobs || []); renderEodDoneView(); });

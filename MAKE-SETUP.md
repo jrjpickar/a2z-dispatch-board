@@ -119,6 +119,28 @@ Passing the job log webhook bundle straight through works: it already has all of
 
 Until one of the two is set the tab says the job log is not connected yet.
 
+## Daily Job Log PDF (EOD Done > Completed job log > Edit job log > Generate PDF)
+
+Each Completed job log row has **Edit job log**. It opens the Daily Job Log (same layout as jobLogTemplateForAccountingV5.docx) filled from the row: date, week ending, customer (contact company name), job site address, employees and hours, description of work. Dispatch can change anything, check tools, add tickets, receipts and notes, then **Save** (kept on the board) or **Generate PDF**.
+
+**Generate PDF** posts JSON to `https://hook.us2.make.com/6i4gimll9ejpfujhvh7tasv3cwiqpjkj` (override with `JOB_LOG_PDF_WEBHOOK`). The fields the V5 template uses:
+
+- `reportEndDate`, `customerName`, `siteAddress`, `totalHours`
+- `employees`: array for the `{{#employees}}...{{/employees}}` row loop. Each item has `name`, `hours` and `scopeOfWork` (the description, on the first row only, like the old PDFs; blank on the rest).
+- `specialTools`: the notes box. Notes, then "Tools used: ..." with the tools checked on the board.
+
+Also sent, for any tag you add later: `weekEnding`, `superintendent`, `scopeOfWork`, `employeeOne`..`employeeTwenty` and `hoursOne`..`hoursTwenty` (V4 style), one key per tool checkbox (`toolWheelbarrow`, `toolDemoHammerLarge`, ... set to ☒ or ☐), `toolsUsedText`, `notes`, `disposalTickets`, `materialReceipts`, `ticket1Number`..`ticket4Amount`, `receipt1Vendor`..`receipt4Amount`, `disposalTotal`, `receiptsTotal`, `docId`, `jobId`, `generatedBy`, `generatedAt`, `eventId`, and **`pdfReturnUrl`**.
+
+Scenario:
+
+1. **Custom webhook**
+2. **Webhook response** right away: status 200, body `{"ok":true}` (the board waits up to 40 seconds for it, not for the PDF)
+3. **Microsoft Word Templates: Fill out a document** with the V5 template, mapping each tag to the field of the same name (`employees` to the `employees` array)
+4. **HTTP: Make a request** to send the filled Word file back: URL `{{1.pdfReturnUrl}}`, method POST, header `x-make-secret` = `JOB_LOG_PUSH_SECRET`, body content type Custom `application/octet-stream` (or the Word type), body = the document data. Shows as **Word .docx** on the row.
+5. Optional: convert to PDF the way you do now, then the same HTTP module with the PDF data. Shows as **View PDF**.
+
+The board tells a PDF from a .docx by the file itself, so both go to the same `pdfReturnUrl`. A row keeps one of each; Generate again and the new files replace the old ones. Add `&name=Yorba%20Job%20Log` to the URL to name the file. 5 MB max per file.
+
 ## Job hours webhook (retired)
 
 The board no longer posts to `https://hook.us2.make.com/swmlb2j1ef0k89fesawlizhmur714kqo` (`JOB_HOURS_WEBHOOK` is no longer read). The day's total crew hours now go on the job log as `hoursWorked` (see Complete EOD Sheet above). You can turn that scenario off in Make. Any old Job hours runs still listed under Admin > Make / GHL problems can't be retried; press Resolve on them.

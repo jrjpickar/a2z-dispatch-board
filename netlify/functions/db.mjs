@@ -83,6 +83,11 @@ async function createSchema(sql) {
     updated_at timestamptz not null default now()
   )`;
   await sql`create index if not exists dispatch_job_log_pdf_day on dispatch_job_log_pdf (day)`;
+  // Daily Job Log documents edited on the board (EOD Done > Completed job log).
+  await sql`create table if not exists dispatch_job_log_doc (
+    doc_id text primary key, data jsonb not null, updated_by text not null default '', updated_at timestamptz not null default now(),
+    generated_at timestamptz, generated_by text not null default ''
+  )`;
   await sql`create table if not exists dispatch_roster_cache (
     kind text primary key, data jsonb not null, updated_at timestamptz not null default now()
   )`;
