@@ -156,6 +156,13 @@ test('board saves the job log doc, Generate PDF posts it to the job_log_pdf webh
   assert.equal(payload.customerName, 'Acme Co'); assert.equal(payload.employeeTwo, 'Bo'); assert.equal(payload.totalHours, '12'); assert.equal(payload.jobId, 'd1');
   assert.equal(payload.pdfReturnUrl, 'https://x.test/api/job-log?pdf=1&docId=event%3Aev-d1');
   // Same fields the job log scenario (scheduleForInvoices) already maps, and the row's own eventId.
+  // The filled .docx goes to Make as base64 "data", and is already on the row.
+  const { readZip } = await import('../lib/eod-xlsx.mjs');
+  const filled = readZip(Buffer.from(payload.data, 'base64')).find(e => e.name === 'word/document.xml').data.toString();
+  const text = filled.replace(/<[^>]+>/g, '');
+  assert.ok(!/\{\{/.test(text), 'no tags left'); assert.match(text, /Acme Co/); assert.match(text, /Ana/); assert.match(text, /Bo/);
+  assert.equal(payload.fileName, 'Raw Job Log - 1 Main,2026-10-26.docx'); assert.equal(payload.mimeType, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  assert.ok(gen.docxId);
   assert.equal(payload.action, 'job_log_edit'); assert.equal(payload.eventId, 'ev-d1'); assert.equal(payload.weekRange, '10/26-11/01');
   assert.deepEqual(payload.assignedWorkers, [{ workerName: 'Ana', hoursWorked: 8, sentHome: false }, { workerName: 'Bo', hoursWorked: 4, sentHome: false }]);
   assert.equal(payload.clientName, 'Acme Co'); assert.equal(payload.jobAddress, '1 Main'); assert.equal(payload.toolsRequired, 'ok');
@@ -183,4 +190,20 @@ test('board editor tool list matches the template list the payload uses', async 
   const src = html.slice(html.indexOf('const JLD_TOOLS = '), html.indexOf('let jldRow = null'));
   const ctx = vm.createContext({}); vm.runInContext(src.replace('const JLD_TOOLS', 'globalThis.JLD_TOOLS'), ctx);
   assert.deepEqual(JSON.parse(JSON.stringify(ctx.JLD_TOOLS)), TOOL_GROUPS);
+});
+test('Word template: split tags merged, one table row per employee, text escaped, line breaks kept', async () => {
+  const { buildJobLogDocx, mergeSplitTags } = await import('../lib/job-log-docx.mjs');
+  const { readZip } = await import('../lib/eod-xlsx.mjs');
+  assert.equal(mergeSplitTags('<w:r><w:t>{{</w:t></w:r><w:r><w:t>totalHours</w:t></w:r><w:r><w:t>}}</w:t></w:r>'),
+    '<w:r><w:t xml:space="preserve">{{totalHours}}</w:t></w:r><w:r><w:t xml:space="preserve"></w:t></w:r><w:r><w:t xml:space="preserve"></w:t></w:r>');
+  const out = buildJobLogDocx({ reportEndDate: '2026-10-22', customerName: 'A & B <Co>', siteAddress: '1 Main', totalHours: '12', specialTools: 'Line 1\nLine 2',
+    employees: [{ name: 'Niko', hours: '8', scopeOfWork: 'Demo' }, { name: 'Aldo', hours: '4', scopeOfWork: '' }] });
+  const xml = readZip(out).find(e => e.name === 'word/document.xml').data.toString();
+  const text = xml.replace(/<[^>]+>/g, '');
+  assert.ok(!text.includes('{{'));
+  assert.match(xml, /A &amp; B &lt;Co&gt;/);
+  assert.match(xml, /Line 1<\/w:t><w:br\/><w:t xml:space="preserve">Line 2/);
+  const rows = xml.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g).filter(r => /Niko|Aldo/.test(r));
+  assert.deepEqual(rows.map(r => r.replace(/<[^>]+>/g, '')), ['Niko8Demo', 'Aldo4']);
+  assert.ok(readZip(out).some(e => e.name === 'word/media/image1.png'), 'logo kept');
 });

@@ -6400,7 +6400,8 @@ async function saveJobLogDoc(generate) {
     const body = await res.json().catch(() => ({}));
     if (body.saved || body.ok) { jldDirty = false; row.docEdited = true; }
     if (!res.ok || !body.ok) throw new Error(body.error || `Could not save (HTTP ${res.status})`);
-    if (generate) { row.docGeneratedAt = body.generatedAt; jldSetStatus('Sent to Make. The PDF / Word file shows up on this row once Make sends it back. Hit Refresh in a minute.'); }
+    if (generate && body.docxId) { row.docxId = body.docxId; jldEl('jldDocx').hidden = false; jldEl('jldDocx').href = '/api/job-log?pdf=' + encodeURIComponent(body.docxId); }
+    if (generate) { row.docGeneratedAt = body.generatedAt; jldSetStatus('Word file made and sent to Make. The PDF shows up on this row once Make sends it back. Hit Refresh in a minute.'); }
     else jldSetStatus(jldStamp(new Date().toISOString(), '', 'Saved'));
     showToast(generate ? 'Job log sent to Make for the PDF.' : 'Job log saved.');
     renderEodDoneView();

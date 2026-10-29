@@ -17,6 +17,7 @@ import { randomUUID } from 'node:crypto';
 import { db, ensureSchema } from './db.mjs';
 import { json, errorResponse, authorizeWrite } from '../../lib/http.mjs';
 import { cleanDoc, docPayload } from '../../lib/job-log-doc.mjs';
+import { buildJobLogDocx, jobLogFileName } from '../../lib/job-log-docx.mjs';
 import { sendWorkflow } from '../../lib/effects.mjs';
 import { requireSession, secretMatches } from '../../lib/session.mjs';
 import { StateError } from '../../lib/state.mjs';
@@ -62,11 +63,20 @@ async function receivePdf(request, url) {
   name = name.replace(/\.(pdf|docx)$/i, '') + ext;
   const key = pdfMatchKey({ eventId, jobId, action, date }) + (kind === 'docx' ? '#docx' : '');
   const sql = db(); await ensureSchema(sql);
+  const saved = await insertFile(sql, { key, jobId, action, date, eventId, name, bytes });
+  return json({ ok: true, kind, [kind === 'docx' ? 'docxId' : 'pdfId']: saved.id, attachedTo: key.replace(/#docx$/, '') });
+}
+async function insertFile(sql, { key, jobId, action, date, eventId, name, bytes }) {
   const [saved] = await sql`insert into dispatch_job_log_pdf (id, match_key, job_id, action, day, event_id, name, content_base64)
-    values (${randomUUID()}, ${key}, ${jobId}, ${action}, ${date}, ${eventId}, ${name}, ${bytes.toString('base64')})
+    values (${randomUUID()}, ${key}, ${jobId || ''}, ${action || ''}, ${date || ''}, ${eventId || ''}, ${name}, ${bytes.toString('base64')})
     on conflict (match_key) do update set name = excluded.name, content_base64 = excluded.content_base64, job_id = excluded.job_id, day = excluded.day, updated_at = now()
     returning id`;
-  return json({ ok: true, kind, [kind === 'docx' ? 'docxId' : 'pdfId']: saved.id, attachedTo: key.replace(/#docx$/, '') });
+  return saved;
+}
+// File a board-made .docx under the row's docId (event:<id> or job:<jobId>|<action>|<date>).
+function saveFile(sql, { key, docId, row, name, bytes }) {
+  const job = /^job:(.+)\|(eod_sheet|complete)\|(\d{4}-\d{2}-\d{2})$/.exec(docId);
+  return insertFile(sql, { key, jobId: job?.[1] || row.jobId, action: job?.[2] || row.action, date: job?.[3] || row.date, eventId: /^event:(.+)$/.exec(docId)?.[1], name, bytes });
 }
 async function servePdf(id) {
   if (!/^[a-f0-9-]{36}$/.test(id)) throw new StateError('PDF not found', 404);
@@ -108,13 +118,20 @@ async function saveDoc(request, session, url, generate) {
   const row = normalizeJobLogRow(body.row || {}) || {};
   const returnUrl = `${url.origin}/api/job-log?pdf=1&docId=${encodeURIComponent(docId)}`;
   const payload = docPayload(doc, { docId, row, generatedBy: by, returnUrl });
+  // The board fills the Word template itself and sends the finished .docx as base64 "data",
+  // so Make only has to turn it into a PDF. The .docx is also kept on the row right away.
+  let docx;
+  try { docx = buildJobLogDocx(payload); }
+  catch (error) { console.error('Job log template fill failed', error); throw new StateError('Saved, but the job log template could not be filled. Check templates/jobLogTemplateForAccountingV5.docx.', 500); }
+  Object.assign(payload, { data: docx.toString('base64'), fileName: jobLogFileName(payload), mimeType: DOCX_TYPE });
+  const docxFile = await saveFile(sql, { key: docId + '#docx', docId, row, name: payload.fileName, bytes: docx });
   // eventId = the job log row's own eventId, so the .docx Make sends back (?pdf=1&eventId=...)
   // lands on the same row as the original.
   const eventId = /^event:(.+)$/.exec(docId)?.[1] || `joblogedit-${Date.now().toString(36)}`;
   try { await sendWorkflow('job_log_pdf', payload, eventId, { timeoutMs: 45000 }); }
   catch (error) { console.error('Job log PDF webhook failed', error); return json({ ok: false, saved: true, error: `Saved, but Make did not take it: ${String(error.message || error).replace(/^Webhook \S+ \([^)]*\): /, '')}` }, 502); }
   const [done] = await sql`update dispatch_job_log_doc set generated_at = now(), generated_by = ${by} where doc_id = ${docId} returning generated_at`;
-  return json({ ok: true, docId, doc, generatedAt: done?.generated_at || new Date().toISOString() });
+  return json({ ok: true, docId, doc, docxId: docxFile.id, generatedAt: done?.generated_at || new Date().toISOString() });
 }
 async function receive(request) {
   const denied = makeAuthError(request); if (denied) return denied;

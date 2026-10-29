@@ -70,7 +70,7 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
   assert.deepEqual(saved.employees.map(e => [e.name, e.hours, e.sentHome]), [['Ana Lopez', '8', false], ['Bob Ray', '8', true], ['Cara Diaz', '4', false]]);
   assert.deepEqual(saved.tools, ['Wheelbarrow']); assert.equal(saved.superintendent, 'Steven'); assert.equal(saved.disposal[0].amount, '85');
   await page.click('#jldGenerate');
-  await page.waitForFunction(() => /Sent to Make/.test(document.getElementById('jldStatus').textContent));
+  await page.waitForFunction(() => /sent to Make/.test(document.getElementById('jldStatus').textContent));
   assert.equal(docPosts[1][0], '?generate=1'); assert.equal(docPosts[1][1].docId, 'event:ev1');
   await page.click('#jldClose');
   assert.equal(await page.locator('#jldBackdrop').isVisible(), false);
