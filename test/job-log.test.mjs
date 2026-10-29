@@ -88,3 +88,25 @@ test('job log and EOD sheet use the contact company name, falling back to the co
   assert.match(html, /eodJobName'\).value = cleanEodText\(\[getClientCompany\(job\)/);
   assert.match(html, /action: 'eod_sheet', jobId, opportunityId: jobId, jobAddress: job.name \|\| '', clientName: getClientCompany\(job\)/);
 });
+test('Make attaches a PDF to a job log row (by eventId or jobId + date) and the board serves it', async () => {
+  clearEnv();
+  process.env.JOB_LOG_PUSH_SECRET = 's3cret';
+  await push({ rows: [{ jobId: 'p1', action: 'eod_sheet', date: '2026-10-27', eventId: 'ev-77' }, { jobId: 'p2', action: 'eod_sheet', date: '2026-10-27' }, { jobId: 'p3', action: 'eod_sheet', date: '2026-10-27', pdfUrl: 'https://drive.example/p3.pdf' }] });
+  const pdf = Buffer.from('%PDF-1.4\n%fake\n');
+  const sendPdf = (q, body = pdf, secret = 's3cret', type = 'application/pdf') => handler(new Request('https://x.test/api/job-log?pdf=1&' + q, { method: 'POST', headers: { 'content-type': type, 'x-make-secret': secret }, body }));
+  assert.equal((await sendPdf('eventId=ev-77', pdf, 'nope')).status, 401);
+  assert.equal((await sendPdf('jobId=p2')).status, 400);
+  assert.equal((await sendPdf('eventId=ev-77', Buffer.from('https://not-a-pdf'))).status, 400);
+  assert.equal((await (await sendPdf('eventId=ev-77')).json()).ok, true);
+  const form = new FormData(); form.append('file', new Blob([pdf], { type: 'application/pdf' }), 'p2 EOD.pdf');
+  const viaForm = await (await handler(new Request('https://x.test/api/job-log?pdf=1&jobId=p2&date=10/27/2026', { method: 'POST', headers: { 'x-make-secret': 's3cret' }, body: form }))).json();
+  assert.equal(viaForm.attachedTo, 'job:p2|eod_sheet|2026-10-27');
+  const rows = (await (await get('from=2026-10-27&to=2026-10-27')).json()).rows;
+  const by = id => rows.find(r => r.jobId === id);
+  assert.ok(by('p1').pdfId && by('p2').pdfId);
+  assert.equal(by('p3').pdfUrl, 'https://drive.example/p3.pdf');
+  const served = await get('pdf=' + by('p1').pdfId);
+  assert.equal(served.headers.get('content-type'), 'application/pdf');
+  assert.equal(Buffer.from(await served.arrayBuffer()).toString(), pdf.toString());
+  assert.equal((await handler(new Request('https://x.test/api/job-log?pdf=' + by('p1').pdfId))).status, 401);
+});

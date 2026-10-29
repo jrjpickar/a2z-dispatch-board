@@ -76,6 +76,13 @@ async function createSchema(sql) {
     row_key text primary key, day text not null, data jsonb not null, updated_at timestamptz not null default now()
   )`;
   await sql`create index if not exists dispatch_job_log_day on dispatch_job_log (day)`;
+  // PDFs Make attaches to job log rows (EOD sheet / job costing PDF).
+  await sql`create table if not exists dispatch_job_log_pdf (
+    id text primary key, match_key text unique not null, job_id text not null default '', action text not null default '',
+    day text not null default '', event_id text not null default '', name text not null, content_base64 text not null,
+    updated_at timestamptz not null default now()
+  )`;
+  await sql`create index if not exists dispatch_job_log_pdf_day on dispatch_job_log_pdf (day)`;
   await sql`create table if not exists dispatch_roster_cache (
     kind text primary key, data jsonb not null, updated_at timestamptz not null default now()
   )`;

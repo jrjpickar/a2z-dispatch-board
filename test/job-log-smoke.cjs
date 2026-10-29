@@ -8,7 +8,7 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   let notSetUp = false;
   const logRows = [
-    { jobId: 'job00000001', action: 'eod_sheet', date: day, jobAddress: '55 Elm St', clientName: 'Acme Builders', monetaryValue: 4200, hoursWorked: 16, reportTime: '07:00', reportEndTime: '15:30', scopeOfWork: 'Demo kitchen and haul debris', workers: [{ name: 'Ana Lopez', hours: 8, sentHome: false }, { name: 'Bob Ray', hours: 8, sentHome: true }] },
+    { jobId: 'job00000001', action: 'eod_sheet', date: day, jobAddress: '55 Elm St', clientName: 'Acme Builders', monetaryValue: 4200, hoursWorked: 16, reportTime: '07:00', reportEndTime: '15:30', scopeOfWork: 'Demo kitchen and haul debris', pdfId: '11111111-2222-3333-4444-555555555555', workers: [{ name: 'Ana Lopez', hours: 8, sentHome: false }, { name: 'Bob Ray', hours: 8, sentHome: true }] },
     { jobId: 'job00000001', action: 'complete', date: day, jobAddress: '55 Elm St', clientName: 'Acme Builders', monetaryValue: 4200, hoursWorked: 0, reportTime: '07:00', workers: [{ name: 'Ana Lopez', hours: null }] },
     { jobId: 'job00000002', action: 'eod_sheet', date: day, jobAddress: '9 Oak Ave', clientName: 'Pine Co', monetaryValue: 900, hoursWorked: 6.5, workers: [{ name: 'Cara Diaz', hours: 6.5 }] }
   ];
@@ -41,6 +41,7 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
   const stats = await page.locator('#jobLogStats').innerText();
   assert.match(stats, /1\s*JOBS COMPLETED/i); assert.match(stats, /2\s*EOD SHEETS/i); assert.match(stats, /22\.5\s*CREW HOURS/i);
   assert.match(await page.locator('#jobLogBody').innerText(), /Sent home/i);
+  assert.equal(await page.locator('#jobLogBody a.job-log-pdf').getAttribute('href'), '/api/job-log?pdf=11111111-2222-3333-4444-555555555555');
   await page.waitForTimeout(400);
   await page.screenshot({ path: process.env.SHOT || '/tmp/job-log.png' });
   await page.selectOption('#jobLogAction', 'complete');

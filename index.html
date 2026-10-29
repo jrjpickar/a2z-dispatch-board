@@ -797,6 +797,8 @@
   @media (max-width: 760px) { #jobLogSection .eod-done-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } #jobLogSection .eod-stat:last-child { grid-column: auto; } }
   .job-log-scope { max-width: 320px; font-size: 12px; color: var(--ink-soft); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .job-log-msg { padding: 18px; font-size: 13px; color: var(--ink-soft); }
+  .job-log-pdf { display: inline-block; margin-top: 6px; font: 600 12px 'Inter', sans-serif; color: var(--orange-dark); text-decoration: underline; }
+  body.dark-mode .job-log-pdf { color: var(--orange); }
   .job-log-msg.err { color: var(--danger); }
   .sent-home-backdrop { position: fixed; inset: 0; z-index: 900; background: rgba(20,21,23,.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
   .sent-home-backdrop[hidden] { display: none; }
@@ -6182,7 +6184,7 @@ function renderJobLogView(day, isToday) {
     return `<tr>
       <td data-label="Date"><span class="mono">${escapeAttr(jobLogDay(r.date))}</span>${r.submittedBy ? `<div class="eod-muted">by ${escapeAttr(r.submittedBy)}</div>` : ''}</td>
       <td data-label="Job"><div class="eod-job-name">${escapeAttr(r.jobAddress || 'N/A')}</div><div class="eod-job-client">${escapeAttr(r.clientName || '')}</div>${link ? `<a class="job-id" href="${link}" target="_blank" rel="noopener" title="Open in GHL">${escapeAttr(String(r.jobId).slice(-8))}</a>` : ''}</td>
-      <td data-label="Logged as">${tag}</td>
+      <td data-label="Logged as">${tag}${r.pdfId || r.pdfUrl ? `<div><a class="job-log-pdf" href="${r.pdfId ? '/api/job-log?pdf=' + encodeURIComponent(r.pdfId) : escapeAttr(r.pdfUrl)}" target="_blank" rel="noopener">View PDF</a></div>` : ''}</td>
       <td data-label="Shift">${shift}</td>
       <td data-label="Crew">${crew}</td>
       <td data-label="Hours">${r.action === 'complete' && !r.hoursWorked ? '<span class="eod-muted">N/A</span>' : `<span class="eod-big">${eodHours(r.hoursWorked)}</span>`}</td>

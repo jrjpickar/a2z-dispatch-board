@@ -103,6 +103,16 @@ Each row needs these fields (any capitalization or spacing works, so sheet heade
 
 Passing the job log webhook bundle straight through works: it already has all of these plus `eventId`.
 
+**PDF for a row (optional).** The Completed job log shows a **View PDF** link on a row once it has one. Two ways:
+
+- Easiest, if the PDF is already saved somewhere (Google Drive, etc.): add a `pdfUrl` field to the row with the share link (must start with `https://`).
+- Or send the file itself, with a second HTTP > Make a request (like your invoice PDF module):
+  - URL: `https://<dispatch board site>/api/job-log?pdf=1&eventId={{eventId}}`. If the row has no `eventId`, use `?pdf=1&jobId={{jobId}}&date={{reportDate}}` instead (add `&action=complete` for a Completed row; the default is `eod_sheet`). Optional `&name=` sets the file name.
+  - Method POST, header `x-make-secret` = `JOB_LOG_PUSH_SECRET`
+  - Body content type: Custom, content type value `application/pdf`, body content = the PDF data (for example `{{21.data}}`). Multipart with a `file` field also works.
+  - 5 MB max. Sending again for the same row replaces the PDF. The PDF can arrive before or after the row.
+  - The board answers `{ "ok": true, "pdfId": "...", "attachedTo": "event:..." }`.
+
 **Backfill / resync (run once, or whenever the sheet was edited by hand):** Google Sheets Search Rows > Array aggregator > the same HTTP module with body `{ "replaceFrom": "2026-01-01", "replaceTo": "2026-10-31", "rows": [aggregated rows] }`. The board clears that date range first, then saves the rows, so it matches the sheet exactly. Send 4 MB or less per call (split by month if needed).
 
 **Other option (pull):** if `JOB_LOG_READ_WEBHOOK` is set, the board asks Make instead, posting `{ "action": "read", "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }` and expecting a Webhook response with the rows as a JSON array. Leave it unset to use the pushed rows.
