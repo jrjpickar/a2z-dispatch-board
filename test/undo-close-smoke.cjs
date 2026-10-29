@@ -5,11 +5,12 @@ const fs = require('node:fs'); const path = require('node:path'); const assert =
 const { pathToFileURL } = require('node:url');
 (async () => {
   const { mutateJob, checkVersion } = await import(pathToFileURL(path.resolve(__dirname, '../lib/state.mjs')));
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
   const context = await browser.newContext();
   const effects = [], commits = [], errors = []; const held = new Map();
   const crew = [{ id: 'w1', name: 'Aldo Reyes', phone: '+13105551111' }, { id: 'w2', name: 'Jose Gutierrez', phone: '+13105552222' }];
-  let job = { jobId: 'job00000001', version: 1, active: true, crew, scopeOfWork: 'Demo', reportDate: '2026-10-07', reportTime: '08:00', reportEndDate: '2026-10-07', reportEndTime: '17:00' };
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  let job = { eodSubmittedDates: [today], jobId: 'job00000001', version: 1, active: true, crew, scopeOfWork: 'Demo', reportDate: '2026-10-07', reportTime: '08:00', reportEndDate: '2026-10-07', reportEndTime: '17:00' };
   const jobs = [{ id: 'job00000001', name: '55 Harbor Blvd', sourceType: 'labor', contact: { name: 'Kim', phone: '+12135550000' }, customFields: [] }];
   let n = 0; const fresh = () => ({ ...JSON.parse(JSON.stringify(job)) });
   await context.route('**/*', async route => {
@@ -56,26 +57,25 @@ const { pathToFileURL } = require('node:url');
   await page.click('.close-undo-btn'); await page.waitForTimeout(800);
   assert.equal(job.active, true); assert.deepEqual(job.crew.map(w => w.name), ['Aldo Reyes', 'Jose Gutierrez']);
   assert.equal(effects.length, 0); assert.deepEqual(commits, ['complete', 'reopen', 'assign']);
-  // 2. Completed, then Send now: stage + job log go out with the crew.
+  // 2. Completed, then Send now: only the stage goes out; EOD already sent the log.
   await hold('.job-stage-btn.complete'); await page.waitForSelector('.close-send-btn');
   await page.click('.close-send-btn'); await page.waitForTimeout(800);
-  assert.deepEqual(effects.map(e => e.kind), ['job_stage', 'job_log']);
-  assert.equal(effects[1].payload.assignedWorkers.length, 2);
-  assert.equal([...held.values()].filter(h => h.status === 'cancelled').length, 2, 'Undo cancelled both held sends');
+  assert.deepEqual(effects.map(e => e.kind), ['job_stage']);
+  assert.equal([...held.values()].filter(h => h.status === 'cancelled').length, 1, 'Undo cancelled the held stage update');
   // 3. Reopen + crew back, Completed, then leave the page: keepalive sends on pagehide.
   await page.evaluate(async () => { await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reopen', jobId: 'job00000001' }); render(); });
   effects.length = 0;
   await page.waitForSelector('.job-stage-btn.complete'); await hold('.job-stage-btn.complete'); await page.waitForSelector('.close-undo-bar');
   // Fire the tab closing event in place (a real unload's keepalive request escapes the test's network mock).
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide'))); await page.waitForTimeout(800);
-  assert.deepEqual(effects.map(e => e.kind).sort(), ['job_log', 'job_stage'], 'sends on tab close');
+  assert.deepEqual(effects.map(e => e.kind).sort(), ['job_stage'], 'sends on tab close');
   assert.ok(effects.every(e => e.delayMs === 30000), 'held for 30 seconds');
   // 4. Browser dies mid window (no pagehide): the sends stay held on the server, not cancelled, so its sweep sends them.
   await page.evaluate(async () => { await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'reopen', jobId: 'job00000001' }); render(); });
   await page.waitForSelector('.job-stage-btn.complete'); await hold('.job-stage-btn.complete'); await page.waitForSelector('.close-undo-bar');
   const before = effects.length;
-  // Nothing more from the browser; the server already holds both sends (its sweep is covered in database.test.mjs).
-  assert.equal([...held.values()].filter(h => h.status === 'scheduled').length, 2, 'held sends live on the server');
+  // Nothing more from the browser; the server already holds the stage update (its sweep is covered in database.test.mjs).
+  assert.equal([...held.values()].filter(h => h.status === 'scheduled').length, 1, 'held sends live on the server');
   assert.equal(effects.length, before);
   assert.deepEqual(errors, []);
   console.log('Undo close smoke passed.');

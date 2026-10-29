@@ -1,3 +1,4 @@
+import { cachedGhlJobs } from '../../lib/feed-cache.mjs';
 import { searchOpportunities, changeOrderPipelineId as configuredChangeOrderPipelineId } from '../../lib/ghl.mjs';
 import { jobRecord } from '../../lib/store.mjs';
 import { db, ensureSchema } from "./db.mjs";
@@ -45,21 +46,6 @@ function dedupe(jobs) {
   return jobs.filter(job => job.id && !seen.has(job.id) && seen.add(job.id));
 }
 
-// The GHL job list is shared by every open board for DASHBOARD_CACHE_SECONDS
-// (default 60, 0 turns it off), so opening the board in GHL again and again
-// does not page through GHL each time. fresh skips the cache and refills it.
-async function cachedGhlJobs(sql, fresh, load) {
-  const ttl = Math.max(0, Math.min(600, Number(process.env.DASHBOARD_CACHE_SECONDS ?? 60) || 0)) * 1000;
-  if (!fresh && ttl) {
-    const [cached] = await sql`select data, updated_at from dispatch_feed_cache where key = 'ghl-jobs'`;
-    const data = cached && (typeof cached.data === 'string' ? JSON.parse(cached.data) : cached.data);
-    if (Array.isArray(data) && Date.now() - new Date(cached.updated_at).getTime() < ttl) return data;
-  }
-  const jobs = await load();
-  await sql`insert into dispatch_feed_cache (key, data, updated_at) values ('ghl-jobs', ${sql.json(jobs)}, now())
-    on conflict (key) do update set data = excluded.data, updated_at = now()`;
-  return jobs;
-}
 
 export default async function handler(request) {
   if (request.method !== "GET") {

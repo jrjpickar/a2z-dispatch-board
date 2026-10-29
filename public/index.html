@@ -3225,14 +3225,14 @@ async function loadLaborRoster({ draw = true } = {}) {
   if (draw) render();
 }
 
-// Jobs and roster load together and draw once. If the roster is still loading
-// 1.5 s after the jobs arrive, the jobs are drawn first and again with the roster.
+// Show jobs as soon as they arrive; a slow roster must not delay the board.
+// Paint again only when the roster actually finishes after the jobs.
 async function refreshAll({ fresh = true } = {}) {
-  const roster = loadLaborRoster({ draw: false });
+  let rosterDone = false;
+  const roster = loadLaborRoster({ draw: false }).then(() => { rosterDone = true; });
   await loadDashboard({ fresh, draw: false });
-  const rosterDone = await Promise.race([roster.then(() => true), new Promise(r => setTimeout(() => r(false), 1500))]);
-  if (!rosterDone) { render(); await roster; }
   render();
+  if (!rosterDone) { await roster; render(); }
 }
 
 /* ---------- Rendering ---------- */
@@ -4372,9 +4372,9 @@ async function reopenJob(jobId, btn) {
   }
 }
 
-// Job log payload (kind "job_log"): one flat shape for Make, sent on Complete EOD
-// Sheet (action "eod_sheet") and on Completed (action "complete"). Snapshot it
-// BEFORE the state commit, because both clear the crew on the board.
+// Job log payload (kind "job_log"): one flat shape for Make, sent once per
+// submitted EOD sheet. Snapshot its individual hours BEFORE resetting the day.
+// Completed only updates the stage; EOD already generated its accounting log.
 function toE164(raw) {
   const s = String(raw || '').trim();
   if (!s) return '';
@@ -4398,21 +4398,30 @@ function jobDayOfWeek(date) {
   const d = new Date(String(date || '') + 'T12:00:00Z');
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase();
 }
-function buildJobLogPayload(job, action, date, hoursWorked = 0) {
+function buildJobLogPayload(job, action, date, crewHours = []) {
+  // Snapshot the submitted EOD rows, not the current board crew: sent-home
+  // workers are no longer assigned, but their hours still belong on this log.
+  const assignedWorkers = crewHours.map(w => {
+    const hours = w.hoursWorked;
+    if (hours === '' || hours == null || !Number.isFinite(Number(hours)) || Number(hours) < 0 || Number(hours) > 24) {
+      throw new Error(`Add valid hours for ${w.workerName || 'every employee'} before sending the job log.`);
+    }
+    return {
+      contactId: w.contactId || '', workerName: w.workerName,
+      workerPhone: toE164(w.workerPhone || (dashboardData.labor || []).find(l => l.name === w.workerName)?.phone || ''),
+      hoursWorked: Number(hours), sentHome: !!w.sentHome
+    };
+  });
   const value = Number(getOpportunityValue(job));
   return {
     jobId: job.id || '', action, ...jobWeekFields(date || getReportDate(job) || localIsoDate()), ...(date ? { date } : {}), dayOfWeek: jobDayOfWeek(date || getReportDate(job) || localIsoDate()),
     jobAddress: job.name || '', clientName: getClientName(job), clientPhone: toE164(getClientPhone(job)),
     scopeOfWork: getScopeOfWork(job) || '', toolsRequired: getToolsRequired(job) || '',
     monetaryValue: Number.isFinite(value) ? value : 0,
-    // Total of every worker's hours on the day's EOD sheet (sent home workers included). 0 on Completed.
-    hoursWorked: Number(hoursWorked) || 0,
-    reportDate: getReportDate(job) || '', reportTime: getReportTime(job) || '',
-    reportEndDate: getReportEndDate(job) || '', reportEndTime: getReportEndTime(job) || '',
-    assignedWorkers: getCrew(job).filter(w => w && w.name).map(w => ({
-      workerPhone: toE164(w.phone || (dashboardData.labor || []).find(l => l.name === w.name)?.phone || ''),
-      workerName: w.name
-    }))
+    hoursWorked: Math.round(assignedWorkers.reduce((sum, w) => sum + w.hoursWorked, 0) * 100) / 100,
+    reportDate: getReportDate(job) || date || '', reportTime: getReportTime(job) || '',
+    reportEndDate: getReportEndDate(job) || date || '', reportEndTime: getReportEndTime(job) || '',
+    assignedWorkers
   };
 }
 
@@ -4467,14 +4476,13 @@ async function setJobStage(jobId, action, btn) {
   const night = getNightWork(job);
   const stagePayload = { action, jobId, opportunityId: jobId, nightWork: night, shiftType: night ? 'night' : 'day',
     reportDate: getReportDate(job), reportTime: getReportTime(job), reportEndDate: getReportEndDate(job), reportEndTime: getReportEndTime(job) };
-  // Job log snapshot taken before the commit clears the crew.
-  const jobLogPayload = action === 'complete' ? buildJobLogPayload(job, 'complete') : null;
+  // EOD already sent the accounting log with its submitted crew hours.
+  // Completion only updates the stage; a second log here would have no crew.
   const crewBefore = getCrew(job).filter(w => w && w.name).map(w => ({ id: w.id || '', name: w.name, phone: w.phone || '' }));
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action, jobId, jobAddress: job.name || '', clientName: getClientName(job), monetaryValue: getOpportunityValue(job) ?? null });
     // Nothing goes to GHL or Make yet: the sends wait out the undo window.
-    const effects = [{ kind: 'job_stage', label: 'GHL job stage update', payload: stagePayload },
-      ...(jobLogPayload ? [{ kind: 'job_log', label: 'Job log', payload: jobLogPayload }] : [])];
+    const effects = [{ kind: 'job_stage', label: 'GHL job stage update', payload: stagePayload }];
     try {
       await queueClose({ jobId, action, jobName: job.name || jobId, crew: crewBefore, requestId: lastCommittedRequests.get(String(jobId)), effects });
     } catch (error) {
@@ -4489,8 +4497,9 @@ async function setJobStage(jobId, action, btn) {
 }
 
 /* ---------- Undo window for Completed / Cancelled ----------
-   The board closes the job right away. The GHL stage change and the job log
-   are handed to the server as held sends that wait CLOSE_UNDO_MS. The server
+   The board closes the job right away. The GHL stage change is handed to the
+   server as a held send that waits CLOSE_UNDO_MS. The accounting log was
+   already sent with the EOD sheet. The server
    owns the timer: if this tab is closed, reloaded or the browser crashes, the
    sends still go out when the window ends (any open board, or the
    effect-dispatcher scheduled function, sends whatever is due). Undo cancels
@@ -4747,7 +4756,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
   } else if (!eodSheet && !confirm('Clear this job’s schedule and crew? Job details will be kept.')) return false;
   const removedWorkers = crewBeforeReset.map(w => ({ contactId: w.id || '', workerName: w.name, workerPhone: w.phone || dashboardData.labor.find(l => l.name === w.name)?.phone || '' }));
   // Job log snapshot, taken BEFORE the reset clears the schedule and crew.
-  const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet', eodSheet.date, eodSheet.totalCrewHours) : null;
+  const jobLogPayload = eodSheet ? buildJobLogPayload(job, 'eod_sheet', eodSheet.date, eodSheet.crewHours || []) : null;
   // EOD Done view: what this sheet was (crew hours, loads, cost, shift), saved with the job.
   const eodSummary = eodSheet ? { jobName: eodSheet.jobName || '', reportTime: getReportTime(job) || '', reportEndTime: getReportEndTime(job) || '',
     crew: (eodSheet.crewHours || []).map(w => ({ name: w.workerName, hours: Number(w.hoursWorked) || 0, sentHome: !!w.sentHome })),
@@ -7845,11 +7854,17 @@ document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListe
   if (view === 'schedule') { renderScheduleView(); loadProjectSchedules(); }
 }));
 document.getElementById('logisticsSourceFilter').addEventListener('change', renderLogistics);
-document.getElementById('refreshBtn').addEventListener('click', () => {
-  if (!document.getElementById('logisticsDispatchView').hidden) return loadLogistics();
-  if (!document.getElementById('adminDispatchView').hidden) { renderAdminView(true); return ensureAdminDriverRoster(true); }
-  if (!document.getElementById('completedDispatchView').hidden || (boardEodMode && !document.getElementById('laborDispatchView').hidden)) loadClosedJobs();
-  refreshAll(); loadProjectSchedules();
+document.getElementById('refreshBtn').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  if (button.disabled) return;
+  button.disabled = true;
+  try {
+    if (!document.getElementById('logisticsDispatchView').hidden) return await loadLogistics();
+    // renderAdminView already refreshes drivers; do not fetch that roster twice.
+    if (!document.getElementById('adminDispatchView').hidden) return await renderAdminView(true);
+    const closed = !document.getElementById('completedDispatchView').hidden || (boardEodMode && !document.getElementById('laborDispatchView').hidden);
+    await Promise.all([refreshAll(), loadProjectSchedules(), closed ? loadClosedJobs() : Promise.resolve()]);
+  } finally { button.disabled = false; }
 });
 
 const themeToggle = document.getElementById('themeToggle');
@@ -8129,7 +8144,13 @@ function psPayload(input) {
 }
 
 /* ---------- Server ---------- */
-async function loadProjectSchedules() {
+let projectSchedulesLoading = null;
+function loadProjectSchedules() {
+  if (projectSchedulesLoading) return projectSchedulesLoading;
+  projectSchedulesLoading = fetchProjectSchedules().finally(() => { projectSchedulesLoading = null; });
+  return projectSchedulesLoading;
+}
+async function fetchProjectSchedules() {
   try {
     const data = await fetchJsonStrict(PS_URL, 'Project schedules');
     psSchedules = Object.fromEntries((data.schedules || []).map(r => [r.jobId, r]));
