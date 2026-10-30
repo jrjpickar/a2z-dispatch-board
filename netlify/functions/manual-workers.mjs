@@ -7,19 +7,21 @@
 //        Removes / restores any worker (crew, driver or both) on the board only.
 //        Hiding also drops them from the GHL-added list and revokes Field App
 //        access. GHL and the Make rosters are not touched.
-//   GET  /api/manual-workers?contact=<id>                                            (admins) -> GHL first/last name + phone
-//   POST /api/manual-workers { action: "edit", contactId, firstName, lastName, phone } (admins only)
-//        Saves the name/phone on the GHL contact, then updates the board to match:
+//   GET  /api/manual-workers?contact=<id>                                            (admins) -> GHL first/last name, phone, Temperature
+//   GET  /api/manual-workers?phone=<phone>                                           (admins) -> same, found by phone (roster workers with no contact id)
+//   POST /api/manual-workers { action: "edit", contactId, firstName, lastName, phone, temperature? } (admins only)
+//        Saves the name/phone (and Temperature when sent) on the GHL contact, then updates the board to match:
 //        GHL-added list, Field App access (moves to the new phone), crews on open
 //        jobs, drivers on open moves, and clears the roster cache so Make's
-//        roster is re-read.
+//        roster is re-read. A Temperature change also updates the board's
+//        temperature cache so every tag shows it right away.
 // Added workers show in the crew picker (labor) and/or driver picker (driver)
 // next to the Make roster, and "fieldApp: true" also enables Field App sign-in.
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { requirePanel } from '../../lib/layout.mjs';
-import { getContact, updateContactNamePhone } from '../../lib/ghl.mjs';
+import { getContact, updateContactNamePhone, getWorkerContact, temperatureOptions, pickTemperature, temperatureFieldId, findContactIdByPhone } from '../../lib/ghl.mjs';
 import { driverKeyFor } from '../../lib/driver-token.mjs';
 import { logActivity } from '../../lib/activity.mjs';
 import { queueEffectNow, sendHeldEffects } from '../../lib/effect-queue.mjs';
@@ -28,6 +30,7 @@ const hiddenKey = ({ contactId, phone, name }) => {
   const id = String(contactId || '').trim();
   return id ? `id:${id}` : driverKeyFor({ phone, name });
 };
+const phoneKey = p => { const d = String(p || '').replace(/\D/g, '').slice(-10); return d.length === 10 ? `phone:${d}` : ''; };
 const hiddenRows = sql => sql`select worker_key as "key", role, name, phone, contact_id as "contactId", hidden_by as "hiddenBy", created_at as "createdAt"
   from dispatch_hidden_workers order by name`;
 const rows = sql => sql`select contact_id as "contactId", name, phone, email, is_labor as labor, is_driver as driver, added_by as "addedBy", created_at as "createdAt"
@@ -38,11 +41,19 @@ export default async function handler(request, context) {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
-      const contact = new URL(request.url).searchParams.get('contact');
-      if (contact) {
+      const params = new URL(request.url).searchParams;
+      const contact = params.get('contact'), byPhone = params.get('phone');
+      if (contact || byPhone) {
         await requirePanel(request, sql, 'laborers');
-        try { return json({ ok: true, contact: await getContact(contact) }); }
-        catch { throw new StateError('Could not load that contact from GHL.', 502); }
+        let id = contact;
+        if (!id) {
+          try { id = await findContactIdByPhone(byPhone); } catch { throw new StateError('Could not search GHL for that phone.', 502); }
+          if (!id) throw new StateError('No GHL contact has that phone number.', 404);
+        }
+        try {
+          const [found, options] = await Promise.all([getWorkerContact(id), temperatureOptions()]);
+          return json({ ok: true, contact: found, temperatureOptions: options });
+        } catch { throw new StateError('Could not load that contact from GHL.', 502); }
       }
       return json({ workers: await rows(sql), hidden: await hiddenRows(sql) });
     }
@@ -124,9 +135,17 @@ async function editWorker(sql, session, contactId, body) {
   const firstName = String(body.firstName || '').trim().slice(0, 60), lastName = String(body.lastName || '').trim().slice(0, 60);
   if (!firstName) throw new StateError('First name is required.');
   let before;
-  try { before = await getContact(contactId); } catch { throw new StateError('Could not load that contact from GHL.', 502); }
+  try { before = await getWorkerContact(contactId); } catch { throw new StateError('Could not load that contact from GHL.', 502); }
+  // Temperature only changes when the form sent one and it differs from GHL.
+  let temperature;
+  if (body.temperature !== undefined && body.temperature !== null) {
+    try { temperature = pickTemperature(body.temperature, await temperatureOptions()); }
+    catch (error) { throw new StateError(error.message, 400); }
+    if (temperature === before.temperature) temperature = undefined;
+  }
+  const customFields = temperature === undefined ? [] : [{ id: await temperatureFieldId(), field_value: temperature }];
   let after;
-  try { after = await updateContactNamePhone(contactId, { firstName, lastName, phone: body.phone }); }
+  try { after = await updateContactNamePhone(contactId, { firstName, lastName, phone: body.phone, customFields }); }
   catch (error) {
     if (error.status === 400 && /phone/i.test(error.message)) throw new StateError(error.message, 400);
     throw new StateError(`GHL didn't save the change${error.reason ? ': ' + error.reason : ''}. Nothing was changed.`, 502);
@@ -157,7 +176,16 @@ async function editWorker(sql, session, contactId, body) {
     moves++;
   }
   await sql`delete from dispatch_roster_cache where kind in ('labor', 'drivers')`;
-  const changes = [before.name !== after.name ? `name ${before.name} → ${after.name}` : '', before.phone !== after.phone ? `phone ${before.phone || 'none'} → ${after.phone || 'none'}` : ''].filter(Boolean);
+  const finalTemperature = temperature === undefined ? before.temperature : temperature;
+  // Temperature cache: by contact id and by phone (roster workers with no id are looked up by phone).
+  const tempKeys = [...new Set([contactId, phoneKey(before.phone), phoneKey(after.phone)].filter(Boolean))];
+  if (temperature !== undefined) for (const key of tempKeys) {
+    await sql`insert into dispatch_worker_temperature (contact_id, value, fetched_at) values (${key}, ${temperature}, now())
+      on conflict (contact_id) do update set value = excluded.value, fetched_at = now()`;
+  }
+  const changes = [before.name !== after.name ? `name ${before.name} → ${after.name}` : '', before.phone !== after.phone ? `phone ${before.phone || 'none'} → ${after.phone || 'none'}` : '',
+    temperature !== undefined ? `temperature ${before.temperature || 'blank'} → ${temperature || 'blank'}` : ''].filter(Boolean);
   await logActivity(sql, session, 'Edited worker in GHL', after.name, { contactId, changes, jobs, moves });
-  return { ok: true, worker: after, changes, jobsUpdated: jobs, movesUpdated: moves, fieldAppMoved: !!access && oldKey !== newKey, workers: await rows(sql), hidden: await hiddenRows(sql) };
+  return { ok: true, worker: { ...after, temperature: finalTemperature }, temperature: finalTemperature, temperatureKeys: tempKeys, temperatureChanged: temperature !== undefined,
+    changes, jobsUpdated: jobs, movesUpdated: moves, fieldAppMoved: !!access && oldKey !== newKey, workers: await rows(sql), hidden: await hiddenRows(sql) };
 }

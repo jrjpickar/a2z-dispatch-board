@@ -2591,12 +2591,12 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
   </div>
 </div>
 
-<!-- Edit worker (admins): name + phone saved straight to the GHL contact. -->
+<!-- Edit worker (admins): name, phone and Temperature saved straight to the GHL contact. -->
 <div class="overlay" id="editWorkerOverlay"></div>
 <div class="sheet" id="editWorkerSheet" aria-labelledby="editWorkerTitle">
   <div class="sheet-head"><h2 id="editWorkerTitle">Edit worker</h2><button id="closeEditWorker" aria-label="Close">&times;</button></div>
   <div class="sheet-body">
-    <p class="logistics-note">Saves to the worker's GHL contact. The board, crews on open jobs, drivers on open moves and Field App sign in all follow the new name and phone.</p>
+    <p class="logistics-note">Saves to the worker's GHL contact. The board, crews on open jobs, drivers on open moves and Field App sign in all follow the new name and phone. Temperature tags update everywhere right away.</p>
     <p class="load-state" id="editWorkerLoading">Loading from GHL...</p>
     <div id="editWorkerForm" hidden>
       <div class="field-row">
@@ -2604,6 +2604,8 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
         <div class="field"><label for="editWorkerLast">Last name</label><input type="text" id="editWorkerLast" maxlength="60" autocomplete="off"></div>
       </div>
       <div class="field"><label for="editWorkerPhone">Phone</label><input type="tel" id="editWorkerPhone" maxlength="20" inputmode="tel" placeholder="+17145550100"></div>
+      <div class="field"><label for="editWorkerTemp">Temperature</label><select id="editWorkerTemp"><option value="">No temperature</option></select></div>
+      <p class="ghl-hint">Admins only. Cold workers are booked by admins only.</p>
       <p class="ghl-hint" id="editWorkerHint"></p>
     </div>
   </div>
@@ -7483,7 +7485,7 @@ function renderFieldAppAccess() {
     const statusCell = isEnabled ? '<span class="logistics-status assigned">Enabled</span>' : '<span class="logistics-route">Not enabled</span>';
     if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${tempTag(p)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td><td></td></tr>`;
     return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${tempTag(p)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
-      + `<td class="field-app-actions">${p.id ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${escapeLogisticsHtml(p.id)}" data-name="${escapeLogisticsHtml(p.name)}">Edit</button> ` : ''}${isEnabled
+      + `<td class="field-app-actions">${p.id || p.phone ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${escapeLogisticsHtml(p.id || '')}" data-phone="${escapeLogisticsHtml(p.phone || '')}" data-name="${escapeLogisticsHtml(p.name)}">Edit</button> ` : ''}${isEnabled
         ? `<button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>`
         : `<button type="button" class="job-stage-btn edit field-app-enable" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}" ${p.phone ? '' : 'disabled title="Needs a phone number on file"'}>Enable</button>`}</td></tr>`;
   }).join('');
@@ -9204,7 +9206,7 @@ function renderAdminLabor() {
   const shown = all.filter(w => !q || `${w.name} ${w.phone || ''} ${[...w.roles].join(' ')}`.toLowerCase().includes(q));
   document.getElementById('adminLaborCount').textContent = `${all.length}`;
   list.innerHTML = shown.length ? shown.map(w => `<li><div class="who">${sessionEsc(w.name)}${tempTag(w)}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}<small>${sessionEsc([...w.roles].join('/'))} · ${sessionEsc(w.phone || 'no phone')}</small></div>`
-    + `<div class="problem-actions">${w.id ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${sessionEsc(w.id)}" data-name="${sessionEsc(w.name)}">Edit</button>` : ''}<button type="button" class="job-stage-btn cancel roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-roster="${w.fromRoster ? '1' : ''}">Remove</button></div></li>`).join('')
+    + `<div class="problem-actions">${w.id || w.phone ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${sessionEsc(w.id || '')}" data-phone="${sessionEsc(w.phone || '')}" data-name="${sessionEsc(w.name)}">Edit</button>` : ''}<button type="button" class="job-stage-btn cancel roster-remove" data-id="${sessionEsc(w.id || '')}" data-name="${sessionEsc(w.name)}" data-phone="${sessionEsc(w.phone || '')}" data-roster="${w.fromRoster ? '1' : ''}">Remove</button></div></li>`).join('')
     : `<li class="load-state">${all.length ? 'No one matches.' : 'No workers on the board.'}</li>`;
 }
 document.getElementById('adminLaborSearch').addEventListener('input', renderAdminLabor);
@@ -9742,54 +9744,77 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
   finally { btn.disabled = false; btn.textContent = 'Save settings'; }
 });
 
-/* Edit worker (admins): first/last name + phone, saved to the GHL contact. */
+/* Edit worker (admins): first/last name, phone and Temperature, saved to the GHL contact.
+   Roster workers with no contact id are found in GHL by phone. */
 const editWorkerOverlay = document.getElementById('editWorkerOverlay'), editWorkerSheet = document.getElementById('editWorkerSheet');
-let editWorkerId = '', editWorkerOriginal = null;
-async function openEditWorker(contactId, name) {
-  editWorkerId = contactId; editWorkerOriginal = null;
+let editWorkerId = '', editWorkerOriginal = null, editWorkerSeq = 0, editWorkerRosterPhone = '';
+function fillEditWorkerTemps(options, current) {
+  const sel = document.getElementById('editWorkerTemp');
+  const list = [...(Array.isArray(options) && options.length ? options : ['Hot', 'Warm', 'Cold'])];
+  if (current && !list.some(o => o.toLowerCase() === current.toLowerCase())) list.push(current);
+  sel.innerHTML = '<option value="">No temperature</option>' + list.map(o => `<option value="${escapeAttr(o)}">${escapeAttr(o)}</option>`).join('');
+  sel.value = list.find(o => o.toLowerCase() === String(current || '').toLowerCase()) || '';
+}
+async function openEditWorker(contactId, name, phone) {
+  const seq = ++editWorkerSeq;
+  editWorkerId = contactId || ''; editWorkerOriginal = null; editWorkerRosterPhone = contactId ? '' : String(phone || '');
   document.getElementById('editWorkerTitle').textContent = `Edit ${name || 'worker'}`;
   document.getElementById('editWorkerLoading').hidden = false; document.getElementById('editWorkerLoading').textContent = 'Loading from GHL...';
   document.getElementById('editWorkerForm').hidden = true;
   document.getElementById('saveEditWorker').disabled = true;
   editWorkerOverlay.classList.add('open'); editWorkerSheet.classList.add('open');
   try {
-    const data = await fetchJsonStrict('/api/manual-workers?contact=' + encodeURIComponent(contactId), 'GHL contact');
-    if (editWorkerId !== contactId) return;
-    editWorkerOriginal = data.contact;
+    const query = contactId ? 'contact=' + encodeURIComponent(contactId) : 'phone=' + encodeURIComponent(phone || '');
+    const data = await fetchJsonStrict('/api/manual-workers?' + query, 'GHL contact');
+    if (seq !== editWorkerSeq) return;
+    editWorkerId = data.contact.id; editWorkerOriginal = data.contact;
     const [first, ...rest] = String(data.contact.name || '').split(' ');
     document.getElementById('editWorkerFirst').value = data.contact.firstName || first || '';
     document.getElementById('editWorkerLast').value = data.contact.lastName || (data.contact.firstName ? '' : rest.join(' '));
     document.getElementById('editWorkerPhone').value = data.contact.phone || '';
+    fillEditWorkerTemps(data.temperatureOptions, data.contact.temperature || '');
     document.getElementById('editWorkerHint').textContent = data.contact.email ? `GHL contact: ${data.contact.email}` : '';
     document.getElementById('editWorkerLoading').hidden = true;
     document.getElementById('editWorkerForm').hidden = false;
     document.getElementById('saveEditWorker').disabled = false;
     document.getElementById('editWorkerFirst').focus();
-  } catch (err) { document.getElementById('editWorkerLoading').textContent = `Couldn't load this contact from GHL: ${err.message}`; }
+  } catch (err) { if (seq === editWorkerSeq) document.getElementById('editWorkerLoading').textContent = `Couldn't load this contact from GHL: ${err.message}`; }
 }
-function closeEditWorker() { editWorkerOverlay.classList.remove('open'); editWorkerSheet.classList.remove('open'); editWorkerId = ''; }
+function closeEditWorker() { editWorkerSeq++; editWorkerOverlay.classList.remove('open'); editWorkerSheet.classList.remove('open'); editWorkerId = ''; }
 ['closeEditWorker', 'cancelEditWorker'].forEach(id => document.getElementById(id).addEventListener('click', closeEditWorker));
 editWorkerOverlay.addEventListener('click', closeEditWorker);
 document.getElementById('adminDispatchView').addEventListener('click', e => {
   const btn = e.target.closest('.worker-edit'); if (!btn) return;
-  openEditWorker(btn.dataset.id, btn.dataset.name);
+  if (!currentSession.isAdmin) return showToast('Only admins can edit workers.', true);
+  openEditWorker(btn.dataset.id, btn.dataset.name, btn.dataset.phone);
 });
 document.getElementById('saveEditWorker').addEventListener('click', async () => {
   const btn = document.getElementById('saveEditWorker');
+  if (!editWorkerId) return;
   const firstName = document.getElementById('editWorkerFirst').value.trim(), lastName = document.getElementById('editWorkerLast').value.trim(), phone = document.getElementById('editWorkerPhone').value.trim();
+  const temperature = document.getElementById('editWorkerTemp').value;
   if (!firstName) return showToast('First name is required.', true);
   btn.disabled = true; btn.textContent = 'Saving to GHL...';
   try {
-    const data = await manualWorkerApi({ action: 'edit', contactId: editWorkerId, firstName, lastName, phone });
+    const body = { action: 'edit', contactId: editWorkerId, firstName, lastName, phone };
+    if (temperature !== String(editWorkerOriginal?.temperature || '')) body.temperature = temperature;
+    const data = await manualWorkerApi(body);
+    const id = editWorkerId, oldPhoneKey = tempPhoneKey(editWorkerRosterPhone || editWorkerOriginal?.phone);
     // Show the new name/phone right away; the roster re-reads from Make too.
-    const patch = list => (list || []).forEach(p => { if (p.id === editWorkerId) Object.assign(p, { name: data.worker.name, phone: data.worker.phone }); });
+    const patch = list => (list || []).forEach(p => { if (p.id === id || (!p.id && oldPhoneKey && tempPhoneKey(p.phone) === oldPhoneKey)) Object.assign(p, { name: data.worker.name, phone: data.worker.phone }); });
     patch(dashboardData.labor); patch(logisticsData.drivers);
+    if (data.temperatureChanged) {
+      const keys = new Set([id, oldPhoneKey, tempPhoneKey(data.worker.phone), ...(data.temperatureKeys || [])].filter(Boolean));
+      keys.forEach(k => { workerTemperatures[k] = data.temperature || ''; });
+    }
     closeEditWorker();
     await afterManualWorkersChange(data);
+    if (data.temperatureChanged) rerenderTemperatures();
     if (logisticsLoaded) loadLogistics();
     pollSharedState();
     const extra = [data.jobsUpdated ? `${data.jobsUpdated} open job crew${data.jobsUpdated === 1 ? '' : 's'}` : '', data.movesUpdated ? `${data.movesUpdated} move${data.movesUpdated === 1 ? '' : 's'}` : '', data.fieldAppMoved ? 'Field App sign-in moved to the new phone' : ''].filter(Boolean).join(', ');
-    showToast(data.changes.length ? `Saved to GHL: ${data.worker.name}.${extra ? ' Also updated ' + extra + '.' : ''}` : 'No changes to save.');
+    const tempNote = data.temperatureChanged ? ` Temperature: ${data.temperature || 'none'}.` : '';
+    showToast(data.changes.length ? `Saved to GHL: ${data.worker.name}.${tempNote}${extra ? ' Also updated ' + extra + '.' : ''}` : 'No changes to save.');
   } catch (err) { showToast(err.message, true); }
   finally { btn.disabled = false; btn.textContent = 'Save to GHL'; }
 });
@@ -9803,8 +9828,9 @@ document.getElementById('resolveAllProblems').addEventListener('click', async ()
 let manualWorkers = [];
 let hiddenWorkers = [];
 let manualWorkersLoaded = null;
-/* Worker temperature: GHL contact custom field {{contact.temperature}} (read only).
-   Looked up by contact id through /api/worker-temperatures (cached server side). */
+/* Worker temperature: GHL contact custom field {{contact.temperature}}.
+   Looked up by contact id through /api/worker-temperatures (cached server side).
+   Admins change it in Edit worker on the Admin page (saved to GHL). */
 let workerTemperatures = {};
 let workerTempTimer = null, workerTempSeq = 0;
 const tempPhoneKey = p => { const d = String(p || '').replace(/\D/g, '').slice(-10); return d.length === 10 ? `phone:${d}` : ''; };
