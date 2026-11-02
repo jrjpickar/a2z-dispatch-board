@@ -8711,6 +8711,7 @@ async function psSubmit(action, btn) {
   if (!psState) return;
   if (action === 'submit') {
     if (!psState.input.phases.some(p => p.on)) { showToast('Turn on at least one phase.', true); return; }
+    if (!confirm('Send this to Slack?')) return;
   }
   const buttons = [document.getElementById('savePsSheet'), document.getElementById('submitPsSheet')];
   const original = btn.textContent;
@@ -8974,6 +8975,7 @@ psListEl.addEventListener('click', async e => {
   if (!btn) return;
   const jobId = btn.dataset.jobId, t = psTabGet(jobId); if (!t) return;
   const action = btn.classList.contains('psv-update') ? 'submit' : 'save';
+  if (action === 'submit' && !confirm('Send this to Slack?')) return;
   const buttons = [...btn.closest('.psv-actions').querySelectorAll('button')];
   const original = btn.textContent;
   buttons.forEach(b => { b.disabled = true; }); btn.textContent = action === 'submit' ? 'Sending...' : 'Saving...';
