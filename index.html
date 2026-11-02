@@ -4615,8 +4615,8 @@ async function setJobStage(jobId, action, btn) {
    server as a held send that waits CLOSE_UNDO_MS. The accounting log was
    already sent with the EOD sheet. The server
    owns the timer: if this tab is closed, reloaded or the browser crashes, the
-   sends still go out when the window ends (any open board, or the
-   effect-dispatcher scheduled function, sends whatever is due). Undo cancels
+   sends still go out when the window ends (any open board, or the server's
+   held-send-background timer, sends whatever is due). Undo cancels
    them on the server, reopens the job and puts the crew back. */
 const CLOSE_UNDO_MS = 30000;
 const pendingCloses = new Map();
@@ -8367,8 +8367,10 @@ function editingDispatch() {
 /* Live updates, light on Netlify:
    - asks only for records changed since the last answer (?since=), so most polls are a few bytes
    - redraws only when something actually changed
-   - every 30 s while someone is using the board, every 60 s after 3 idle minutes, every 5 min after 15 idle minutes, never while the tab is hidden
-     (was 15 s; slowed to save Netlify credits. Your own saves still show instantly.)
+   - every 30 s while someone is using the board, every 60 s after 3 idle minutes, and it STOPS after 15 idle minutes
+     (a board left open all day or overnight was keeping the Netlify database awake 24/7, most of the bill).
+     Any click, key, scroll or coming back to the tab refreshes right away and starts it again. Never while the tab is hidden.
+     Your own saves still show instantly.
    - moves are only polled while the Logistics tab is open
    - the held send nudge (/api/workflow-effect) only goes out while this browser has a Completed/Cancelled waiting;
      the server job (every 5 minutes, work hours) covers everything else */
@@ -8377,15 +8379,16 @@ let sharedSince = '', movesSince = '', lastActivity = Date.now(), pollTimer = nu
   const wasIdle = Date.now() - lastActivity > 180000; lastActivity = Date.now();
   if (wasIdle) schedulePoll(500);
 }, { passive: true, capture: true }));
-// 30 s in use, 60 s after 3 idle minutes, 5 min after 15 idle minutes (a board
+// 30 s in use, 60 s after 3 idle minutes, stopped after 15 idle minutes (a board
 // left open all day in a GHL tab). Any click, key or scroll refreshes right away.
+const POLL_STOP_IDLE_MS = 900000;
 function nextPollMs() {
   const idle = Date.now() - lastActivity;
-  return idle > 900000 ? 300000 : idle > 180000 ? 60000 : 30000;
+  return idle > POLL_STOP_IDLE_MS ? 0 : idle > 180000 ? 60000 : 30000;
 }
 function schedulePoll(ms) {
   clearTimeout(pollTimer);
-  pollTimer = setTimeout(async () => { await pollSharedState(); schedulePoll(nextPollMs()); }, ms);
+  pollTimer = setTimeout(async () => { await pollSharedState(); const next = nextPollMs(); if (next) schedulePoll(next); }, ms);
 }
 async function pollSharedState() {
   if (document.hidden || sharedPollBusy || editingDispatch()) return;

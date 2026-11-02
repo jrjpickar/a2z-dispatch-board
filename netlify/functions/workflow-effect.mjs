@@ -2,7 +2,7 @@ import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { waitsForNightly, sendJob, waitingSummary, nextDispatchUtc } from '../../lib/daily-dispatch.mjs';
-import { recordEffect, deliverEffect, sendHeldEffects, cancelHeldEffects, QUIET_STATUSES } from '../../lib/effect-queue.mjs';
+import { recordEffect, deliverEffect, sendHeldEffects, cancelHeldEffects, startHeldSend, QUIET_STATUSES } from '../../lib/effect-queue.mjs';
 const idList = value => (Array.isArray(value) ? value : []).map(v => String(v || '').slice(0, 240)).filter(Boolean).slice(0, 20);
 export default async function handler(request) {
   try {
@@ -50,6 +50,7 @@ export default async function handler(request) {
     }
     const { effectId, status } = await recordEffect(sql, { requestId, kind, payload, effectKey, delayMs });
     if (delayMs > 0) {
+      if (status === 'new') await startHeldSend(effectId); // server timer: sends at due_at even if every board closes
       if (status === 'new' || status === 'scheduled') return json({ ok: true, scheduled: true, effectId });
       return json({ ok: status !== 'cancelled', effectId, status });
     }

@@ -1,5 +1,14 @@
 # A2Z Dispatch 1.9
 
+## Let the database sleep (Nov 2, 2026)
+
+The Netlify bill was almost all **Database compute** (about 176 credits a day, every day including weekends). Functions were about 4 a day. The database sleeps after 5 minutes with no queries, but it never got there:
+
+- **No more 5-minute backup send job.** `effect-dispatcher` ran every 5 minutes from 4 AM to 9 PM and woke the database each time, so it never slept during those hours. It is gone. Each Completed/Cancelled held send now starts its own timer (`held-send-background`) that waits out the undo window and sends. The board still sends at the end of the countdown, on Send now, and when the tab closes. The 6:30 PM run also sweeps anything left over.
+- **Idle boards stop polling.** After 15 untouched minutes the board stops checking for changes (it used to keep checking every 5 minutes, all night). Any click, key, scroll or coming back to the tab refreshes right away and starts it again.
+- **Driver app** stops its 45 s refresh after 15 minutes with no taps. A tap or reopening the app refreshes it.
+- Assign / remove worker webhooks are unchanged: they still go out at 6:30 PM (or on Send now for that job), and Send schedule now still goes right away.
+
 ## 8 hour default, fewer Netlify credits, cleaner look (Oct 21, 2026)
 
 - **EOD crew hours** now start at 8 hours for every worker, whatever the job times are. Dispatch can still change any of them. Workers sent home still show the hours picked when they were sent home.

@@ -325,6 +325,11 @@
   const langToggle = $('langToggle');
 
   let pollTimer = null;
+  let lastTouch = Date.now();
+  ['pointerdown', 'keydown', 'touchstart'].forEach(t => window.addEventListener(t, () => {
+    const wasIdle = Date.now() - lastTouch > 900000; lastTouch = Date.now();
+    if (wasIdle && document.visibilityState === 'visible' && !homeView.hidden) loadMoves(false);
+  }, { passive: true, capture: true }));
   let usingNameMode = false;
   let lastData = null;
 
@@ -485,7 +490,9 @@
 
   function startPolling() {
     stopPolling();
-    pollTimer = setInterval(() => { if (document.visibilityState === 'visible') loadMoves(false); }, POLL_MS);
+    // Stops after 15 minutes with no taps (a phone left on the dash was keeping the
+    // Netlify database awake). A tap or reopening the app refreshes and restarts it.
+    pollTimer = setInterval(() => { if (document.visibilityState === 'visible' && Date.now() - lastTouch < 900000) loadMoves(false); }, POLL_MS);
   }
   function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
 
@@ -537,7 +544,7 @@
 
   signOutBtn.addEventListener('click', () => goToLogin());
   refreshBtn.addEventListener('click', () => loadMoves(true));
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !homeView.hidden) loadMoves(false); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { lastTouch = Date.now(); if (!homeView.hidden) loadMoves(false); } });
 
   routesList.addEventListener('click', async event => {
     const button = event.target.closest('.stop-toggle');
