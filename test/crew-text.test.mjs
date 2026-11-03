@@ -49,7 +49,7 @@ test('6:30 PM Pacific: next run time and which runs wait for it', () => {
   assert.equal(new Date(pacificToUtc('2026-11-10', '18:30')).toISOString(), '2026-11-11T02:30:00.000Z');
   assert.equal(new Date(dd.nextDispatchUtc(Date.parse('2026-10-26T20:00:00Z'))).toISOString(), '2026-10-27T01:30:00.000Z'); // 1 PM -> today 6:30
   assert.equal(new Date(dd.nextDispatchUtc(Date.parse('2026-10-27T03:00:00Z'))).toISOString(), '2026-10-28T01:30:00.000Z'); // 8 PM -> tomorrow 6:30
-  assert.equal(dd.waitsForNightly('workers', { action: 'assign' }), true);
+  assert.equal(dd.waitsForNightly('workers', { action: 'assign' }), false, 'assign goes to Make right away');
   assert.equal(dd.waitsForNightly('workers', { action: 'remove' }), true);
   assert.equal(dd.waitsForNightly('split_day', { action: 'split_day_assign' }), true);
   assert.equal(dd.waitsForNightly('workers', { action: 'rapid_assign', rapidAssign: true }), false, 'Send schedule now goes right away');
@@ -111,7 +111,7 @@ async function queue(kind, payload) {
 }
 const assignRun = (jobId, [id, name, phone], extra = {}) => ({ action: 'assign', jobId, contactId: id, workerName: name, workerPhone: phone, reportDate: T, reportTime: '07:00', ...extra });
 
-test('assign and remove wait for 6:30 PM; Send schedule now goes right away; nothing hits Make on the click', async () => {
+test('remove waits for 6:30 PM; assign and Send schedule now go right away; crew text waits', async () => {
   await real.ensureSchema(sql);
   await sql`insert into dispatch_feed_cache (key, data, updated_at) values ('ghl-jobs', ${JSON.stringify(jobsDb)}, now()) on conflict (key) do update set data = excluded.data`;
   await sql`insert into dispatch_settings (key, value) values ('ghl-oauth:QUcu2PEAxPV1sQm1GQCq', ${JSON.stringify({ access_token: 'at', refresh_token: 'rt', expiresAt: Date.now() + 3600e3, locationId: 'QUcu2PEAxPV1sQm1GQCq' })}) on conflict (key) do nothing`;
@@ -119,17 +119,19 @@ test('assign and remove wait for 6:30 PM; Send schedule now goes right away; not
   await setState('k2', { reportDate: T, reportTime: '06:30', reportEndDate: T, reportEndTime: '15:00', jobType: 'contract', crew: crew(CY) });
   await setState('k3', { reportDate: '2026-11-05', reportTime: '07:00', reportEndDate: '2026-11-05', reportEndTime: '15:30', crew: crew(DE) });
   stubFetch();
-  let r = await queue('workers', assignRun('k1', ANA)); assert.equal(r.waitsForNightly, true);
-  r = await queue('workers', assignRun('k1', BO)); assert.equal(r.waitsForNightly, true);
+  let r = await queue('workers', assignRun('k1', ANA)); assert.equal(r.ok, true); assert.equal(r.waitsForNightly, undefined);
+  r = await queue('workers', assignRun('k1', BO)); assert.equal(r.ok, true);
   r = await queue('workers', assignRun('k1', CY)); // Cy assigned to k1 then removed again before 6:30
   r = await queue('workers', { action: 'remove', jobId: 'k1', removedWorkers: [{ contactId: 'cc', workerName: 'Cy Ruiz', workerPhone: '+15550000003' }] });
   r = await queue('workers', assignRun('k2', CY));
   r = await queue('workers', assignRun('k3', DE, { reportDate: '2026-11-05' }));
   r = await queue('crew_text', { action: 'crewText', jobId: 'k1', reportDate: T, rapidAssign: false, textWorkers: [] });
   assert.equal(r.waitsForNightly, true);
-  assert.deepEqual([calls.make.length, calls.texts.length], [0, 0], 'nothing sent on the click');
+  assert.deepEqual(calls.make.map(m => [m.jobId, m.action, m.workerName]), [['k1', 'assign', 'Ana Lopez'], ['k1', 'assign', 'Bo Diaz'], ['k1', 'assign', 'Cy Ruiz'], ['k2', 'assign', 'Cy Ruiz'], ['k3', 'assign', 'De Paz']], 'assign runs go to Make on the click');
+  assert.equal(calls.texts.length, 0, 'no schedule text on the click');
   const waiting = await (await effectHandler(new Request('https://board.test/api/workflow-effect?waiting=jobs'))).json();
-  assert.deepEqual(waiting.jobs.k1, { changes: 4, names: ['Ana Lopez', 'Bo Diaz', 'Cy Ruiz'] });
+  assert.deepEqual(waiting.jobs.k1, { changes: 1, names: ['Cy Ruiz'] }, 'only the remove waits');
+  calls.make = [];
   // Send schedule now (rapid) is not held.
   r = await queue('workers', { ...assignRun('k3', DE, { reportDate: '2026-11-05' }), action: 'rapid_assign', rapidAssign: true });
   assert.deepEqual(calls.make.map(m => m.action), ['rapid_assign']);
@@ -141,26 +143,26 @@ test('Send now on a job sends it as it sits: net Make changes and the job text t
   stubFetch();
   const res = await (await post({ op: 'job_send_now', jobId: 'k2' })).json();
   assert.equal(res.ok, true, JSON.stringify(res));
-  assert.deepEqual([res.makeSent, res.texted], [1, 1]);
-  assert.deepEqual(calls.make.map(m => [m.action, m.workerName]), [['assign', 'Cy Ruiz']]);
+  assert.deepEqual([res.makeSent, res.texted], [0, 1], 'the assign already went on the click; only the text');
+  assert.deepEqual(calls.make, []);
   assert.deepEqual(calls.texts.map(t => t.to), ['+15550000003']);
   assert.ok(calls.texts[0].body.includes('2 Tomorrow St') && !calls.texts[0].body.includes('1 Tomorrow St'), 'that job only');
   const again = await (await post({ op: 'job_send_now', jobId: 'k2' })).json();
   assert.deepEqual([again.makeSent, again.texted], [0, 0], 'nothing twice');
 });
 
-test('6:30 PM run: one job every 15 seconds, tomorrow texted, later jobs Make only, canceled-out changes dropped', async () => {
+test('6:30 PM run: one job every 15 seconds, tomorrow texted, waiting removes sent', async () => {
   stubFetch();
   const starts = [];
   const result = await dd.runNightly(sql, { now: now630, gapMs: 150, log: (...a) => starts.push(Date.now()) });
-  assert.deepEqual(result.jobs.map(j => j.jobId), ['k2', 'k1', 'k3'], "tomorrow's jobs first by start (k2 6:30, k1 7:00), then the rest");
-  // k1: Ana and Bo assigned (Cy canceled out); k2 already sent by Send now; k3: De assigned (job is next week, no text)
-  assert.deepEqual(calls.make.map(m => [m.jobId, m.action, m.workerName]), [['k1', 'assign', 'Ana Lopez'], ['k1', 'assign', 'Bo Diaz'], ['k3', 'assign', 'De Paz']]);
+  assert.deepEqual(result.jobs.map(j => j.jobId), ['k2', 'k1'], "tomorrow's jobs by start (k2 6:30, k1 7:00); k3 has nothing waiting");
+  // k1: Cy's remove (his assign went on the click); k2 already texted by Send now
+  assert.deepEqual(calls.make.map(m => [m.jobId, m.action, m.removedWorkers?.[0]?.workerName]), [['k1', 'remove', 'Cy Ruiz']]);
   assert.deepEqual(calls.texts.map(t => t.to).sort(), ['+15550000001', '+15550000002'], "only tomorrow's crew who hadn't gotten it");
   assert.ok(calls.texts.every(t => t.body.startsWith('FRIDAY\n\nOct 30, 2026\n\n\n\n(HOURLY)\n\n(Acme)\n\n1 Tomorrow St')));
-  assert.ok(starts[1] - starts[0] >= 140 && starts[2] - starts[1] >= 140, 'batches spaced out');
+  assert.ok(starts[1] - starts[0] >= 140, 'batches spaced out');
   const left = await sql`select status, count(*)::int as n from dispatch_effects where payload->>'jobId' like 'k%' and kind = 'workers' group by status order by status`;
-  assert.deepEqual(left.map(r => [r.status, r.n]), [['cancelled', 2], ['confirmed', 5]]);
+  assert.deepEqual(left.map(r => [r.status, r.n]), [['confirmed', 7]]);
   const waiting = await (await effectHandler(new Request('https://board.test/api/workflow-effect?waiting=jobs'))).json();
   assert.deepEqual(waiting.jobs, {});
 });

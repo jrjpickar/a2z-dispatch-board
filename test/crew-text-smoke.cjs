@@ -43,7 +43,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   });
   await page.waitForTimeout(500);
   const perWorker = effects.filter(e => e.payload.action === 'assign');
-  assert.equal(perWorker.length, 2, 'per worker runs unchanged (the server holds them for 6:30 PM)');
+  assert.equal(perWorker.length, 2, 'one assign run per worker (sent to Make right away)');
   assert.equal(effects.filter(e => e.payload.action === 'crewText').length, 0, 'Assign selected queues no crew text: the 6:30 PM run sends it');
   // Send schedule now still texts the workers in that assignment right away.
   await page.evaluate(async () => {

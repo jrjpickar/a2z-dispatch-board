@@ -4193,21 +4193,21 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
   // Crew schedule text (that job only), built, texted (Twilio) and logged in GHL on
   // the server. Send schedule now: right away, to the workers in this assignment.
   // Assign selected: nothing here; the 6:30 PM run (or Send now on the row) texts
-  // everyone on the job who hasn't gotten it. The Make runs above wait for 6:30 PM
-  // too unless this is Send schedule now (the server decides).
+  // everyone on the job who hasn't gotten it. The assign runs above go to Make right
+  // away (Make delays its own text); split day runs still wait for 6:30 PM (the server decides).
   const scheduleDate = getReportDate(job);
   const crewText = !rapid ? [{ status: 'fulfilled' }] : await Promise.allSettled([runSideEffect(CONFIG.MOVE_WORKER_URL,
     { action: 'crewText', jobId, jobAddress: job.name || '', reportDate: scheduleDate, reportTime: getReportTime(job), timeZone: BOARD_TZ, triggeredBy: effectBase.action, rapidAssign: rapid,
       textWorkers: assignedWorkers.map(w => ({ contactId: w.contactId || '', workerName: w.workerName, workerPhone: w.workerPhone })) },
     'Crew schedule text', 'crew_text', 'crew-text-' + (scheduleDate || 'nodate') + '-' + assignedWorkers.map(w => String(w.workerPhone || '').replace(/\D/g, '').slice(-4)).join('-').slice(0, 40))]);
   if (crewText[0].status === 'rejected') console.warn('Crew schedule text not confirmed', crewText[0].reason);
-  // Assign selected leaves the Make runs waiting for 6:30 PM: show the count on Send now.
+  // Split day runs from Assign selected wait for 6:30 PM: show the count on Send now.
   if (!rapid) watchDispatchWaiting();
   const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected' && !splitFailed.has(assignedWorkers[i].workerName)).map(w => w.workerName);
   if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only and nothing was sent for them. Take them off with the x and try again.`, true);
   else if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
   else if (rapid) showToast(assignedWorkers.length === 1 ? 'Crew assigned. Schedule sent now.' : `Crew assigned. Schedule sent now to ${assignedWorkers.length} workers.`);
-  else showToast(`Crew assignment saved. It goes to Make and the crew at 6:30 PM, or hold Send now on the job.`);
+  else showToast(`Crew assigned and sent to Make. The schedule text goes out at 6:30 PM, or hold Send now on the job.`);
   render();
 }
 
@@ -4411,7 +4411,7 @@ function updateCrewAssignSelection(panel) {
   const noText = panel.classList.contains('no-text');
   if (summary) summary.innerHTML = !names.length ? '' : noText
     ? `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. Saved on the board only. Nobody gets a text.`
-    : `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> goes to Make and texts the schedule at 6:30 PM (or hold <b>Send now</b> on the job). <b>Send schedule now</b> sends it right away.`;
+    : `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> goes to Make now and texts the schedule at 6:30 PM (or hold <b>Send now</b> on the job). <b>Send schedule now</b> sends it right away.`;
   if (btn && !btn.textContent.endsWith('...')) btn.textContent = noText ? 'Assign without texting' : 'Assign selected';
   setPickerButtons(panel, renderSplitPicks(panel));
   // The jobs table scrolls horizontally, which also clips this dropdown on the
@@ -4750,8 +4750,8 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { if (e.target.closest?.('.hold-btn')) e.preventDefault(); endHold(true); } }, true);
 
 /* ---------- Send now (job row) and the 6:30 PM run ----------
-   Assign and remove worker runs to Make wait on the server until 6:30 PM Pacific
-   every day (lib/daily-dispatch.mjs). Then each job goes out as it sits: Make gets
+   Remove worker and split day runs to Make wait on the server until 6:30 PM Pacific
+   every day (lib/daily-dispatch.mjs). Assign runs go to Make right away. Then each job goes out as it sits: Make gets
    only the net change per worker, and tomorrow's crews get the schedule text for
    their own job (once each). Send schedule now in the picker still goes right away.
    Every job row has Send now next to Unschedule: hold it in the box and that job

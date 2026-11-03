@@ -43,7 +43,8 @@ export default async function handler(request) {
     // Send now) texts everyone on the job who hasn't gotten it. Send schedule now
     // (rapidAssign) texts right away, below.
     if (kind === 'crew_text' && payload?.rapidAssign !== true) return json({ ok: true, waitsForNightly: true, nextRun: new Date(nextDispatchUtc()).toISOString() });
-    // Assign / remove worker runs wait for the 6:30 PM run (or Send now on the job).
+    // Remove worker / split day runs wait for the 6:30 PM run (or Send now on the job).
+    // Assign runs go to Make right away (below); Make delays the text on its side.
     if (waitsForNightly(kind, payload)) {
       const { effectId, status } = await recordEffect(sql, { requestId, kind, payload, effectKey, nightly: true });
       return json({ ok: status !== 'cancelled', waitsForNightly: true, effectId, status, nextRun: new Date(nextDispatchUtc()).toISOString() });
