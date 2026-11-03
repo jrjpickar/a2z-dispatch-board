@@ -79,7 +79,7 @@ Google Sheets fields (top level, named to match the values batchUpdate placehold
 
 ## Field app clock in / clock out (new webhook)
 
-Each **Clock In** and **Clock Out** in the field app posts one plain JSON run to `https://hook.us2.make.com/l4gm9c07tjmikwnv3xhwvf65a4irt3ql` (override with `CLOCK_WEBHOOK` in Netlify). The server sends it in the background, so the worker never waits on Make. End the scenario with the `{"ok":true}` Webhook response; a run Make doesn't confirm shows under Admin > Make / GHL problems as **Clock in / out** with Retry.
+Each **Clock In** and **Clock Out** in the field app posts one plain JSON run to `https://hook.us2.make.com/l4gm9c07tjmikwnv3xhwvf65a4irt3ql` (override with `CLOCK_WEBHOOK` in Netlify). The server sends it in the background, so the worker never waits on Make. **No Webhook response is needed** for this one: Make's plain "Accepted" counts as sent (a `{"ok":true}` response also works). A run Make refuses or never answers shows under Admin > Make / GHL problems as **Clock in / out** with Retry. The first punch on a new job address waits for the address lookup before its run goes out, so `distanceFt` is filled in.
 
 Fields (both actions):
 
@@ -93,6 +93,7 @@ Fields (both actions):
 - `clockInDate`, `clockInTime`, `clockOutDate`, `clockOutTime` (same formats; clock out fields empty on clockIn), `clockInAt`, `clockOutAt` (ISO), `timeZone`
 - `latitude`, `longitude`, `accuracyFt`, `distanceFt` (from the job), `locationStatus` (`onsite`, `near`, `away`, or `unknown` when the job has no map pin), `mapLink`
 - `language` (`en` / `es`, the language the summary was written in), `shiftId`, `eventId`
+- `autoClosed`: `true` on a clockOut the server made for a forgotten clock out (closed at the worker's next clock in, 16+ hours later; the out time is the last location the phone sent). `scopeOfWork` is empty and `notes` says so.
 
 To set it up: in Make, open the scenario with that webhook, click **Redetermine data structure**, then clock in and out once from the field app.
 

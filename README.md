@@ -1,13 +1,21 @@
 # A2Z Dispatch 1.9
 
+## Crew schedule text is editable (Nov 3, 2026)
+
+- **Admin > Crew schedule text** (senior admins). Edit the layout of the text each worker gets (6:30 PM run, Send now, Send schedule now). Tap a field like `{DATE}`, `{ADDRESS}`, `{TIME}` or `{CREW}` to drop it in; the crew line (`* {NAME}{SPLIT}`) sets how each worker is listed. A line whose fields come out empty (no end time, not hourly) is left out.
+- Live preview with the sample job, the length, and how many texts each worker is billed for. Unknown fields, a missing `{NAME}` in the crew line, an unmatched `{` or a layout over 1,200 characters can't be saved; a layout without the crew, day, address or time saves with a warning.
+- **Reset to default** puts back the original text exactly. If a saved layout can't be read, texts go out with the default, so a bad layout never stops a send. A Retry from Make / GHL problems resends the same text the first try built.
+- Saved in `dispatch_settings` (`crewTextTemplate`); changes show in the Activity log.
+
 ## Field app clock in / clock out with location (Nov 3, 2026)
 
 - **Clock In / Clock Out** on each of today's job cards in the field app (`/driver/`). Location is required for both: no location, no punch. A blocked phone gets iPhone / Android steps to turn it back on (English and Spanish).
-- **Live location while on the clock.** With the app open, the phone sends a reading every 5 minutes. Phones stop sending when the app is closed or the screen locks.
+- **Live location while on the clock.** With the app open, the phone sends a reading when the worker moves 150 ft or more, and every 15 minutes either way (moves only after 10 hours on the clock, nothing after 16). Phones stop sending when the app is closed or the screen locks.
 - **Work summary on clock out.** Required "Work done today" (quick add buttons, each one goes in once) and an optional note for dispatch.
 - **Tomorrow's job** shows on its own card (and moves to the top right after clock out).
+- **Forgotten clock out:** a shift still open 16 hours later is closed when the worker next clocks in, at the last location the phone sent, sent to Make with `autoClosed: true` and flagged "Never clocked out" on the Time Clock.
 - **Make:** every clock in and clock out posts one run to `https://hook.us2.make.com/l4gm9c07tjmikwnv3xhwvf65a4irt3ql` (override with `CLOCK_WEBHOOK`). See MAKE-SETUP.md.
-- **Dispatch board: Time Clock** (Jobs Scheduled, next to EOD Done). One expandable row per job for the picked day: who is on the clock, hours, clock in / live / clock out location, the work summary and note, and "Need a look" flags (off site, no update in 15 minutes, no clock out 30 minutes after the end time, a note for dispatch). **Map** opens a map on the board with the job pin, the on-site area, clock in / out spots, the path and a live dot; **Map the whole crew** shows everyone on that job. Refreshes every minute while open. Read only (`GET /api/time-clock`). The map uses Leaflet from cdnjs and OpenStreetMap tiles, loaded the first time a map opens. Everything else on the board works as before.
+- **Dispatch board: Time Clock** (Jobs Scheduled, next to EOD Done). One expandable row per job for the picked day: who is on the clock, hours, clock in / live / clock out location, the work summary and note, and "Need a look" flags (off site, no update in 20 minutes, no clock out 30 minutes after the end time, a note for dispatch). **Map** opens a map on the board with the job pin, the on-site area, clock in / out spots, the path and a live dot; **Map the whole crew** shows everyone on that job. Refreshes every minute while open. Read only (`GET /api/time-clock`). The map uses Leaflet from cdnjs and OpenStreetMap tiles, loaded the first time a map opens. Everything else on the board works as before.
 - **View PDF on the page.** EOD Done > Completed job log: View PDF (on the row and in Edit job log) now opens the PDF in a viewer on the board, with Open in new tab and Download. It works inside GHL too (a new tab couldn't sign in there). Ctrl / Cmd click still opens a tab.
 - Shifts are saved in the new `field_shifts` table (created on the first request after deploy).
 - **Job map pins are free:** each job address is looked up once with the US Census Geocoder (free, no key), then OpenStreetMap if the Census has no match. No Google account needed.

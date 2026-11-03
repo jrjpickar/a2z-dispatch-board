@@ -1686,6 +1686,17 @@
   /* ---------- Senior admin tools ---------- */
   .senior-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .senior-form { padding: 14px 16px 6px; }
+  .ct-help { margin: 0 0 10px; font-size: 12.5px; color: var(--ink-soft); }
+  .ct-form textarea, .ct-form input[type=text] { width: 100%; font: 13px/1.45 'IBM Plex Mono', monospace; padding: 9px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--ink); resize: vertical; }
+  .ct-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: -4px 0 12px; }
+  .ct-fields button { border: 1px solid var(--border); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 3px 9px; font: 600 11.5px 'IBM Plex Mono', monospace; cursor: pointer; }
+  .ct-fields button:hover { border-color: var(--orange); color: var(--orange-dark); }
+  .ct-preview-head { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ink-soft); margin-bottom: 4px; }
+  .ct-preview-head b { color: var(--ink); text-transform: uppercase; letter-spacing: .05em; font: 600 11px 'Oswald', sans-serif; }
+  .ct-preview { margin: 0; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px 14px 14px 4px; font: 13px/1.4 'Inter', sans-serif; white-space: pre-wrap; max-height: 320px; overflow: auto; color: var(--ink); }
+  .ct-warn { min-height: 1em; margin: 8px 0 4px; font-size: 12.5px; color: #8a6d1a; }
+  .ct-warn.err { color: var(--danger); font-weight: 600; }
+  body.dark-mode .ct-warn { color: #f0cf7a; } body.dark-mode .ct-warn.err { color: #ef8a7a; }
   #adminDispatchView .panel-head + .admin-list { margin-top: 12px; }
   .senior-check { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: -4px 0 12px; }
   .senior-save { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -2161,6 +2172,20 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
         <div class="field"><label for="setPin">Admin PIN <span class="label-optional" id="pinStatus"></span></label><input type="password" id="setPin" autocomplete="new-password" maxlength="64" placeholder="Leave blank to keep"></div>
         <label class="senior-check"><input type="checkbox" id="clearPin"> Remove the admin PIN set here</label>
         <div class="senior-save"><span class="senior-updated" id="settingsUpdated"></span><button type="button" class="btn-primary" id="saveSettings">Save settings</button></div>
+      </div>
+    </div>
+    <div class="panel" data-panel="crewText">
+      <div class="panel-head"><h2>Crew schedule text</h2><span class="mono" id="ctState"></span></div>
+      <div class="senior-form ct-form">
+        <p class="ct-help">The text each worker gets at 6:30 PM, on Send now and on Send schedule now. Tap a field to put it where the cursor is. A line whose fields come out empty (no end time, not hourly) is left out.</p>
+        <div class="field"><label for="ctTemplate">Text layout</label><textarea id="ctTemplate" rows="12" spellcheck="false"></textarea></div>
+        <div class="ct-fields" id="ctFields"></div>
+        <div class="field"><label for="ctCrewLine">Crew line (one per worker, for {CREW})</label><input type="text" id="ctCrewLine" maxlength="120" spellcheck="false"></div>
+        <div class="ct-fields" id="ctCrewFields"></div>
+        <div class="ct-preview-head"><b>Preview</b><span id="ctMeta"></span></div>
+        <pre class="ct-preview" id="ctPreview"></pre>
+        <div class="ct-warn" id="ctWarn" role="status"></div>
+        <div class="senior-save"><button type="button" class="btn-ghost" id="ctReset">Reset to default</button><button type="button" class="btn-ghost" id="ctUndo">Undo changes</button><button type="button" class="btn-primary" id="ctSave">Save text</button></div>
       </div>
     </div>
     <div class="panel" data-panel="activity">
@@ -6272,7 +6297,7 @@ document.getElementById('eodDoneToday').addEventListener('click', () => { docume
    location, and the work summary. Map opens an in-board map (Leaflet + OpenStreetMap,
    loaded the first time) with the job pin, the clock in / out spots, the path and a
    live dot. Refreshes every minute while the view is open and in use (stops after 15 idle minutes). Read only. */
-const TC_STALE_MS = 15 * 60000; // the phone sends every 5 minutes while open
+const TC_STALE_MS = 20 * 60000; // the phone sends when it moves 150 ft, and every 15 minutes either way, while open
 let tcData = null, tcTimer = null, tcLoading = false, tcMapState = null;
 const tcOpenJobs = new Set();
 const tcFmt = iso => iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: BOARD_TZ, hour: 'numeric', minute: '2-digit' }) : '';
@@ -6315,7 +6340,7 @@ function pacificToUtcIso(ymd, hhmm) {
   return new Date(guess - (Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - guess)).toISOString();
 }
 function tcFlag(s, job) {
-  return s.clockIn?.status === 'away' || s.clockOut?.status === 'away' || (!s.clockOut && (s.last?.status === 'away' || tcStale(s))) || tcPastEnd(s, job) || !!s.summary?.notes;
+  return !!s.clockOut?.auto || s.clockIn?.status === 'away' || s.clockOut?.status === 'away' || (!s.clockOut && (s.last?.status === 'away' || tcStale(s))) || tcPastEnd(s, job) || !!s.summary?.notes;
 }
 function tcGroups(day) {
   const feed = new Map((dashboardData.jobs || []).map(j => [j.id, j]));
@@ -6377,7 +6402,7 @@ function renderTimeClockView() {
     const time = g.job && getReportTime(g.job) ? eodTime12(getReportTime(g.job)) + (getReportEndTime(g.job) ? ' - ' + eodTime12(getReportEndTime(g.job)) : '') : '';
     const rows = g.shifts.slice().sort((a, b) => a.workerName.localeCompare(b.workerName) || a.clockIn.at.localeCompare(b.clockIn.at)).map(s => {
       const hours = s.clockOut ? `${tcHours(s.clockIn.at, s.clockOut.at)} h` : `<span class="tc-chip live"><i></i>${tcHm(Date.now() - Date.parse(s.clockIn.at))}</span>`;
-      const outCell = s.clockOut ? escapeAttr(tcFmt(s.clockOut.at)) : tcPastEnd(s, g.job) ? '<span class="tc-chip flag"><i></i>No clock out</span>' : '<span class="eod-muted">On the clock</span>';
+      const outCell = s.clockOut ? escapeAttr(tcFmt(s.clockOut.at)) + (s.clockOut.auto ? '<div><span class="tc-chip flag"><i></i>Never clocked out</span></div>' : '') : tcPastEnd(s, g.job) ? '<span class="tc-chip flag"><i></i>No clock out</span>' : '<span class="eod-muted">On the clock</span>';
       const sum = s.summary ? `<tr class="tc-sum"><td colspan="7"><div class="tc-sumbox"><div><span class="k">Work done</span>${escapeAttr(s.summary.work)}${s.summary.lang === 'es' ? ' <span class="eod-muted">(Spanish)</span>' : ''}</div>${s.summary.notes ? `<div class="note"><span class="k">For dispatch</span>${escapeAttr(s.summary.notes)}</div>` : ''}</div></td></tr>` : '';
       return `<tr${s.summary ? ' class="tc-has-sum"' : ''}><td><b>${escapeAttr(s.workerName)}</b>${pacificDayOf(s.clockIn.at) !== day ? `<div class="eod-muted">since ${escapeAttr(new Date(s.clockIn.at).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' }))}</div>` : ''}</td>
         <td class="mono">${escapeAttr(tcFmt(s.clockIn.at))}</td><td class="mono">${outCell}</td><td class="mono">${hours}</td>
@@ -6412,7 +6437,7 @@ async function openTcMap(target) {
   scrim.className = 'tc-map-scrim'; scrim.id = 'tcMapScrim';
   scrim.innerHTML = `<div class="tc-map-card" role="dialog" aria-labelledby="tcMapTitle"><div class="tc-map-head"><div><h3 id="tcMapTitle"></h3><div class="tc-detail" id="tcMapSub"></div></div><button type="button" class="tc-map-close" id="tcMapClose">Close</button></div>
     <div id="tcMap"></div>
-    <div class="tc-map-legend"><span><i style="background:var(--orange)"></i>Job</span><span><i style="background:#2f74c0"></i>Live (updates every minute)</span><span><i style="background:#2f8f4e"></i>Clock in</span><span><i style="background:#1c1d1f"></i>Clock out</span><span><i style="background:rgba(47,143,78,.25);border:1px solid #2f8f4e"></i>On site area</span></div></div>`;
+    <div class="tc-map-legend"><span><i style="background:var(--orange)"></i>Job</span><span><i style="background:#2f74c0"></i>Live (board updates every minute)</span><span><i style="background:#2f8f4e"></i>Clock in</span><span><i style="background:#1c1d1f"></i>Clock out</span><span><i style="background:rgba(47,143,78,.25);border:1px solid #2f8f4e"></i>On site area</span></div></div>`;
   scrim.addEventListener('click', e => { if (e.target === scrim) closeTcMap(); });
   document.body.append(scrim);
   document.getElementById('tcMapClose').onclick = closeTcMap;
@@ -10051,7 +10076,79 @@ function renderSettings(st) {
   document.getElementById('pinStatus').textContent = `(${st.adminPinSet ? 'set here' : 'not set here'}${st.envPinSet ? '; Netlify PIN also works' : ''})`;
   const last = Object.values(st.updated || {}).sort((a, b) => new Date(b.at) - new Date(a.at))[0];
   document.getElementById('settingsUpdated').textContent = last ? `Last changed by ${last.by} ${seniorWhen(last.at)}` : '';
+  // Don't wipe a half-edited crew text when settings reload.
+  if (st.crewText && !(ctSaved && ctDirty() && document.activeElement?.closest?.('[data-panel="crewText"]'))) renderCrewTextPanel(st.crewText);
 }
+/* Crew schedule text (Admin, senior): edit the layout of the server-side crew text.
+   Preview comes from the server (same code that builds the real text). */
+let ctSaved = null, ctInfo = null, ctPreviewTimer = 0, ctPreviewSeq = 0;
+function renderCrewTextPanel(info) {
+  if (!info) return;
+  ctInfo = info; ctSaved = { template: info.template, crewLine: info.crewLine };
+  document.getElementById('ctTemplate').value = info.template;
+  document.getElementById('ctCrewLine').value = info.crewLine;
+  const chips = (fields, target) => Object.entries(fields).map(([k, label]) => `<button type="button" data-ct-field="${sessionEsc(k)}" data-ct-target="${target}" title="${sessionEsc(label)}">{${sessionEsc(k)}}</button>`).join('');
+  document.getElementById('ctFields').innerHTML = chips(info.fields || {}, 'ctTemplate');
+  document.getElementById('ctCrewFields').innerHTML = chips(info.crewFields || {}, 'ctCrewLine');
+  document.getElementById('ctTemplate').maxLength = info.max || 1200;
+  showCrewTextPreview({ ok: true, ...info.preview, warnings: [] });
+  ctDirty();
+}
+function ctDirty() {
+  const t = document.getElementById('ctTemplate').value, c = document.getElementById('ctCrewLine').value;
+  const dirty = !!ctSaved && (t !== ctSaved.template || c !== ctSaved.crewLine);
+  document.getElementById('ctUndo').disabled = !dirty;
+  document.getElementById('ctSave').disabled = !dirty;
+  document.getElementById('ctState').textContent = dirty ? 'Not saved' : ctInfo?.isDefault ? 'Default' : 'Custom';
+  return dirty;
+}
+function showCrewTextPreview(p) {
+  const warn = document.getElementById('ctWarn');
+  if (!p.ok) { warn.className = 'ct-warn err'; warn.textContent = p.error || 'This layout can\'t be used.'; return; }
+  document.getElementById('ctPreview').textContent = p.text;
+  document.getElementById('ctMeta').textContent = `${p.length} characters · ${p.segments === 1 ? '1 text' : `billed as ${p.segments} texts`} per worker`;
+  warn.className = 'ct-warn'; warn.textContent = (p.warnings || []).join(' ');
+}
+function queueCrewTextPreview() {
+  ctDirty();
+  clearTimeout(ctPreviewTimer);
+  ctPreviewTimer = setTimeout(async () => {
+    const seq = ++ctPreviewSeq;
+    try {
+      const p = await seniorApi('', { action: 'preview_crew_text', crewText: { template: document.getElementById('ctTemplate').value, crewLine: document.getElementById('ctCrewLine').value } });
+      if (seq === ctPreviewSeq) showCrewTextPreview(p);
+    } catch (e) { if (seq === ctPreviewSeq) showCrewTextPreview({ ok: false, error: e.message }); }
+  }, 700);
+}
+document.getElementById('ctTemplate').addEventListener('input', queueCrewTextPreview);
+document.getElementById('ctCrewLine').addEventListener('input', queueCrewTextPreview);
+document.querySelector('[data-panel="crewText"]').addEventListener('click', e => {
+  const b = e.target.closest('[data-ct-field]'); if (!b) return;
+  const el = document.getElementById(b.dataset.ctTarget), token = '{' + b.dataset.ctField + '}';
+  const start = el.selectionStart ?? el.value.length, end = el.selectionEnd ?? el.value.length;
+  el.value = el.value.slice(0, start) + token + el.value.slice(end);
+  el.focus(); el.setSelectionRange(start + token.length, start + token.length);
+  queueCrewTextPreview();
+});
+document.getElementById('ctUndo').addEventListener('click', () => { if (ctInfo) renderCrewTextPanel(ctInfo); });
+async function saveCrewText(body, okMsg) {
+  const btn = document.getElementById('ctSave'); btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const data = await seniorApi('', { action: 'save_settings', ...body });
+    renderSettings(data.settings);
+    renderCrewTextPanel(data.settings.crewText);
+    showToast(okMsg);
+    seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {});
+  } catch (err) { showCrewTextPreview({ ok: false, error: err.message }); showToast(err.message, true); }
+  finally { btn.textContent = 'Save text'; ctDirty(); }
+}
+document.getElementById('ctSave').addEventListener('click', () => saveCrewText({ crewText: { template: document.getElementById('ctTemplate').value, crewLine: document.getElementById('ctCrewLine').value } }, 'Crew text saved. The next texts use it.'));
+document.getElementById('ctReset').addEventListener('click', () => {
+  if (!confirm('Put the crew text back to the original layout for everyone?')) return;
+  saveCrewText({ resetCrewText: true }, 'Crew text is back to the default.');
+});
+window.addEventListener('beforeunload', e => { if (ctSaved && ctDirty()) { e.preventDefault(); e.returnValue = ''; } });
+
 async function loadSeniorTools() {
   if (!currentSession.isAdmin) return;
   try { await fetchSessionUsers(); } catch {}

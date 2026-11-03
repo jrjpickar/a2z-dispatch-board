@@ -66,13 +66,16 @@ test('clock in needs location, the crew and today; saves distance and posts cloc
   const id = rid();
   r = await call(ana, { op: 'clockIn', jobId: 'j1', requestId: id, location: at(120) });
   assert.equal(r.status, 200, JSON.stringify(r.data));
-  assert.equal(r.data.clockIn.status, 'onsite'); assert.ok(Math.abs(r.data.clockIn.dist - 120) < 3);
+  assert.equal(r.data.clockIn.status, 'unknown', 'first punch on a job: the answer does not wait on the address lookup');
   assert.equal(r.data.open.jobId, 'j1');
   assert.equal(makeRuns.length, 1);
   const run = makeRuns[0];
   assert.equal(run.action, 'clockIn'); assert.equal(run.jobId, 'j1'); assert.equal(run.hoursWorked, 0);
   assert.equal(run.scopeOfWork, ''); assert.equal(run.notes, '');
   assert.match(run.date, /^\d{2}\/\d{2}\/\d{2}$/); assert.match(run.time, /^\d{2}:\d{2}(AM|PM)$/);
+  assert.ok(Math.abs(run.distanceFt - 120) < 3, 'the lookup ran right after and the Make run has the distance');
+  const [saved] = await sql`select clock_in from field_shifts where id = ${'shift-' + id}`;
+  assert.equal((typeof saved.clock_in === 'string' ? JSON.parse(saved.clock_in) : saved.clock_in).status, 'onsite', 'the saved punch got its distance');
   assert.equal(run.workerName, 'Ana Lopez'); assert.equal(run.employeeName, 'Ana Lopez'); assert.equal(run.locationStatus, 'onsite'); assert.equal(run.jobScopeOfWork, 'Kitchen demo'); assert.ok(run.eventId);
   // Same request again (double tap / retry): no second shift, no second run.
   r = await call(ana, { op: 'clockIn', jobId: 'j1', requestId: id, location: at(120) });
@@ -136,6 +139,13 @@ test('free job lookup: Census first, OpenStreetMap when Census has no match, ret
   assert.deepEqual(await fc.geocode('Nowhere'), { pin: null, retry: false });
 });
 
+test('clock webhook: a plain "Accepted" from Make counts as sent (no Webhook response needed)', async () => {
+  const { sendWorkflow } = await import('../lib/effects.mjs');
+  globalThis.fetch = async () => new Response('Accepted', { status: 200 });
+  await sendWorkflow('clock', { action: 'clockIn', jobId: 'j1' }, 'e1');
+  await assert.rejects(sendWorkflow('worker_sent_home', { action: 'worker_sent_home', jobId: 'j1' }, 'e2'), /Accepted/, 'other webhooks still need the response');
+});
+
 test('no sign-in, no clock (field app)', async () => {
   const res = await handler(new Request('https://board.test/api/field-clock'), {});
   assert.equal(res.status, 401);
@@ -157,4 +167,23 @@ test('board Time Clock: signed-in board users read the day with locations, trail
   assert.ok(s.trail.length >= 3); assert.deepEqual(data.pins.j1, PIN);
   res = await board(new Request('https://board.test/api/time-clock?day=2001-01-01', { headers: { 'x-a2z-session': session } }));
   assert.equal((await res.json()).shifts.length, 0);
+});
+
+test('forgotten clock out: after 16 hours the next clock in closes it (flagged) and goes ahead', async () => {
+  stubFetch();
+  const id1 = rid();
+  let r = await call(ana, { op: 'clockIn', jobId: 'j1', requestId: id1, location: at(100) });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  r = await call(ana, { op: 'clockIn', jobId: 'j1', requestId: rid(), location: at(100) });
+  assert.equal(r.status, 409, 'still on the clock: no second clock in yet');
+  await sql`update field_shifts set clock_in = jsonb_set(clock_in, '{at}', to_jsonb((now() - interval '17 hours')::text)), last_loc = jsonb_set(last_loc, '{at}', to_jsonb((now() - interval '9 hours')::text)) where id = ${'shift-' + id1}`;
+  makeRuns = [];
+  r = await call(ana, { op: 'clockIn', jobId: 'j1', requestId: rid(), location: at(100) });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  const out = makeRuns.find(m => m.action === 'clockOut');
+  assert.ok(out, 'the forgotten shift got its clockOut run'); assert.equal(out.autoClosed, true); assert.equal(out.hoursWorked, 8);
+  assert.ok(makeRuns.find(m => m.action === 'clockIn'), 'and the new clock in went through');
+  // Clock back out so later tests start clean.
+  r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(100), work: 'Demo' });
+  assert.equal(r.status, 200);
 });

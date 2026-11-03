@@ -14,7 +14,7 @@ import { StateError } from '../../lib/state.mjs';
 import { requireSenior } from '../../lib/session.mjs';
 import { requirePanel } from '../../lib/layout.mjs';
 import { logActivity, recentActivity, logSend, sendHistory } from '../../lib/activity.mjs';
-import { seniorSettings, saveSettings } from '../../lib/settings.mjs';
+import { seniorSettings, saveSettings, previewCrewText } from '../../lib/settings.mjs';
 import { sendWorkflow, workflows, webhookUrl } from '../../lib/effects.mjs';
 import { syncJobSchedule } from '../../lib/ghl.mjs';
 
@@ -131,6 +131,7 @@ export default async function handler(request) {
       if (cleared.length) await logActivity(sql, session, 'Acknowledged GHL schedule sync', jobId);
       return json({ ok: true, ...(await problems(sql)) });
     }
+    if (body.action === 'preview_crew_text') return json(previewCrewText(body.crewText));
     if (body.action === 'save_settings') {
       const changed = await saveSettings(sql, body, session.name);
       if (changed.length) await logActivity(sql, session, 'Changed settings', changed.join(', '));

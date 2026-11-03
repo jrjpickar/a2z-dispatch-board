@@ -206,3 +206,42 @@ test('6:30 PM trigger: only acts 6:30 to 7:59 PM Pacific, once a day, and hands 
     assert.equal(denied.status, 403);
   } finally { Date.now = realNow; }
 });
+
+// ---------- Editable text layout (Admin > Crew schedule text) ----------
+test('crew text layout: default is unchanged, custom layouts render, empty lines drop cleanly', async () => {
+  const ct = await import('../lib/crew-text.mjs');
+  const sample = ct.renderCrewText(ct.CREW_TEXT_SAMPLE);
+  assert.equal(sample, 'TUESDAY\n\nNov 3, 2026\n\n\n\n(Kyle Matt)\n\n267 E 16th St, Costa Mesa, CA 92627\n\n7:00 AM - 3:30 PM\n\n* Juanito Reyes\n* Guillermo 4hr\n* Jesus Reyes\n* Jose Manuel\n\n\n\nbuenas noches guys');
+  const custom = { template: 'Hola! {WEEKDAY} {DATE}\n{SHIFT}\nCliente: {CLIENT}\nInicio: {START}\nFin: {END}\n\n{CREW}\n\nGracias', crewLine: '- {NAME} ({HOURS}h)' };
+  const t = ct.renderCrewText({ ...ct.CREW_TEXT_SAMPLE, END: '' }, custom);
+  assert.equal(t, 'Hola! Tuesday Nov 3, 2026\nCliente: Kyle Matt\nInicio: 7:00 AM\n\n- Juanito Reyes (h)\n- Guillermo (4h)\n- Jesus Reyes (h)\n- Jose Manuel (h)\n\nGracias');
+  // Values are not re-read as fields (a client named "{CREW}" stays as typed).
+  assert.match(ct.renderCrewText({ ...ct.CREW_TEXT_SAMPLE, CLIENT: '{CREW}' }), /\(\{CREW\}\)/);
+});
+
+test('crew text layout: bad layouts are refused with a clear reason', async () => {
+  const { cleanCrewText } = await import('../lib/crew-text.mjs');
+  const ok = { template: '{DATE}\n{ADDRESS}\n{TIME}\n{CREW}', crewLine: '* {NAME}' };
+  assert.deepEqual(cleanCrewText(ok).warnings, []);
+  assert.throws(() => cleanCrewText({ ...ok, template: '   \n ' }), /empty/);
+  assert.throws(() => cleanCrewText({ ...ok, template: 'x'.repeat(1201) }), /too long/);
+  assert.throws(() => cleanCrewText({ ...ok, template: '{DATE} {Adress}' }), /\{Adress\}/);
+  assert.throws(() => cleanCrewText({ ...ok, template: '{DATE} {ADDRESS' }), /without its pair/);
+  assert.throws(() => cleanCrewText({ ...ok, crewLine: '' }), /crew line is empty/);
+  assert.throws(() => cleanCrewText({ ...ok, crewLine: '* {WORKER}' }), /\{WORKER\}/);
+  assert.throws(() => cleanCrewText({ ...ok, crewLine: '* worker' }), /needs \{NAME\}/);
+  assert.equal(cleanCrewText({ template: 'Hi {CLIENT}', crewLine: '{NAME}' }).warnings.length, 4, 'missing crew, day, address and time are warned about');
+  assert.equal(cleanCrewText({ ...ok, template: '{DATE}\r\n{CREW}  \r\n\r\n' }).template, '{DATE}\n{CREW}', 'Windows line ends and trailing spaces cleaned');
+});
+
+test('crew text layout: a saved layout is used for real texts; a broken one falls back to the default', async () => {
+  const ct = await import('../lib/crew-text.mjs');
+  const fakeSql = value => async () => value === undefined ? [] : [{ value }];
+  assert.deepEqual(await ct.readCrewText(fakeSql(undefined)), { ...ct.CREW_TEXT_DEFAULT });
+  assert.deepEqual(await ct.readCrewText(fakeSql({ template: '{Nope}', crewLine: '{NAME}' })), { ...ct.CREW_TEXT_DEFAULT }, 'invalid saved layout never breaks a send');
+  assert.deepEqual(await ct.readCrewText(async () => { throw new Error('db down'); }), { ...ct.CREW_TEXT_DEFAULT });
+  const layout = { template: '{DATE}: {ADDRESS} {TIME}\n{CREW}', crewLine: '{NAME}' };
+  const t = buildJobText(jobs, states, '2026-10-26', 'j2', { layout });
+  assert.equal(t.text, 'Oct 26, 2026: 16 Burning Tree Rd, Newport Beach 7:00 AM - 3:30 PM\nJose Fabian\nNiko Reyes');
+  assert.equal(ct.smsSegments('a'.repeat(160)), 1); assert.equal(ct.smsSegments('a'.repeat(161)), 2); assert.equal(ct.smsSegments('ó'.repeat(71)), 2);
+});

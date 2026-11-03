@@ -316,7 +316,7 @@
       fixT: 'Turn location back on', fixB: "The app can't ask again after location was blocked. Change it in your phone settings:",
       fixIos: ['Open <b>Settings &gt; Privacy &amp; Security &gt; Location Services</b> and turn it on.', 'In that list tap <b>Safari Websites</b> and pick <b>While Using the App</b>.', 'Go to <b>Settings &gt; Safari &gt; Location</b> and pick <b>Allow</b> so it stops asking.', 'Come back here and tap <b>Clock In</b>.'],
       fixAndroid: ['In Chrome, tap the icon next to the web address.', 'Tap <b>Permissions &gt; Location</b> and pick <b>Allow</b>.', 'In <b>Settings &gt; Apps &gt; Chrome &gt; Permissions &gt; Location</b>, pick <b>Allow only while using the app</b>.', 'Come back here and tap <b>Clock In</b>.'],
-      tryAgain: 'Try again', close: 'Close',
+      tryAgain: 'Try again', close: 'Close', forgotOut: 'You never clocked out at {a}. Clocking in here closes it, and dispatch will see it. Or clock out there first.',
       sumT: 'Before you clock out', sumB: 'Tell dispatch what got done today.', workL: 'Work done today', workPh: 'Ex: Demoed the kitchen cabinets, loaded 2 trucks, swept the site',
       chips: ['Demo', 'Haul off', 'Loaded trucks', 'Cleanup', 'Moved materials'],
       notesL: 'Anything dispatch should know? (optional)', notesPh: 'Ex: Ran out of bags, need a dumpster swap tomorrow', errWork: 'Write a few words about the work done.', cancel: 'Cancel', map: 'Map'
@@ -372,7 +372,7 @@
       fixT: 'Vuelve a activar la ubicación', fixB: 'La app no puede preguntar de nuevo después de bloquear la ubicación. Cámbialo en la configuración del teléfono:',
       fixIos: ['Abre <b>Configuración &gt; Privacidad y seguridad &gt; Localización</b> y actívala.', 'En esa lista toca <b>Sitios web de Safari</b> y elige <b>Mientras se usa la app</b>.', 'Ve a <b>Configuración &gt; Safari &gt; Ubicación</b> y elige <b>Permitir</b> para que no pregunte cada vez.', 'Regresa aquí y toca <b>Marcar Entrada</b>.'],
       fixAndroid: ['En Chrome, toca el ícono junto a la dirección web.', 'Toca <b>Permisos &gt; Ubicación</b> y elige <b>Permitir</b>.', 'En <b>Ajustes &gt; Apps &gt; Chrome &gt; Permisos &gt; Ubicación</b>, elige <b>Permitir solo mientras se usa la app</b>.', 'Regresa aquí y toca <b>Marcar Entrada</b>.'],
-      tryAgain: 'Intentar de nuevo', close: 'Cerrar',
+      tryAgain: 'Intentar de nuevo', close: 'Cerrar', forgotOut: 'Nunca marcaste salida en {a}. Marcar entrada aquí lo cierra, y despacho lo verá. O marca salida allí primero.',
       sumT: 'Antes de marcar salida', sumB: 'Dile a despacho qué se hizo hoy.', workL: 'Trabajo hecho hoy', workPh: 'Ej: Demolimos los gabinetes de la cocina, cargamos 2 camiones, barrimos el sitio',
       chips: ['Demolición', 'Retiro de escombros', 'Camiones cargados', 'Limpieza', 'Movimos material'],
       notesL: '¿Algo que despacho deba saber? (opcional)', notesPh: 'Ej: Se acabaron las bolsas, hay que cambiar el contenedor mañana', errWork: 'Escribe unas palabras sobre el trabajo hecho.', cancel: 'Cancelar', map: 'Mapa'
@@ -583,6 +583,7 @@
       const [data] = await Promise.all([api('/api/driver-moves', { method: 'GET' }), loadClock()]);
       renderData(data);
       syncLiveLocation();
+      warmLocation();
       updatedLabel.textContent = t('updated', { time: new Date().toLocaleTimeString([], { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit' }) });
     } catch (error) {
       if (error.status === 401) return goToLogin(t('sessionEnded'));
@@ -602,12 +603,16 @@
   // Location is required for both. While on the clock with the app open, the phone
   // sends a reading every 5 minutes (live location). Clock out asks for a short
   // summary of the work done first.
-  const CLOCK_PING_MS = 300000;
+  // Live location: a reading goes up when the worker has moved 150 ft or more since the
+  // last one, or every 15 minutes either way. After 10 hours on the clock only moves go
+  // up, and after 16 hours nothing (a phone left on with a forgotten clock out shouldn't
+  // keep the database awake all night).
+  const PING_MOVE_FT = 150, PING_HEARTBEAT_MS = 900000, PING_QUIET_AFTER_MS = 10 * 3600000, PING_STOP_AFTER_MS = 16 * 3600000;
   const TZ = 'America/Los_Angeles';
   let clock = { open: null, recent: [] };
   let clockBusy = '', clockMsg = null, permState = 'unknown', fixTab = /android/i.test(navigator.userAgent) ? 'android' : 'ios';
   let sumDraft = { work: '', notes: '' }, sumReady = false;
-  let watchId = null, lastPingAt = 0;
+  let watchId = null, lastPingAt = 0, lastSent = null;
   const ICON_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 
@@ -653,19 +658,43 @@
   let lastFix = null;
   const fixOf = p => ({ lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy * 3.28084), at: Date.now() });
   const plain = f => ({ lat: f.lat, lng: f.lng, acc: f.acc });
+  // Fast and good enough: takes the first reading within 165 ft, or the best one after
+  // 4 seconds if it's within 1,000 ft, instead of waiting for a perfect GPS fix.
   function getPosition() {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) return reject({ code: 2 });
       if (lastFix && Date.now() - lastFix.at < 30000) return resolve(plain(lastFix));
-      navigator.geolocation.getCurrentPosition(
-        p => { if (permState !== 'granted') permState = 'granted'; lastFix = fixOf(p); resolve(plain(lastFix)); },
-        e => {
-          if (e.code === 1) { permState = 'denied'; lastFix = null; return reject({ code: 1 }); }
-          if (lastFix && Date.now() - lastFix.at < 120000) return resolve(plain(lastFix));
-          reject({ code: e.code });
-        },
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
+      let best = null, done = false, id = null;
+      const finish = (fn, v) => { if (done) return; done = true; if (id !== null) navigator.geolocation.clearWatch(id); clearTimeout(soft); clearTimeout(hard); fn(v); };
+      const soft = setTimeout(() => { if (best && best.acc <= 1000) finish(resolve, plain(best)); }, 4000);
+      const hard = setTimeout(() => {
+        if (best) return finish(resolve, plain(best));
+        if (lastFix && Date.now() - lastFix.at < 120000) return finish(resolve, plain(lastFix));
+        finish(reject, { code: 3 });
+      }, 20000);
+      id = navigator.geolocation.watchPosition(p => {
+        if (permState !== 'granted') permState = 'granted';
+        const f = fixOf(p); lastFix = f;
+        if (!best || f.acc < best.acc) best = f;
+        if (f.acc <= 165) finish(resolve, plain(f));
+      }, e => {
+        if (e.code === 1) { permState = 'denied'; lastFix = null; return finish(reject, { code: 1 }); }
+      }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 });
     });
+  }
+  // Opening the app with a job today: get one reading ready so Clock In is instant.
+  let warmedAt = 0;
+  function warmLocation() {
+    if (permState !== 'granted' || Date.now() - warmedAt < 120000 || !lastData) return;
+    const today = pacificDay(0);
+    if (!clock.open && !(lastData.jobs || []).some(j => jobIsToday(j, today))) return;
+    warmedAt = Date.now();
+    getPosition().catch(() => {});
+  }
+  function feetBetween(a, b) {
+    const rad = d => d * Math.PI / 180, R = 20902231;
+    const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
   }
 
   function locationTop(showSetup) {
@@ -682,9 +711,11 @@
     else if (doneHere) state = '<span>' + escapeHtml(t('outAt', { t: fmtTime(doneHere.clockOut.at) })) + '</span><b>' + escapeHtml(hm(Date.parse(doneHere.clockOut.at) - Date.parse(doneHere.clockIn.at))) + '</b>';
     else state = '<span>' + escapeHtml(t('notIn')) + '</span>';
     let btn;
-    if (open && !mine) btn = '<div class="clock-note">' + escapeHtml(t('otherOpen', { a: open.jobAddress || '' })) + '</div>';
+    const forgotten = open && Date.now() - Date.parse(open.clockIn.at) >= 16 * 3600000;
+    if (open && !mine && !forgotten) btn = '<div class="clock-note">' + escapeHtml(t('otherOpen', { a: open.jobAddress || '' })) + '</div>';
     else if (clockBusy === job.jobId) btn = '<button type="button" class="clock-btn ' + (mine ? 'out' : 'in') + '" disabled><span class="clock-spin"></span>' + escapeHtml(t('getting')) + '</button>';
     else if (permState === 'denied') btn = '<button type="button" class="clock-btn locked" data-clock="fix">' + ICON_LOCK + escapeHtml(t('locRequired')) + '</button>';
+    else if (open && !mine) btn = '<div class="clock-note">' + escapeHtml(t('forgotOut', { a: open.jobAddress || '' })) + '</div><button type="button" class="clock-btn in" data-clock="in" data-job="' + escapeHtml(job.jobId) + '">' + ICON_PIN + escapeHtml(t('clockIn')) + '</button>';
     else btn = '<button type="button" class="clock-btn ' + (mine ? 'out' : 'in') + '" data-clock="' + (mine ? 'out' : 'in') + '" data-job="' + escapeHtml(job.jobId) + '">' + ICON_PIN + escapeHtml(mine ? t('clockOut') : t('clockIn')) + '</button>';
     const live = mine ? (document.visibilityState === 'visible' && permState !== 'denied'
       ? '<div class="clock-live"><span class="dot"></span>' + escapeHtml(t('liveOn', { t: fmtTime(open.lastAt || open.clockIn.at) })) + '</div>'
@@ -707,7 +738,7 @@
       const location = await getPosition();
       const res = await api('/api/field-clock', { method: 'POST', body: JSON.stringify({ op: 'clockIn', jobId, requestId: createRequestId(), location, lang: currentLang }) });
       clock = { open: res.open, recent: res.recent || [] };
-      lastPingAt = Date.now();
+      lastPingAt = Date.now(); lastSent = location;
       const r = res.clockIn || {};
       clockMsg = { jobId, tone: r.status === 'away' ? 'warn' : 'ok', text: t('inOk', { t: fmtTime(r.at || new Date().toISOString()), r: resultText(r) }) };
     } catch (error) {
@@ -744,8 +775,13 @@
     if (!lastPingAt && clock.open.lastAt) lastPingAt = Date.parse(clock.open.lastAt);
     watchId = navigator.geolocation.watchPosition(async p => {
       lastFix = fixOf(p);
-      if (!clock.open || Date.now() - lastPingAt < CLOCK_PING_MS) return;
-      lastPingAt = Date.now();
+      if (!clock.open) return;
+      const onFor = Date.now() - Date.parse(clock.open.clockIn.at);
+      if (onFor > PING_STOP_AFTER_MS) return;
+      const moved = !lastSent || feetBetween(lastSent, lastFix) >= PING_MOVE_FT;
+      const heartbeat = Date.now() - lastPingAt >= PING_HEARTBEAT_MS && onFor <= PING_QUIET_AFTER_MS;
+      if (Date.now() - lastPingAt < 60000 || !(moved || heartbeat)) return;
+      lastPingAt = Date.now(); lastSent = plain(lastFix);
       try {
         const res = await api('/api/field-clock', { method: 'POST', body: JSON.stringify({ op: 'ping', location: plain(lastFix) }) });
         if (res && res.lastAt && clock.open) { clock.open.lastAt = res.lastAt; redraw(); }

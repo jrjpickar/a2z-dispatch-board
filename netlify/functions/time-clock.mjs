@@ -10,7 +10,7 @@ import { StateError } from '../../lib/state.mjs';
 import { clockRules, pacificDay } from '../../lib/field-clock.mjs';
 
 const asJson = v => typeof v === 'string' ? JSON.parse(v) : v;
-const loc = p => p ? { at: p.at, lat: p.lat, lng: p.lng, acc: p.acc ?? null, dist: p.dist ?? null, status: p.status || 'unknown' } : null;
+const loc = p => p ? { at: p.at, lat: p.lat, lng: p.lng, acc: p.acc ?? null, dist: p.dist ?? null, status: p.status || 'unknown', auto: !!p.autoClosed } : null;
 const dayShift = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
 
 export default async function handler(request) {
