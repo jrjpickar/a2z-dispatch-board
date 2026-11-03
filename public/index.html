@@ -6271,7 +6271,7 @@ document.getElementById('eodDoneToday').addEventListener('click', () => { docume
    row per job: who is on the clock, hours, where they clocked in and out, their live
    location, and the work summary. Map opens an in-board map (Leaflet + OpenStreetMap,
    loaded the first time) with the job pin, the clock in / out spots, the path and a
-   live dot. Refreshes every minute while the view is open. Read only. */
+   live dot. Refreshes every minute while the view is open and in use (stops after 15 idle minutes). Read only. */
 const TC_STALE_MS = 15 * 60000; // the phone sends every 5 minutes while open
 let tcData = null, tcTimer = null, tcLoading = false, tcMapState = null;
 const tcOpenJobs = new Set();
@@ -6477,7 +6477,9 @@ document.getElementById('tcJobs').addEventListener('toggle', e => {
 }, true);
 function startTimeClock() {
   renderTimeClockView(); loadTimeClock();
-  if (!tcTimer) tcTimer = setInterval(() => { if (boardTcMode && document.visibilityState === 'visible') loadTimeClock(); }, 60000);
+  // Same rule as the board's own refresh: stops after 15 untouched minutes so a Time Clock
+  // left open overnight doesn't keep the Netlify database awake. Any click starts it again.
+  if (!tcTimer) tcTimer = setInterval(() => { if (boardTcMode && document.visibilityState === 'visible' && Date.now() - lastActivity < POLL_STOP_IDLE_MS) loadTimeClock(); }, 60000);
 }
 function stopTimeClock() { if (tcTimer) clearInterval(tcTimer); tcTimer = null; closeTcMap(); }
 const tcGo = ymd => { document.getElementById('tcDate').value = ymd; tcData = null; renderTimeClockView(); loadTimeClock(); };
