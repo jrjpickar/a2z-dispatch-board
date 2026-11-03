@@ -144,6 +144,56 @@
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); }
 
+  /* ---------- Clock in / out ---------- */
+  .loc-pill { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 9px 12px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); margin-bottom: 12px; }
+  .loc-pill i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .loc-pill.on i { background: var(--good); box-shadow: 0 0 0 3px #dff0e5; }
+  .loc-pill.need i { background: var(--gold); box-shadow: 0 0 0 3px var(--gold-tint); }
+  .loc-pill.off i { background: var(--danger); box-shadow: 0 0 0 3px #fbeae7; }
+  .loc-pill span { flex: 1; }
+  .setup-card { background: var(--orange-tint-soft); border: 1px solid var(--orange); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  .setup-card h2 { margin: 0 0 4px; font-size: 16px; }
+  .setup-card p { margin: 0 0 12px; font-size: 13px; color: var(--ink-soft); }
+  .clock { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); display: grid; gap: 10px; }
+  .clock-state { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ink-soft); }
+  .clock-state b { color: var(--ink); font-family: 'IBM Plex Mono', monospace; font-size: 14px; }
+  .clock-btn { border: 0; border-radius: 12px; padding: 16px 14px; font-family: 'Oswald', sans-serif; font-size: 21px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; color: #fff; cursor: pointer; }
+  .clock-btn.in { background: var(--good); }
+  .clock-btn.out { background: var(--ink); }
+  .clock-btn.locked { background: var(--grey-light); color: var(--grey-dark); font-size: 17px; }
+  .clock-btn:disabled { opacity: 0.8; cursor: progress; }
+  .clock-btn svg { width: 22px; height: 22px; flex: none; }
+  .clock-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: clockspin .8s linear infinite; }
+  @keyframes clockspin { to { transform: rotate(360deg); } }
+  .clock-msg { font-size: 13px; padding: 9px 11px; border-radius: 8px; }
+  .clock-msg.ok { background: #e2f1e6; color: var(--good); }
+  .clock-msg.warn { background: var(--gold-tint); color: #7a5d10; }
+  .clock-msg.bad { background: #fbeae7; color: var(--danger); }
+  .clock-live { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--good); background: #e2f1e6; border-radius: 8px; padding: 8px 10px; }
+  .clock-live.paused { color: #7a5d10; background: var(--gold-tint); }
+  .clock-live .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex: none; }
+  .clock-note { font-size: 12.5px; color: var(--grey-dark); }
+  .day-head { font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 0.06em; color: var(--grey-dark); margin-bottom: 2px; text-transform: uppercase; }
+  .job-card.tomorrow { border-color: var(--gold); }
+  .job-map { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--orange-dark); text-decoration: none; }
+  .sheet-scrim { position: fixed; inset: 0; background: rgba(10,11,12,0.45); z-index: 30; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet { background: var(--card); width: 100%; max-width: 640px; border-radius: 18px 18px 0 0; padding: 18px 16px calc(22px + env(safe-area-inset-bottom)); display: grid; gap: 12px; max-height: 92vh; overflow-y: auto; }
+  .sheet h3 { margin: 0; font-family: 'Oswald', sans-serif; text-transform: uppercase; font-size: 18px; letter-spacing: 0.03em; }
+  .sheet .sub { font-size: 13px; color: var(--ink-soft); }
+  .sheet label { font-size: 13px; font-weight: 600; }
+  .sheet textarea { width: 100%; min-height: 92px; resize: vertical; padding: 10px; border-radius: 9px; border: 1px solid var(--border); font-family: inherit; font-size: 16px; line-height: 1.4; color: var(--ink); background: #fff; }
+  .sheet textarea.short { min-height: 60px; }
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .quick button { border: 1px solid var(--border); background: var(--bg); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
+  .quick button[aria-pressed="true"] { background: var(--orange-tint); border-color: var(--orange); color: var(--orange-dark); }
+  .sheet .err { color: var(--danger); font-size: 13px; font-weight: 600; min-height: 1em; }
+  .sheet .btn-ghost { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .seg { display: flex; background: var(--bg); border-radius: 9px; padding: 3px; gap: 3px; }
+  .seg button { flex: 1; border: 0; background: none; padding: 8px; border-radius: 7px; font-weight: 600; font-size: 13px; color: var(--grey-dark); cursor: pointer; }
+  .seg button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; }
+  @media (prefers-reduced-motion: reduce) { .clock-spin { animation: none; } }
+
   .install-banner { display: none; align-items: center; gap: 10px; background: var(--orange-tint-soft); border-bottom: 1px solid var(--orange-tint); padding: 10px 16px; font-size: 13px; color: var(--ink); }
   .install-banner.show { display: flex; }
   .install-banner p { margin: 0; flex: 1; }
@@ -253,7 +303,23 @@
       job: 'Job',
       installDefault: 'Install this app on your phone for one-tap access.',
       installIOS: 'Install this app: tap the Share icon below, then "Add to Home Screen".',
-      install: 'Install'
+      install: 'Install',
+      today: 'Today', tomorrow: 'Tomorrow', later: 'Coming Up',
+      locOn: 'Location on', locNeed: 'Location needed', locOff: 'Location blocked', fixIt: 'Fix it',
+      setupT: 'Location is required to clock in', setupB: 'A2Z records where you are when you tap Clock In or Clock Out, and while you are on the clock with the app open. Never off the clock.', setupBtn: 'Turn on location',
+      clockIn: 'Clock In', clockOut: 'Clock Out', locRequired: 'Location required', getting: 'Getting your location...', saving2: 'Saving...',
+      notIn: 'Not clocked in yet', onSince: 'On the clock since', outAt: 'Clocked out {t}', otherOpen: 'You are clocked in at {a}. Clock out there first.',
+      liveOn: 'Sharing your location while on the clock · last sent {t}', livePaused: 'Location paused. Keep the app open while you work.',
+      inOk: 'Clocked in at {t}. {r}', outOk: 'Clocked out at {t} · {h} h. {r}', seeYou: 'Tomorrow: {t} at {a}.',
+      rOnsite: 'On site.', rNear: 'Near the site ({d}).', rAway: '{d} from the job. Dispatch will see this.', rUnknown: 'Location saved.',
+      errBlocked: 'Location is blocked. Turn it on to clock in.', errNoFix: "Can't find your location. Step outside and try again.", sumSaved: 'Your summary is saved. Tap Clock Out to try again.',
+      fixT: 'Turn location back on', fixB: "The app can't ask again after location was blocked. Change it in your phone settings:",
+      fixIos: ['Open <b>Settings &gt; Privacy &amp; Security &gt; Location Services</b> and turn it on.', 'In that list tap <b>Safari Websites</b> and pick <b>While Using the App</b>.', 'Go to <b>Settings &gt; Safari &gt; Location</b> and pick <b>Allow</b> so it stops asking.', 'Come back here and tap <b>Clock In</b>.'],
+      fixAndroid: ['In Chrome, tap the icon next to the web address.', 'Tap <b>Permissions &gt; Location</b> and pick <b>Allow</b>.', 'In <b>Settings &gt; Apps &gt; Chrome &gt; Permissions &gt; Location</b>, pick <b>Allow only while using the app</b>.', 'Come back here and tap <b>Clock In</b>.'],
+      tryAgain: 'Try again', close: 'Close',
+      sumT: 'Before you clock out', sumB: 'Tell dispatch what got done today.', workL: 'Work done today', workPh: 'Ex: Demoed the kitchen cabinets, loaded 2 trucks, swept the site',
+      chips: ['Demo', 'Haul off', 'Loaded trucks', 'Cleanup', 'Moved materials'],
+      notesL: 'Anything dispatch should know? (optional)', notesPh: 'Ex: Ran out of bags, need a dumpster swap tomorrow', errWork: 'Write a few words about the work done.', cancel: 'Cancel', map: 'Map'
     },
     es: {
       signOut: 'Cerrar Sesión',
@@ -293,7 +359,23 @@
       job: 'Trabajo',
       installDefault: 'Instala esta app en tu teléfono para acceso con un toque.',
       installIOS: 'Instala esta app: toca el ícono de Compartir abajo, luego "Agregar a Inicio".',
-      install: 'Instalar'
+      install: 'Instalar',
+      today: 'Hoy', tomorrow: 'Mañana', later: 'Próximos',
+      locOn: 'Ubicación activada', locNeed: 'Se necesita ubicación', locOff: 'Ubicación bloqueada', fixIt: 'Arreglar',
+      setupT: 'Se requiere ubicación para marcar entrada', setupB: 'A2Z registra dónde estás cuando tocas Marcar Entrada o Marcar Salida, y mientras trabajas con la app abierta. Nunca fuera del horario.', setupBtn: 'Activar ubicación',
+      clockIn: 'Marcar Entrada', clockOut: 'Marcar Salida', locRequired: 'Se requiere ubicación', getting: 'Buscando tu ubicación...', saving2: 'Guardando...',
+      notIn: 'Aún no marcas entrada', onSince: 'Trabajando desde', outAt: 'Salida marcada {t}', otherOpen: 'Tienes entrada marcada en {a}. Marca salida allí primero.',
+      liveOn: 'Compartiendo tu ubicación mientras trabajas · último envío {t}', livePaused: 'Ubicación en pausa. Mantén la app abierta mientras trabajas.',
+      inOk: 'Entrada marcada a las {t}. {r}', outOk: 'Salida marcada a las {t} · {h} h. {r}', seeYou: 'Mañana: {t} en {a}.',
+      rOnsite: 'En el sitio.', rNear: 'Cerca del sitio ({d}).', rAway: 'A {d} del trabajo. Despacho verá esto.', rUnknown: 'Ubicación guardada.',
+      errBlocked: 'La ubicación está bloqueada. Actívala para marcar entrada.', errNoFix: 'No se encuentra tu ubicación. Sal afuera e intenta de nuevo.', sumSaved: 'Tu resumen está guardado. Toca Marcar Salida para intentar de nuevo.',
+      fixT: 'Vuelve a activar la ubicación', fixB: 'La app no puede preguntar de nuevo después de bloquear la ubicación. Cámbialo en la configuración del teléfono:',
+      fixIos: ['Abre <b>Configuración &gt; Privacidad y seguridad &gt; Localización</b> y actívala.', 'En esa lista toca <b>Sitios web de Safari</b> y elige <b>Mientras se usa la app</b>.', 'Ve a <b>Configuración &gt; Safari &gt; Ubicación</b> y elige <b>Permitir</b> para que no pregunte cada vez.', 'Regresa aquí y toca <b>Marcar Entrada</b>.'],
+      fixAndroid: ['En Chrome, toca el ícono junto a la dirección web.', 'Toca <b>Permisos &gt; Ubicación</b> y elige <b>Permitir</b>.', 'En <b>Ajustes &gt; Apps &gt; Chrome &gt; Permisos &gt; Ubicación</b>, elige <b>Permitir solo mientras se usa la app</b>.', 'Regresa aquí y toca <b>Marcar Entrada</b>.'],
+      tryAgain: 'Intentar de nuevo', close: 'Cerrar',
+      sumT: 'Antes de marcar salida', sumB: 'Dile a despacho qué se hizo hoy.', workL: 'Trabajo hecho hoy', workPh: 'Ej: Demolimos los gabinetes de la cocina, cargamos 2 camiones, barrimos el sitio',
+      chips: ['Demolición', 'Retiro de escombros', 'Camiones cargados', 'Limpieza', 'Movimos material'],
+      notesL: '¿Algo que despacho deba saber? (opcional)', notesPh: 'Ej: Se acabaron las bolsas, hay que cambiar el contenedor mañana', errWork: 'Escribe unas palabras sobre el trabajo hecho.', cancel: 'Cancelar', map: 'Mapa'
     }
   };
 
@@ -309,7 +391,7 @@
   function t(key, vars) {
     const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
     let str = dict[key] != null ? dict[key] : (TRANSLATIONS.en[key] || key);
-    if (vars) Object.keys(vars).forEach(k => { str = str.replace('{' + k + '}', vars[k]); });
+    if (vars && typeof str === 'string') Object.keys(vars).forEach(k => { str = str.replace('{' + k + '}', vars[k]); });
     return str;
   }
 
@@ -448,10 +530,12 @@
     });
   }
 
-  function jobCard(job) {
+  function jobCard(job, opts) {
+    opts = opts || {};
     const schedule = formatTimeRange(job.reportDate, job.reportTime, job.reportEndDate, job.reportEndTime);
     const crew = job.crew || [];
-    return '<div class="job-card" data-job-id="' + escapeHtml(job.jobId) + '">'
+    return '<div class="job-card' + (opts.tomorrow ? ' tomorrow' : '') + '" data-job-id="' + escapeHtml(job.jobId) + '">'
+      + (opts.tomorrow ? '<div class="day-head">' + escapeHtml(dayHead(job.reportDate)) + '</div>' : '')
       + '<h2>' + escapeHtml(job.jobAddress || job.clientName || t('job')) + '</h2>'
       + '<div class="job-meta">'
       + '<span class="schedule">' + escapeHtml(schedule) + '</span>'
@@ -461,26 +545,44 @@
       + (crew.length ? '<div class="crew-label">' + escapeHtml(t('crewOnJob')) + '</div><ul class="crew-list">'
           + crew.map(w => '<li class="' + (w.isYou ? 'you' : '') + '">' + escapeHtml(w.name) + (w.isYou ? escapeHtml(t('you')) : '') + '</li>').join('')
           + '</ul>' : '')
+      + (opts.tomorrow && job.jobAddress ? '<a class="job-map" href="' + mapsLink(job.jobAddress) + '" target="_blank" rel="noopener">' + escapeHtml(t('map')) + ' ↗</a>' : '')
+      + (opts.today ? clockBlock(job) : '')
       + '</div>';
   }
 
   function renderData(data) {
     lastData = data;
     const routes = data.routes || [], jobs = data.jobs || [];
-    if (!routes.length && !jobs.length) {
+    const today = pacificDay(0), tmr = pacificDay(1);
+    const todayJobs = sortByDate(jobs.filter(j => jobIsToday(j, today)));
+    const tmrJobs = sortByDate(jobs.filter(j => !jobIsToday(j, today) && j.reportDate === tmr));
+    const laterJobs = sortByDate(jobs.filter(j => !jobIsToday(j, today) && j.reportDate !== tmr));
+    const open = clock.open;
+    const orphan = open && !todayJobs.some(j => j.jobId === open.jobId);
+    if (!routes.length && !jobs.length && !open) {
       routesList.innerHTML = '<div class="empty-state">' + escapeHtml(t('emptyState')) + '</div>';
       return;
     }
     let html = '';
+    if (todayJobs.length || open) html += locationTop(!open);
+    if (orphan) html += '<div class="section-label">' + escapeHtml(t('today')) + '</div>' + jobCard({ jobId: open.jobId, jobAddress: open.jobAddress, clientName: open.clientName }, { today: true });
+    const tomorrowHtml = tmrJobs.length ? '<div class="section-label">' + escapeHtml(t('tomorrow')) + '</div>' + tmrJobs.map(j => jobCard(j, { tomorrow: true })).join('') : '';
+    // Right after clocking out, tomorrow goes first: it's the next thing they need.
+    const last = (clock.recent || [])[0];
+    const justOut = !open && last && last.clockOut && Date.now() - Date.parse(last.clockOut.at) < 12 * 3600000;
+    if (justOut) html += tomorrowHtml;
+    if (todayJobs.length) html += (orphan ? '' : '<div class="section-label">' + escapeHtml(t('today')) + '</div>') + todayJobs.map(j => jobCard(j, { today: true })).join('');
+    if (!justOut) html += tomorrowHtml;
     if (routes.length) html += '<div class="section-label">' + escapeHtml(t('myRoutes')) + '</div>' + sortByDate(routes).map(routeCard).join('');
-    if (jobs.length) html += '<div class="section-label">' + escapeHtml(jobs.length > 1 ? t('myJobs') : t('myJob')) + '</div>' + sortByDate(jobs).map(jobCard).join('');
+    if (laterJobs.length) html += '<div class="section-label">' + escapeHtml(t('later')) + '</div>' + laterJobs.map(j => jobCard(j)).join('');
     routesList.innerHTML = html;
   }
 
   async function loadMoves(showSpinner) {
     try {
-      const data = await api('/api/driver-moves', { method: 'GET' });
+      const [data] = await Promise.all([api('/api/driver-moves', { method: 'GET' }), loadClock()]);
       renderData(data);
+      syncLiveLocation();
       updatedLabel.textContent = t('updated', { time: new Date().toLocaleTimeString([], { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit' }) });
     } catch (error) {
       if (error.status === 401) return goToLogin(t('sessionEnded'));
@@ -496,6 +598,231 @@
   }
   function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
 
+  // ---------- Clock in / clock out (POST /api/field-clock) ----------
+  // Location is required for both. While on the clock with the app open, the phone
+  // sends a reading every 5 minutes (live location). Clock out asks for a short
+  // summary of the work done first.
+  const CLOCK_PING_MS = 300000;
+  const TZ = 'America/Los_Angeles';
+  let clock = { open: null, recent: [] };
+  let clockBusy = '', clockMsg = null, permState = 'unknown', fixTab = /android/i.test(navigator.userAgent) ? 'android' : 'ios';
+  let sumDraft = { work: '', notes: '' }, sumReady = false;
+  let watchId = null, lastPingAt = 0;
+  const ICON_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+  const ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+  function pacificDay(offset) {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+    const d = new Date(Date.UTC(+p.year, +p.month - 1, +p.day + (offset || 0)));
+    return d.toISOString().slice(0, 10);
+  }
+  function jobIsToday(job, today) {
+    const start = job.reportDate || ''; if (!start) return false;
+    const end = job.reportEndDate && job.reportEndDate >= start ? job.reportEndDate : start;
+    return start <= today && today <= end;
+  }
+  function dayHead(ymd) {
+    const d = new Date(ymd + 'T12:00:00Z'), loc = currentLang === 'es' ? 'es-US' : 'en-US';
+    return d.toLocaleDateString(loc, { weekday: 'long', timeZone: 'UTC' }) + ' · ' + d.toLocaleDateString(loc, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  }
+  const fmtTime = iso => new Date(iso).toLocaleTimeString('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' });
+  const fmtDist = ft => ft < 1000 ? (Math.round(ft / 10) * 10) + ' ft' : (ft / 5280).toFixed(1) + ' mi';
+  const hm = ms => { const m = Math.max(0, Math.round(ms / 60000)); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
+  const to12 = hhmm => { if (!/^\d{1,2}:\d{2}/.test(hhmm || '')) return hhmm || ''; const [h, m] = hhmm.split(':').map(Number); return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); };
+  function resultText(r) {
+    if (!r || r.status === 'unknown' || r.dist == null) return t('rUnknown');
+    if (r.status === 'onsite') return t('rOnsite');
+    if (r.status === 'near') return t('rNear', { d: fmtDist(r.dist) });
+    return t('rAway', { d: fmtDist(r.dist) });
+  }
+
+  async function loadClock() {
+    try { const c = await api('/api/field-clock', { method: 'GET' }); clock = { open: c.open, recent: c.recent || [] }; }
+    catch (error) { if (error.status === 401) throw error; }
+  }
+  async function watchPermission() {
+    try {
+      const st = await navigator.permissions.query({ name: 'geolocation' });
+      permState = st.state;
+      st.onchange = () => { permState = st.state; if (lastData) renderData(lastData); syncLiveLocation(); };
+    } catch (e) { permState = 'unknown'; }
+  }
+  // One reading. Resolves { lat, lng, acc (feet) } or rejects with { code }: 1 blocked, 2/3 no fix.
+  // While on the clock the live watch keeps a fresh reading, so clock out can use it
+  // (a phone standing still may not hand out a new fix right away).
+  let lastFix = null;
+  const fixOf = p => ({ lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy * 3.28084), at: Date.now() });
+  const plain = f => ({ lat: f.lat, lng: f.lng, acc: f.acc });
+  function getPosition() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) return reject({ code: 2 });
+      if (lastFix && Date.now() - lastFix.at < 30000) return resolve(plain(lastFix));
+      navigator.geolocation.getCurrentPosition(
+        p => { if (permState !== 'granted') permState = 'granted'; lastFix = fixOf(p); resolve(plain(lastFix)); },
+        e => {
+          if (e.code === 1) { permState = 'denied'; lastFix = null; return reject({ code: 1 }); }
+          if (lastFix && Date.now() - lastFix.at < 120000) return resolve(plain(lastFix));
+          reject({ code: e.code });
+        },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
+    });
+  }
+
+  function locationTop(showSetup) {
+    const pill = permState === 'granted' ? ['on', t('locOn')] : permState === 'denied' ? ['off', t('locOff')] : ['need', t('locNeed')];
+    return '<div class="loc-pill ' + pill[0] + '"><i></i><span>' + escapeHtml(pill[1]) + '</span>'
+      + (permState === 'denied' ? '<button type="button" class="link-btn" data-clock="fix">' + escapeHtml(t('fixIt')) + '</button>' : '') + '</div>'
+      + (showSetup && permState === 'prompt' ? '<div class="setup-card"><h2>' + escapeHtml(t('setupT')) + '</h2><p>' + escapeHtml(t('setupB')) + '</p><button type="button" class="btn-primary" data-clock="setup">' + escapeHtml(t('setupBtn')) + '</button></div>' : '');
+  }
+  function clockBlock(job) {
+    const open = clock.open, mine = open && open.jobId === job.jobId;
+    const doneHere = !open && (clock.recent || []).find(s => s.jobId === job.jobId && s.clockOut && s.clockOut.at.slice(0, 10) >= pacificDay(-1));
+    let state;
+    if (mine) state = '<span>' + escapeHtml(t('onSince')) + '</span><b>' + escapeHtml(fmtTime(open.clockIn.at)) + ' · ' + escapeHtml(hm(Date.now() - Date.parse(open.clockIn.at))) + '</b>';
+    else if (doneHere) state = '<span>' + escapeHtml(t('outAt', { t: fmtTime(doneHere.clockOut.at) })) + '</span><b>' + escapeHtml(hm(Date.parse(doneHere.clockOut.at) - Date.parse(doneHere.clockIn.at))) + '</b>';
+    else state = '<span>' + escapeHtml(t('notIn')) + '</span>';
+    let btn;
+    if (open && !mine) btn = '<div class="clock-note">' + escapeHtml(t('otherOpen', { a: open.jobAddress || '' })) + '</div>';
+    else if (clockBusy === job.jobId) btn = '<button type="button" class="clock-btn ' + (mine ? 'out' : 'in') + '" disabled><span class="clock-spin"></span>' + escapeHtml(t('getting')) + '</button>';
+    else if (permState === 'denied') btn = '<button type="button" class="clock-btn locked" data-clock="fix">' + ICON_LOCK + escapeHtml(t('locRequired')) + '</button>';
+    else btn = '<button type="button" class="clock-btn ' + (mine ? 'out' : 'in') + '" data-clock="' + (mine ? 'out' : 'in') + '" data-job="' + escapeHtml(job.jobId) + '">' + ICON_PIN + escapeHtml(mine ? t('clockOut') : t('clockIn')) + '</button>';
+    const live = mine ? (document.visibilityState === 'visible' && permState !== 'denied'
+      ? '<div class="clock-live"><span class="dot"></span>' + escapeHtml(t('liveOn', { t: fmtTime(open.lastAt || open.clockIn.at) })) + '</div>'
+      : '<div class="clock-live paused"><span class="dot"></span>' + escapeHtml(t('livePaused')) + '</div>') : '';
+    const msg = clockMsg && clockMsg.jobId === job.jobId ? '<div class="clock-msg ' + clockMsg.tone + '" role="status">' + escapeHtml(clockMsg.text) + '</div>' : '';
+    return '<div class="clock"><div class="clock-state">' + state + '</div>' + live + btn + msg + '</div>';
+  }
+
+  function tomorrowLine() {
+    const tmr = pacificDay(1);
+    const j = sortByDate(((lastData && lastData.jobs) || []).filter(x => x.reportDate === tmr))[0];
+    return j ? ' ' + t('seeYou', { t: to12(j.reportTime), a: String(j.jobAddress || '').split(',')[0] }) : '';
+  }
+  function redraw() { if (lastData) renderData(lastData); }
+
+  async function clockIn(jobId) {
+    if (permState === 'denied') { clockMsg = { jobId, tone: 'bad', text: t('errBlocked') }; redraw(); return openFix(); }
+    clockBusy = jobId; clockMsg = null; redraw();
+    try {
+      const location = await getPosition();
+      const res = await api('/api/field-clock', { method: 'POST', body: JSON.stringify({ op: 'clockIn', jobId, requestId: createRequestId(), location, lang: currentLang }) });
+      clock = { open: res.open, recent: res.recent || [] };
+      lastPingAt = Date.now();
+      const r = res.clockIn || {};
+      clockMsg = { jobId, tone: r.status === 'away' ? 'warn' : 'ok', text: t('inOk', { t: fmtTime(r.at || new Date().toISOString()), r: resultText(r) }) };
+    } catch (error) {
+      if (error.status === 401) return goToLogin(t('sessionEnded'));
+      clockMsg = { jobId, tone: 'bad', text: error.code === 1 ? t('errBlocked') : error.code ? t('errNoFix') : error.message };
+      if (error.code === 1) openFix();
+      if (error.status === 409) await loadClock();
+    } finally { clockBusy = ''; redraw(); syncLiveLocation(); }
+  }
+  async function clockOut(jobId) {
+    if (permState === 'denied') { clockMsg = { jobId, tone: 'bad', text: t('errBlocked') }; redraw(); return openFix(); }
+    if (!sumReady) return openSummary(jobId);
+    clockBusy = jobId; clockMsg = null; redraw();
+    try {
+      const location = await getPosition();
+      const res = await api('/api/field-clock', { method: 'POST', body: JSON.stringify({ op: 'clockOut', requestId: sumReady, location, work: sumDraft.work, notes: sumDraft.notes, lang: currentLang }) });
+      clock = { open: res.open, recent: res.recent || [] };
+      sumDraft = { work: '', notes: '' }; sumReady = false;
+      const r = res.clockOut || {};
+      clockMsg = { jobId, tone: r.status === 'away' ? 'warn' : 'ok', text: t('outOk', { t: fmtTime(r.at || new Date().toISOString()), h: String(res.hoursWorked ?? ''), r: resultText(r) }) + tomorrowLine() };
+    } catch (error) {
+      if (error.status === 401) return goToLogin(t('sessionEnded'));
+      clockMsg = { jobId, tone: 'bad', text: (error.code === 1 ? t('errBlocked') : error.code ? t('errNoFix') : error.message) + ' ' + t('sumSaved') };
+      if (error.code === 1) openFix();
+      if (error.status === 409) await loadClock();
+    } finally { clockBusy = ''; redraw(); syncLiveLocation(); }
+  }
+
+  // Live location while on the clock: only while the app is open (phones stop it otherwise).
+  function syncLiveLocation() {
+    const want = !!clock.open && document.visibilityState === 'visible' && permState !== 'denied' && !!navigator.geolocation;
+    if (!want) { if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; } return; }
+    if (watchId !== null) return;
+    if (!lastPingAt && clock.open.lastAt) lastPingAt = Date.parse(clock.open.lastAt);
+    watchId = navigator.geolocation.watchPosition(async p => {
+      lastFix = fixOf(p);
+      if (!clock.open || Date.now() - lastPingAt < CLOCK_PING_MS) return;
+      lastPingAt = Date.now();
+      try {
+        const res = await api('/api/field-clock', { method: 'POST', body: JSON.stringify({ op: 'ping', location: plain(lastFix) }) });
+        if (res && res.lastAt && clock.open) { clock.open.lastAt = res.lastAt; redraw(); }
+        if (res && res.open === null) { clock.open = null; syncLiveLocation(); }
+      } catch (e) { /* next reading tries again */ }
+    }, e => { if (e.code === 1) { permState = 'denied'; redraw(); syncLiveLocation(); } }, { enableHighAccuracy: true, maximumAge: 60000, timeout: 60000 });
+  }
+
+  // ----- Sheets: work summary before clock out, and the fix-location steps -----
+  function closeSheet() { const el = $('clockSheet'); if (el) el.remove(); }
+  function sheet(html) {
+    closeSheet();
+    const scrim = document.createElement('div');
+    scrim.className = 'sheet-scrim'; scrim.id = 'clockSheet';
+    scrim.innerHTML = html;
+    scrim.addEventListener('click', e => { if (e.target === scrim) closeSheet(); });
+    document.body.appendChild(scrim);
+    return scrim;
+  }
+  function openSummary(jobId) {
+    const el = sheet('<form class="sheet" id="sumForm" novalidate role="dialog" aria-labelledby="sumT">'
+      + '<div><h3 id="sumT">' + escapeHtml(t('sumT')) + '</h3><div class="sub">' + escapeHtml(t('sumB')) + '</div></div>'
+      + '<label for="sumWork">' + escapeHtml(t('workL')) + '</label>'
+      + '<div class="quick">' + t('chips').map(c => '<button type="button" data-chip="' + escapeHtml(c) + '"></button>').join('') + '</div>'
+      + '<textarea id="sumWork" maxlength="600" placeholder="' + escapeHtml(t('workPh')) + '"></textarea>'
+      + '<label for="sumNotes">' + escapeHtml(t('notesL')) + '</label><textarea class="short" id="sumNotes" maxlength="400" placeholder="' + escapeHtml(t('notesPh')) + '"></textarea>'
+      + '<div class="err" id="sumErr" role="alert"></div>'
+      + '<button type="submit" class="clock-btn out">' + ICON_PIN + escapeHtml(t('clockOut')) + '</button>'
+      + '<button type="button" class="btn-ghost" id="sumCancel">' + escapeHtml(t('cancel')) + '</button></form>');
+    const work = $('sumWork'), notes = $('sumNotes');
+    work.value = sumDraft.work; notes.value = sumDraft.notes;
+    // Quick add: each one goes in once. Tapping an added one takes it back out.
+    const parts = text => text.split(',').map(x => x.trim()).filter(Boolean);
+    const has = c => parts(sumDraft.work).some(x => x.toLowerCase() === c.toLowerCase());
+    const sync = () => el.querySelectorAll('[data-chip]').forEach(b => { const on = has(b.dataset.chip); b.setAttribute('aria-pressed', on); b.textContent = (on ? '✓ ' : '+ ') + b.dataset.chip; });
+    work.addEventListener('input', () => { sumDraft.work = work.value; sync(); });
+    notes.addEventListener('input', () => { sumDraft.notes = notes.value; });
+    el.querySelectorAll('[data-chip]').forEach(b => b.addEventListener('click', () => {
+      const c = b.dataset.chip, list = parts(sumDraft.work);
+      sumDraft.work = has(c) ? list.filter(x => x.toLowerCase() !== c.toLowerCase()).join(', ') : list.concat(c).join(', ');
+      work.value = sumDraft.work; sync();
+    }));
+    sync();
+    $('sumCancel').addEventListener('click', closeSheet);
+    $('sumForm').addEventListener('submit', e => {
+      e.preventDefault();
+      if (sumDraft.work.trim().length < 3) { $('sumErr').textContent = t('errWork'); work.focus(); return; }
+      sumReady = createRequestId(); closeSheet(); clockOut(jobId);
+    });
+    if (!sumDraft.work) work.focus();
+  }
+  function openFix() {
+    const steps = t(fixTab === 'android' ? 'fixAndroid' : 'fixIos');
+    sheet('<div class="sheet" role="dialog" aria-labelledby="fixT"><h3 id="fixT">' + escapeHtml(t('fixT')) + '</h3><div class="sub">' + escapeHtml(t('fixB')) + '</div>'
+      + '<div class="seg"><button type="button" data-tab="ios" class="' + (fixTab === 'ios' ? 'active' : '') + '">iPhone</button><button type="button" data-tab="android" class="' + (fixTab === 'android' ? 'active' : '') + '">Android</button></div>'
+      + '<ol class="steps">' + steps.map(s => '<li>' + s + '</li>').join('') + '</ol>'
+      + '<button type="button" class="btn-primary" id="fixRetry">' + escapeHtml(t('tryAgain')) + '</button><button type="button" class="btn-ghost" id="fixClose">' + escapeHtml(t('close')) + '</button></div>');
+    document.querySelectorAll('#clockSheet [data-tab]').forEach(b => b.addEventListener('click', () => { fixTab = b.dataset.tab; openFix(); }));
+    $('fixClose').addEventListener('click', closeSheet);
+    $('fixRetry').addEventListener('click', async () => {
+      closeSheet();
+      try { await getPosition(); clockMsg = null; } catch (e) { /* still blocked: the pill stays red */ }
+      redraw(); syncLiveLocation();
+    });
+  }
+
+  routesList.addEventListener('click', event => {
+    const b = event.target.closest('[data-clock]'); if (!b) return;
+    const what = b.dataset.clock;
+    if (what === 'fix') return openFix();
+    if (what === 'setup') { getPosition().then(() => { redraw(); syncLiveLocation(); }, e => { if (e.code === 1) openFix(); redraw(); }); return; }
+    if (what === 'in') return clockIn(b.dataset.job);
+    if (what === 'out') return clockOut(b.dataset.job);
+  });
+  setInterval(() => { if (clock.open && document.visibilityState === 'visible' && !homeView.hidden && !$('clockSheet')) redraw(); }, 60000);
+  watchPermission();
+
   function goToHome() {
     const name = localStorage.getItem(NAME_KEY) || '';
     driverNameLabel.textContent = name;
@@ -508,6 +835,7 @@
   function goToLogin(message) {
     stopPolling();
     clearSession();
+    clock = { open: null, recent: [] }; sumDraft = { work: '', notes: '' }; sumReady = false; clockMsg = null; closeSheet(); syncLiveLocation();
     topbarWho.hidden = true;
     homeView.hidden = true; loginView.hidden = false;
     loginError.classList.remove('show');
@@ -544,7 +872,7 @@
 
   signOutBtn.addEventListener('click', () => goToLogin());
   refreshBtn.addEventListener('click', () => loadMoves(true));
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { lastTouch = Date.now(); if (!homeView.hidden) loadMoves(false); } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { lastTouch = Date.now(); if (!homeView.hidden) loadMoves(false); } else syncLiveLocation(); });
 
   routesList.addEventListener('click', async event => {
     const button = event.target.closest('.stop-toggle');

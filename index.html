@@ -768,6 +768,70 @@
   .completed-empty { padding: 18px; color: var(--ink-soft); font-size: 13px; }
   #eodDoneDispatchView { padding: 18px 20px; }
   #jobsPanel.eod-mode > :not(.jobs-panel-head):not(#eodDoneDispatchView) { display: none !important; }
+  /* Time Clock (Jobs Scheduled > Time Clock): field app punches, live location, map */
+  #timeClockView { padding: 18px 20px; }
+  #jobsPanel.tc-mode > :not(.jobs-panel-head):not(#timeClockView) { display: none !important; }
+  .tc-title { margin: 0 0 2px; font: 600 18px 'Oswald', sans-serif; letter-spacing: .03em; text-transform: uppercase; }
+  #tcSub { margin: 0; font-size: 13px; color: var(--ink-soft); }
+  #tcDate { padding: 6px 8px; font: 13px 'IBM Plex Mono', monospace; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--ink); }
+  .eod-done-stats.tc-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .eod-stat.flag b { color: var(--danger); } .eod-stat.live b { color: var(--orange); }
+  .tc-job { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+  .tc-job > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 16px; }
+  .tc-job > summary::-webkit-details-marker { display: none; }
+  .tc-job > summary::before { content: '▸'; color: var(--ink-soft); font-size: 12px; transition: transform .15s; }
+  .tc-job[open] > summary::before { transform: rotate(90deg); }
+  .tc-job[open] > summary { border-bottom: 1px solid var(--border); }
+  .tc-job-name { font: 600 15px 'Oswald', sans-serif; letter-spacing: .02em; }
+  .tc-job-meta { font-size: 12px; color: var(--ink-soft); }
+  .tc-job-head { flex: 1 1 260px; min-width: 0; }
+  .tc-counts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tc-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--grey-light); color: var(--ink-soft); }
+  .tc-chip i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+  .tc-chip.onsite { background: #e2f3e8; color: #2f7d4f; }
+  .tc-chip.near, .tc-chip.stale { background: var(--gold-tint); color: #7a5d10; }
+  .tc-chip.away, .tc-chip.flag { background: #fbeae7; color: var(--danger); }
+  .tc-chip.live { background: var(--orange-tint); color: var(--orange-dark); }
+  body.dark-mode .tc-chip.onsite { background: #183324; color: #8fd4a8; }
+  body.dark-mode .tc-chip.near, body.dark-mode .tc-chip.stale { color: #f0cf7a; }
+  body.dark-mode .tc-chip.away, body.dark-mode .tc-chip.flag { background: #3e1f1b; color: #ef8a7a; }
+  body.dark-mode .tc-chip.live { color: #ffb08a; }
+  .tc-table-wrap { overflow-x: auto; }
+  table.tc-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 13px; }
+  .tc-table th { text-align: left; font: 600 11px 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); padding: 9px 12px; background: var(--stripe, var(--bg)); border-bottom: 1px solid var(--border); }
+  .tc-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .tc-table tr:last-child td { border-bottom: 0; }
+  .tc-table tr.tc-has-sum td { border-bottom: 0; }
+  .tc-table td.mono { font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+  .tc-sum td { padding-top: 0 !important; }
+  .tc-sumbox { background: var(--bg); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; display: grid; gap: 3px; }
+  .tc-sumbox .k { font: 700 10.5px 'Oswald', sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin-right: 8px; }
+  .tc-sumbox .note { color: var(--orange-dark); }
+  .tc-detail { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+  .tc-map-btn { background: none; border: 0; padding: 0; color: var(--orange-dark); font-weight: 600; font-size: 12px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  .tc-trail { display: flex; gap: 3px; margin-top: 5px; }
+  .tc-trail i { width: 8px; height: 8px; border-radius: 2px; background: var(--grey-light); }
+  .tc-trail i.onsite { background: #2f8f4e; } .tc-trail i.near { background: #c9a227; } .tc-trail i.away { background: var(--danger); }
+  .tc-job-foot { display: flex; justify-content: flex-end; padding: 8px 12px; border-top: 1px solid var(--border); }
+  .tc-map-scrim { position: fixed; inset: 0; background: rgba(10,11,12,.55); z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .tc-map-card { background: var(--card); color: var(--ink); width: min(980px, 100%); height: min(720px, 100%); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  .tc-map-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .tc-map-head h3 { margin: 0; font: 600 16px 'Oswald', sans-serif; letter-spacing: .03em; text-transform: uppercase; }
+  .tc-map-head .tc-detail { margin: 2px 0 0; }
+  .tc-map-close { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; color: var(--ink); }
+  #tcMap { flex: 1; min-height: 300px; background: var(--bg); }
+  .tc-map-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--ink-soft); }
+  .tc-map-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .tc-map-legend i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .tc-live-dot { width: 18px; height: 18px; border-radius: 50%; background: #2f74c0; border: 3px solid #fff; box-shadow: 0 0 0 0 rgba(47,116,192,.6); animation: tcpulse 1.8s ease-out infinite; }
+  .tc-live-dot.stale { background: #9ea0a3; animation: none; }
+  .tc-pin { width: 16px; height: 16px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--orange); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+  .tc-punch { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  .tc-punch.in { background: #2f8f4e; } .tc-punch.out { background: #1c1d1f; }
+  .tc-map-name { background: var(--card); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; font: 600 11px 'Inter', sans-serif; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  @keyframes tcpulse { 0% { box-shadow: 0 0 0 0 rgba(47,116,192,.55); } 100% { box-shadow: 0 0 0 16px rgba(47,116,192,0); } }
+  @media (prefers-reduced-motion: reduce) { .tc-live-dot { animation: none; } }
+  @media (max-width: 760px) { .eod-done-stats.tc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tc-map-scrim { padding: 0; } .tc-map-card { height: 100%; border-radius: 0; } }
   .eod-day-btn { color: var(--ink-soft) !important; border-color: var(--border) !important; padding: 7px 11px !important; font-size: 13px; line-height: 1; }
   .eod-day-btn:hover { color: var(--ink) !important; border-color: var(--ink-soft) !important; }
   #eodDoneDate { padding: 6px 8px; font: 13px 'IBM Plex Mono', monospace; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--ink); }
@@ -829,6 +893,17 @@
   .job-log-edit:hover { background: var(--orange); color: #fff; }
   .job-log-edited { display: block; margin-top: 4px; font: 600 10px 'IBM Plex Mono', monospace; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
   @media (max-width: 760px) { .jld-page { padding: 18px 14px; } .jld-grid, .jld-two { grid-template-columns: 1fr; } .jld-cell { border-right: 0; } .jld-tools { grid-template-columns: 1fr 1fr; } .jld-tools > div { border-bottom: 1px solid #222; } }
+  /* View PDF (EOD Done > Completed job log): opens in a viewer on the page */
+  .pdf-view-scrim { position: fixed; inset: 0; background: rgba(10,11,12,.6); z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .pdf-view-card { background: var(--card); color: var(--ink); width: min(1000px, 100%); height: 100%; max-height: 960px; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  .pdf-view-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .pdf-view-head h3 { margin: 0; font: 600 15px 'Oswald', sans-serif; letter-spacing: .03em; text-transform: uppercase; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pdf-view-actions { display: flex; gap: 8px; flex: none; }
+  .pdf-view-actions a, .pdf-view-actions button { border: 1px solid var(--border); background: var(--card); color: var(--ink); border-radius: 8px; padding: 6px 12px; font: 600 12.5px 'Inter', sans-serif; text-decoration: none; cursor: pointer; }
+  .pdf-view-body { flex: 1; position: relative; background: #525659; }
+  .pdf-view-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #525659; }
+  .pdf-view-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: #fff; font-size: 13px; }
+  @media (max-width: 760px) { .pdf-view-scrim { padding: 0; } .pdf-view-card { border-radius: 0; max-height: none; } }
   .job-log-pdf { display: inline-block; margin-top: 6px; font: 600 12px 'Inter', sans-serif; color: var(--orange-dark); text-decoration: underline; }
   body.dark-mode .job-log-pdf { color: var(--orange); }
   .job-log-msg.err { color: var(--danger); }
@@ -1888,7 +1963,7 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
   <!-- Jobs scheduled -->
   <div class="panel" id="jobsPanel">
     <div class="panel-head jobs-panel-head">
-      <h2>Jobs Scheduled</h2><div class="board-view-toggle" role="group" aria-label="Board layout"><button type="button" id="splitViewBtn" aria-pressed="true">Split view</button><button type="button" id="combinedViewBtn" aria-pressed="false">Current view</button><button type="button" id="eodDoneViewBtn" aria-pressed="false">EOD Done</button></div>
+      <h2>Jobs Scheduled</h2><div class="board-view-toggle" role="group" aria-label="Board layout"><button type="button" id="splitViewBtn" aria-pressed="true">Split view</button><button type="button" id="combinedViewBtn" aria-pressed="false">Current view</button><button type="button" id="eodDoneViewBtn" aria-pressed="false">EOD Done</button><button type="button" id="timeClockViewBtn" aria-pressed="false">Time Clock</button></div>
       <div class="jobs-search-wrap">
         <input type="search" id="jobSearch" class="jobs-search" placeholder="Search address, client, crew or job ID" autocomplete="off" aria-label="Search jobs">
         <span class="jobs-search-count mono" id="jobSearchCount"></span>
@@ -1963,6 +2038,21 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
           <tbody id="eodDoneBody"></tbody>
         </table>
       </div>
+    </div>
+    <div class="tc-section" id="timeClockView" hidden>
+      <div class="psv-head">
+        <div><h3 class="tc-title">Time Clock</h3><p id="tcSub">Field app clock ins and clock outs, with where each worker was.</p></div>
+        <div class="completed-tools">
+          <button type="button" class="btn-ghost eod-day-btn" id="tcPrev" aria-label="Previous day">&lsaquo;</button>
+          <input type="date" id="tcDate" aria-label="Day">
+          <button type="button" class="btn-ghost eod-day-btn" id="tcNext" aria-label="Next day">&rsaquo;</button>
+          <button type="button" class="btn-ghost eod-day-btn" id="tcToday">Today</button>
+          <button type="button" class="btn-ghost eod-day-btn" id="tcExpandAll">Expand all</button>
+          <button type="button" class="btn-ghost eod-day-btn" id="tcRefresh">Refresh</button>
+        </div>
+      </div>
+      <div class="eod-done-stats tc-stats" id="tcStats"></div>
+      <div id="tcJobs"><div class="job-log-msg">Loading...</div></div>
     </div>
   </div>
 </div>
@@ -2449,7 +2539,7 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
     <textarea id="jldNotes" rows="4" maxlength="3000"></textarea>
     <div class="jld-foot">
       <span class="jld-status" id="jldStatus"></span>
-      <a class="btn-ghost" id="jldViewPdf" target="_blank" rel="noopener" hidden>View PDF</a>
+      <a class="btn-ghost" id="jldViewPdf" target="_blank" rel="noopener" data-view-pdf hidden>View PDF</a>
       <a class="btn-ghost" id="jldDocx" download hidden>Word .docx</a>
       <button type="button" class="btn-ghost" id="jldClose">Close</button>
       <button type="button" class="btn-ghost" id="jldSave">Save</button>
@@ -6176,6 +6266,286 @@ document.getElementById('eodDonePrev').addEventListener('click', () => { const i
 document.getElementById('eodDoneNext').addEventListener('click', () => { const i = document.getElementById('eodDoneDate'); i.value = eodShiftDay(i.value || localIsoDate(), 1); renderEodDoneView(); });
 document.getElementById('eodDoneToday').addEventListener('click', () => { document.getElementById('eodDoneDate').value = localIsoDate(); renderEodDoneView(); });
 
+/* ---------- Time Clock (Jobs Scheduled > Time Clock) ----------
+   Field app clock ins / clock outs for a day (GET /api/time-clock), one expandable
+   row per job: who is on the clock, hours, where they clocked in and out, their live
+   location, and the work summary. Map opens an in-board map (Leaflet + OpenStreetMap,
+   loaded the first time) with the job pin, the clock in / out spots, the path and a
+   live dot. Refreshes every minute while the view is open. Read only. */
+const TC_STALE_MS = 15 * 60000; // the phone sends every 5 minutes while open
+let tcData = null, tcTimer = null, tcLoading = false, tcMapState = null;
+const tcOpenJobs = new Set();
+const tcFmt = iso => iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: BOARD_TZ, hour: 'numeric', minute: '2-digit' }) : '';
+const tcDist = ft => ft == null ? '' : ft < 1000 ? (Math.round(ft / 10) * 10) + ' ft' : (ft / 5280).toFixed(1) + ' mi';
+const tcHm = ms => { const m = Math.max(0, Math.round(ms / 60000)); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
+const tcHours = (a, b) => (Math.round(Math.max(0, Date.parse(b) - Date.parse(a)) / 36000) / 100).toFixed(2);
+function tcStatusLabel(p, prefix) {
+  if (!p) return '';
+  if (p.status === 'onsite') return prefix ? 'On site now' : `On site (${tcDist(p.dist)})`;
+  if (p.status === 'near') return `Near site (${tcDist(p.dist)})`;
+  if (p.status === 'away') return (prefix ? 'Off site: ' : '') + tcDist(p.dist) + ' away';
+  return 'Location saved';
+}
+function tcLocCell(s, which) {
+  const p = which === 'in' ? s.clockIn : s.clockOut;
+  if (!p) return '<span class="eod-muted">-</span>';
+  const rough = p.acc > 300 ? ` · accurate to ${Math.round(p.acc / 10) * 10} ft` : '';
+  return `<span class="tc-chip ${escapeAttr(p.status)}"><i></i>${escapeAttr(tcStatusLabel(p))}</span><div class="tc-detail"><button type="button" class="tc-map-btn" data-tc-map="${escapeAttr(s.id)}">Map</button>${escapeAttr(rough)}</div>`;
+}
+function tcStale(s) { return !s.clockOut && Date.now() - Date.parse(s.last?.at || s.clockIn.at) > TC_STALE_MS; }
+function tcLiveCell(s) {
+  if (s.clockOut) return '<span class="eod-muted">Off the clock</span>';
+  const last = s.last || s.clockIn;
+  const trail = `<div class="tc-trail" title="Last readings, oldest to newest">${(s.trail || []).slice(-14).map(p => `<i class="${escapeAttr(p.status)}"></i>`).join('')}</div>`;
+  const map = `<button type="button" class="tc-map-btn" data-tc-map="${escapeAttr(s.id)}">Map</button>`;
+  if (tcStale(s)) return `<span class="tc-chip stale"><i></i>No update since ${escapeAttr(tcFmt(last.at))}</span><div class="tc-detail">App closed or no signal. Last spot: ${escapeAttr(tcStatusLabel(last).toLowerCase())} · ${map}</div>${trail}`;
+  const age = Date.now() - Date.parse(last.at);
+  return `<span class="tc-chip ${escapeAttr(last.status)}"><i></i>${escapeAttr(tcStatusLabel(last, true))}</span><div class="tc-detail">Updated ${age < 60000 ? 'just now' : Math.round(age / 60000) + ' min ago'} · ${map}</div>${trail}`;
+}
+function tcPastEnd(s, job) {
+  if (s.clockOut || !job) return false;
+  const end = getReportEndTime(job), date = getReportEndDate(job) || getReportDate(job);
+  if (!end || !date) return false;
+  return Date.now() > Date.parse(pacificToUtcIso(date, end)) + 30 * 60000;
+}
+function pacificToUtcIso(ymd, hhmm) {
+  const [y, mo, d] = ymd.split('-').map(Number), [h, mi] = String(hhmm).split(':').map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: BOARD_TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(guess).map(x => [x.type, x.value]));
+  return new Date(guess - (Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - guess)).toISOString();
+}
+function tcFlag(s, job) {
+  return s.clockIn?.status === 'away' || s.clockOut?.status === 'away' || (!s.clockOut && (s.last?.status === 'away' || tcStale(s))) || tcPastEnd(s, job) || !!s.summary?.notes;
+}
+function tcGroups(day) {
+  const feed = new Map((dashboardData.jobs || []).map(j => [j.id, j]));
+  const groups = new Map();
+  const group = (id, job, s) => {
+    if (!groups.has(id)) groups.set(id, { id, job, name: (job && job.name) || s?.jobAddress || id, client: (job && getClientCompany(job)) || s?.clientName || '', shifts: [], crew: job ? getCrew(job).filter(w => w && w.name).map(w => w.name) : [] });
+    return groups.get(id);
+  };
+  for (const job of dashboardData.jobs || []) if (!isClosedOnBoard(job) && getReportDate(job) === day && getCrew(job).some(w => w && w.name)) group(job.id, job);
+  for (const s of (tcData && tcData.day === day ? tcData.shifts : [])) group(s.jobId, feed.get(s.jobId), s).shifts.push(s);
+  return [...groups.values()];
+}
+async function loadTimeClock() {
+  if (tcLoading) return;
+  const day = document.getElementById('tcDate').value || localIsoDate();
+  tcLoading = true;
+  try {
+    const res = await fetchWithTimeout('/api/time-clock?day=' + encodeURIComponent(day), { headers: { Accept: 'application/json' } }, 20000);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || 'HTTP ' + res.status);
+    tcData = body;
+  } catch (error) {
+    if (!tcData || tcData.day !== day) document.getElementById('tcJobs').innerHTML = `<div class="job-log-msg">Couldn't load the time clock: ${escapeAttr(error.message)}</div>`;
+    tcLoading = false; return;
+  }
+  tcLoading = false;
+  renderTimeClockView();
+  if (tcMapState) tcDrawMap();
+}
+function renderTimeClockView() {
+  const view = document.getElementById('timeClockView');
+  if (!view || view.hidden) return;
+  const dateInput = document.getElementById('tcDate');
+  const today = localIsoDate();
+  if (!dateInput.value) dateInput.value = today;
+  const day = dateInput.value;
+  document.getElementById('tcToday').hidden = day === today;
+  const nice = new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' });
+  document.getElementById('tcSub').textContent = `${day === today ? 'Today, ' : ''}${nice}. Field app clock ins and clock outs, with where each worker was.`;
+  if (!tcData || tcData.day !== day) { document.getElementById('tcJobs').innerHTML = '<div class="job-log-msg">Loading...</div>'; return; }
+  const words = document.getElementById('jobSearch').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const all = tcGroups(day);
+  const groups = all.filter(g => { const hay = [g.name, g.client, g.id, ...g.crew, ...g.shifts.map(s => s.workerName)].join(' ').toLowerCase(); return words.every(w => hay.includes(w)); })
+    .sort((a, b) => (b.shifts.some(s => !s.clockOut) - a.shifts.some(s => !s.clockOut)) || (b.shifts.length - a.shifts.length) || a.name.localeCompare(b.name));
+  const shifts = all.flatMap(g => g.shifts);
+  const onClock = new Set(shifts.filter(s => !s.clockOut).map(s => s.workerName.toLowerCase())).size;
+  const out = new Set(shifts.filter(s => s.clockOut).map(s => s.workerName.toLowerCase())).size;
+  const notIn = all.reduce((t, g) => t + g.crew.filter(n => !g.shifts.some(s => s.workerName.toLowerCase() === n.toLowerCase())).length, 0);
+  const flags = all.reduce((t, g) => t + g.shifts.filter(s => tcFlag(s, g.job)).length, 0);
+  document.getElementById('tcStats').innerHTML = [['live', onClock, 'On the clock'], ['', out, 'Clocked out'], ['', notIn, 'Not clocked in'], [flags ? 'flag' : '', flags, 'Need a look']]
+    .map(([cls, n, label]) => `<div class="eod-stat ${cls}"><b>${n}</b><span>${label}</span></div>`).join('');
+  const countEl = document.getElementById('jobSearchCount');
+  if (countEl) countEl.textContent = words.length ? `${groups.length} of ${all.length}` : '';
+  if (!groups.length) { document.getElementById('tcJobs').innerHTML = `<div class="completed-wrap completed-empty">${all.length ? 'Nothing matches.' : 'No crews scheduled and no clock ins on this day.'}</div>`; return; }
+  document.getElementById('tcJobs').innerHTML = groups.map(g => {
+    const live = g.shifts.filter(s => !s.clockOut).length, done = g.shifts.filter(s => s.clockOut).length;
+    const missing = g.crew.filter(n => !g.shifts.some(s => s.workerName.toLowerCase() === n.toLowerCase()));
+    const flagged = g.shifts.filter(s => tcFlag(s, g.job)).length;
+    const time = g.job && getReportTime(g.job) ? eodTime12(getReportTime(g.job)) + (getReportEndTime(g.job) ? ' - ' + eodTime12(getReportEndTime(g.job)) : '') : '';
+    const rows = g.shifts.slice().sort((a, b) => a.workerName.localeCompare(b.workerName) || a.clockIn.at.localeCompare(b.clockIn.at)).map(s => {
+      const hours = s.clockOut ? `${tcHours(s.clockIn.at, s.clockOut.at)} h` : `<span class="tc-chip live"><i></i>${tcHm(Date.now() - Date.parse(s.clockIn.at))}</span>`;
+      const outCell = s.clockOut ? escapeAttr(tcFmt(s.clockOut.at)) : tcPastEnd(s, g.job) ? '<span class="tc-chip flag"><i></i>No clock out</span>' : '<span class="eod-muted">On the clock</span>';
+      const sum = s.summary ? `<tr class="tc-sum"><td colspan="7"><div class="tc-sumbox"><div><span class="k">Work done</span>${escapeAttr(s.summary.work)}${s.summary.lang === 'es' ? ' <span class="eod-muted">(Spanish)</span>' : ''}</div>${s.summary.notes ? `<div class="note"><span class="k">For dispatch</span>${escapeAttr(s.summary.notes)}</div>` : ''}</div></td></tr>` : '';
+      return `<tr${s.summary ? ' class="tc-has-sum"' : ''}><td><b>${escapeAttr(s.workerName)}</b>${pacificDayOf(s.clockIn.at) !== day ? `<div class="eod-muted">since ${escapeAttr(new Date(s.clockIn.at).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' }))}</div>` : ''}</td>
+        <td class="mono">${escapeAttr(tcFmt(s.clockIn.at))}</td><td class="mono">${outCell}</td><td class="mono">${hours}</td>
+        <td>${tcLocCell(s, 'in')}</td><td>${tcLiveCell(s)}</td><td>${tcLocCell(s, 'out')}</td></tr>${sum}`;
+    }).join('') + missing.map(n => `<tr><td><b>${escapeAttr(n)}</b></td><td class="mono">-</td><td class="mono">-</td><td class="mono">-</td><td colspan="3"><span class="tc-chip"><i></i>Not clocked in</span></td></tr>`).join('');
+    return `<details class="tc-job" data-tc-job="${escapeAttr(g.id)}"${tcOpenJobs.has(g.id) ? ' open' : ''}>
+      <summary><div class="tc-job-head"><div class="tc-job-name">${escapeAttr(g.name || 'Job')}</div><div class="tc-job-meta">${escapeAttr([g.client, time].filter(Boolean).join(' · '))}</div></div>
+        <div class="tc-counts">${live ? `<span class="tc-chip live"><i></i>${live} on the clock</span>` : ''}${done ? `<span class="tc-chip onsite"><i></i>${done} clocked out</span>` : ''}${missing.length ? `<span class="tc-chip"><i></i>${missing.length} not in</span>` : ''}${flagged ? `<span class="tc-chip flag"><i></i>${flagged} need a look</span>` : ''}</div></summary>
+      <div class="tc-table-wrap"><table class="tc-table"><thead><tr><th>Worker</th><th>In</th><th>Out</th><th>Hours</th><th>Clock in location</th><th>Live location</th><th>Clock out location</th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${g.shifts.length ? `<div class="tc-job-foot"><button type="button" class="tc-map-btn" data-tc-map-job="${escapeAttr(g.id)}">Map the whole crew</button></div>` : ''}
+    </details>`;
+  }).join('');
+}
+function pacificDayOf(iso) { return toLocalYMD(new Date(iso)); }
+
+// ----- In-board map -----
+let leafletReady = null;
+function loadLeaflet() {
+  if (window.L) return Promise.resolve();
+  if (leafletReady) return leafletReady;
+  leafletReady = new Promise((resolve, reject) => {
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.append(css);
+    const js = document.createElement('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    js.onload = () => resolve(); js.onerror = () => { leafletReady = null; reject(new Error('Map library did not load')); };
+    document.head.append(js);
+  });
+  return leafletReady;
+}
+async function openTcMap(target) {
+  closeTcMap();
+  const scrim = document.createElement('div');
+  scrim.className = 'tc-map-scrim'; scrim.id = 'tcMapScrim';
+  scrim.innerHTML = `<div class="tc-map-card" role="dialog" aria-labelledby="tcMapTitle"><div class="tc-map-head"><div><h3 id="tcMapTitle"></h3><div class="tc-detail" id="tcMapSub"></div></div><button type="button" class="tc-map-close" id="tcMapClose">Close</button></div>
+    <div id="tcMap"></div>
+    <div class="tc-map-legend"><span><i style="background:var(--orange)"></i>Job</span><span><i style="background:#2f74c0"></i>Live (updates every minute)</span><span><i style="background:#2f8f4e"></i>Clock in</span><span><i style="background:#1c1d1f"></i>Clock out</span><span><i style="background:rgba(47,143,78,.25);border:1px solid #2f8f4e"></i>On site area</span></div></div>`;
+  scrim.addEventListener('click', e => { if (e.target === scrim) closeTcMap(); });
+  document.body.append(scrim);
+  document.getElementById('tcMapClose').onclick = closeTcMap;
+  tcMapState = { target, map: null, layer: null, fitted: false };
+  try { await loadLeaflet(); } catch (error) { document.getElementById('tcMap').innerHTML = `<div class="job-log-msg">${escapeAttr(error.message)}. Check the connection and try again.</div>`; return; }
+  if (!tcMapState) return;
+  const map = L.map('tcMap', { zoomControl: true });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+  tcMapState.map = map; tcMapState.layer = L.layerGroup().addTo(map);
+  tcDrawMap();
+}
+function closeTcMap() {
+  if (tcMapState?.map) tcMapState.map.remove();
+  tcMapState = null;
+  document.getElementById('tcMapScrim')?.remove();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && tcMapState) closeTcMap(); });
+function tcDrawMap() {
+  const st = tcMapState; if (!st || !st.map || !tcData) return;
+  const t = st.target;
+  const shifts = (tcData.shifts || []).filter(s => t.jobId ? s.jobId === t.jobId : s.id === t.shiftId);
+  if (!shifts.length) return;
+  const jobId = shifts[0].jobId, pin = tcData.pins?.[jobId];
+  const job = (dashboardData.jobs || []).find(j => j.id === jobId);
+  document.getElementById('tcMapTitle').textContent = t.jobId ? `${(job && job.name) || shifts[0].jobAddress} · whole crew` : `${shifts[0].workerName} · ${(job && job.name) || shifts[0].jobAddress}`;
+  const one = shifts[0];
+  document.getElementById('tcMapSub').textContent = t.jobId ? `${shifts.filter(s => !s.clockOut).length} on the clock, ${shifts.filter(s => s.clockOut).length} clocked out` :
+    `In ${tcFmt(one.clockIn.at)}${one.clockOut ? ' · Out ' + tcFmt(one.clockOut.at) : ' · ' + (tcStale(one) ? 'no update since ' + tcFmt(one.last?.at) : 'live, updated ' + tcFmt(one.last?.at))}`;
+  const icon = (cls, html = '') => L.divIcon({ className: '', html: `<div class="${cls}">${html}</div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
+  const layer = st.layer; layer.clearLayers();
+  const pts = [];
+  if (pin) {
+    const rules = tcData.rules || { onsite: 500, near: 1000 };
+    L.circle([pin.lat, pin.lng], { radius: rules.near * 0.3048, color: '#c9a227', weight: 1, fillOpacity: 0.05, dashArray: '4 4' }).addTo(layer);
+    L.circle([pin.lat, pin.lng], { radius: rules.onsite * 0.3048, color: '#2f8f4e', weight: 1, fillOpacity: 0.12 }).addTo(layer);
+    L.marker([pin.lat, pin.lng], { icon: L.divIcon({ className: '', html: '<div class="tc-pin"></div>', iconSize: [16, 16], iconAnchor: [8, 16] }) }).bindTooltip((job && job.name) || one.jobAddress).addTo(layer);
+    pts.push([pin.lat, pin.lng]);
+  }
+  for (const s of shifts) {
+    const path = (s.trail || []).map(p => [p.lat, p.lng]);
+    if (path.length > 1) L.polyline(path, { color: '#2f74c0', weight: 3, opacity: 0.55 }).addTo(layer);
+    if (s.clockIn?.lat != null) { L.marker([s.clockIn.lat, s.clockIn.lng], { icon: icon('tc-punch in') }).bindTooltip(`${s.workerName} clocked in ${tcFmt(s.clockIn.at)}`).addTo(layer); pts.push([s.clockIn.lat, s.clockIn.lng]); }
+    if (s.clockOut?.lat != null) { L.marker([s.clockOut.lat, s.clockOut.lng], { icon: icon('tc-punch out') }).bindTooltip(`${s.workerName} clocked out ${tcFmt(s.clockOut.at)}`).addTo(layer); pts.push([s.clockOut.lat, s.clockOut.lng]); }
+    if (!s.clockOut && s.last?.lat != null) {
+      L.marker([s.last.lat, s.last.lng], { icon: icon('tc-live-dot' + (tcStale(s) ? ' stale' : '')), zIndexOffset: 1000 })
+        .bindTooltip(`${s.workerName} · ${tcStatusLabel(s.last, true)} · ${tcFmt(s.last.at)}`, { permanent: shifts.length > 1, direction: 'top', offset: [0, -10], className: 'tc-map-name' }).addTo(layer);
+      if (s.last.acc) L.circle([s.last.lat, s.last.lng], { radius: s.last.acc * 0.3048, color: '#2f74c0', weight: 0, fillOpacity: 0.1 }).addTo(layer);
+      pts.push([s.last.lat, s.last.lng]);
+    }
+    pts.push(...path);
+  }
+  if (!st.fitted && pts.length) { st.map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 17 }); st.fitted = true; }
+}
+document.getElementById('tcJobs').addEventListener('click', e => {
+  const one = e.target.closest('[data-tc-map]'), all = e.target.closest('[data-tc-map-job]');
+  if (one) { e.preventDefault(); openTcMap({ shiftId: one.dataset.tcMap }); }
+  else if (all) { e.preventDefault(); openTcMap({ jobId: all.dataset.tcMapJob }); }
+});
+document.getElementById('tcJobs').addEventListener('toggle', e => {
+  const d = e.target.closest?.('[data-tc-job]'); if (!d) return;
+  if (d.open) tcOpenJobs.add(d.dataset.tcJob); else tcOpenJobs.delete(d.dataset.tcJob);
+}, true);
+function startTimeClock() {
+  renderTimeClockView(); loadTimeClock();
+  if (!tcTimer) tcTimer = setInterval(() => { if (boardTcMode && document.visibilityState === 'visible') loadTimeClock(); }, 60000);
+}
+function stopTimeClock() { if (tcTimer) clearInterval(tcTimer); tcTimer = null; closeTcMap(); }
+const tcGo = ymd => { document.getElementById('tcDate').value = ymd; tcData = null; renderTimeClockView(); loadTimeClock(); };
+document.getElementById('tcDate').addEventListener('change', e => tcGo(e.target.value || localIsoDate()));
+document.getElementById('tcPrev').addEventListener('click', () => tcGo(eodShiftDay(document.getElementById('tcDate').value || localIsoDate(), -1)));
+document.getElementById('tcNext').addEventListener('click', () => tcGo(eodShiftDay(document.getElementById('tcDate').value || localIsoDate(), 1)));
+document.getElementById('tcToday').addEventListener('click', () => tcGo(localIsoDate()));
+document.getElementById('tcRefresh').addEventListener('click', () => loadTimeClock());
+document.getElementById('tcExpandAll').addEventListener('click', () => {
+  const boxes = [...document.querySelectorAll('#tcJobs [data-tc-job]')];
+  const open = !boxes.every(d => d.open);
+  boxes.forEach(d => { d.open = open; if (open) tcOpenJobs.add(d.dataset.tcJob); else tcOpenJobs.delete(d.dataset.tcJob); });
+  document.getElementById('tcExpandAll').textContent = open ? 'Collapse all' : 'Expand all';
+});
+
+/* ---------- View PDF on the page ----------
+   EOD Done's View PDF links open the PDF in a viewer on the board instead of a new
+   tab (a new tab can't sign in when the board runs inside GHL). The board's own PDFs
+   are fetched with the board's sign-in and shown from a blob; a Google Drive link
+   uses Drive's preview; any other link is shown as is. */
+let pdfViewUrl = null;
+function closePdfViewer() {
+  document.getElementById('pdfViewScrim')?.remove();
+  if (pdfViewUrl) { URL.revokeObjectURL(pdfViewUrl); pdfViewUrl = null; }
+}
+async function openPdfViewer(href, title) {
+  closePdfViewer();
+  const scrim = document.createElement('div');
+  scrim.className = 'pdf-view-scrim'; scrim.id = 'pdfViewScrim';
+  scrim.innerHTML = `<div class="pdf-view-card" role="dialog" aria-labelledby="pdfViewTitle"><div class="pdf-view-head"><h3 id="pdfViewTitle">${escapeAttr(title || 'Job log PDF')}</h3>
+    <div class="pdf-view-actions"><a id="pdfViewOpen" target="_blank" rel="noopener" hidden>Open in new tab</a><a id="pdfViewSave" hidden>Download</a><button type="button" id="pdfViewClose">Close</button></div></div>
+    <div class="pdf-view-body" id="pdfViewBody"><div class="pdf-view-msg">Loading PDF...</div></div></div>`;
+  scrim.addEventListener('click', e => { if (e.target === scrim) closePdfViewer(); });
+  document.body.append(scrim);
+  document.getElementById('pdfViewClose').onclick = closePdfViewer;
+  const body = document.getElementById('pdfViewBody');
+  const show = src => { const f = document.createElement('iframe'); f.title = title || 'PDF'; f.src = src; body.replaceChildren(f); };
+  const url = new URL(href, location.href);
+  if (url.origin === location.origin) {
+    try {
+      const res = await fetchWithTimeout(url.href, { headers: { Accept: 'application/pdf' } }, 30000);
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'HTTP ' + res.status); }
+      const blob = await res.blob();
+      if (!document.getElementById('pdfViewScrim')) return;
+      pdfViewUrl = URL.createObjectURL(blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' }));
+      show(pdfViewUrl);
+      const save = document.getElementById('pdfViewSave');
+      save.href = pdfViewUrl; save.download = (title || 'job-log').replace(/[\\/:*?"<>|]+/g, ' ').trim() + '.pdf'; save.hidden = false;
+      const open = document.getElementById('pdfViewOpen'); open.href = pdfViewUrl; open.hidden = false;
+    } catch (error) {
+      body.innerHTML = `<div class="pdf-view-msg">Couldn't load the PDF: ${escapeAttr(error.message)}</div>`;
+    }
+    return;
+  }
+  const drive = /drive\.google\.com\/file\/d\/([^/?#]+)/.exec(url.href) || /drive\.google\.com\/open\?id=([^&#]+)/.exec(url.href);
+  show(drive ? `https://drive.google.com/file/d/${drive[1]}/preview` : url.href);
+  const open = document.getElementById('pdfViewOpen'); open.href = url.href; open.hidden = false;
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[data-view-pdf]');
+  if (!a || !a.href || e.ctrlKey || e.metaKey || e.shiftKey) return; // Ctrl / Cmd click still opens a tab
+  e.preventDefault();
+  const row = a.closest('tr');
+  const name = (row?.querySelector('.eod-job-name')?.textContent || '').trim();
+  openPdfViewer(a.href, name ? 'Job log · ' + name : 'Job log PDF');
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('pdfViewScrim')) { e.stopPropagation(); closePdfViewer(); } }, true);
+
 /* ---------- Completed job log (EOD Done > Completed job log) ---------- */
 // Reads the job log back from Make (GET /api/job-log, which posts { action: "read",
 // from, to } to JOB_LOG_READ_WEBHOOK). Same day picker and search box as EOD sheets;
@@ -6262,7 +6632,7 @@ function renderJobLogView(day, isToday) {
     return `<tr>
       <td data-label="Date"><span class="mono">${escapeAttr(jobLogDay(r.date))}</span>${r.submittedBy ? `<div class="eod-muted">by ${escapeAttr(r.submittedBy)}</div>` : ''}</td>
       <td data-label="Job"><div class="eod-job-name">${escapeAttr(r.jobAddress || 'N/A')}</div><div class="eod-job-client">${escapeAttr(r.clientName || '')}</div>${link ? `<a class="job-id" href="${link}" target="_blank" rel="noopener" title="Open in GHL">${escapeAttr(String(r.jobId).slice(-8))}</a>` : ''}</td>
-      <td data-label="Logged as">${tag}<div>${r.docId ? `<button type="button" class="job-log-edit" data-doc-id="${escapeAttr(r.docId)}">Edit job log</button>` : ''}${r.pdfId || r.pdfUrl ? `<a class="job-log-pdf" href="${r.pdfId ? '/api/job-log?pdf=' + encodeURIComponent(r.pdfId) : escapeAttr(r.pdfUrl)}" target="_blank" rel="noopener">View PDF</a>` : ''}${r.docxId ? ` <a class="job-log-pdf" href="/api/job-log?pdf=${encodeURIComponent(r.docxId)}" download>Word .docx</a>` : ''}</div>${r.docGeneratedAt ? `<span class="job-log-edited">PDF sent ${escapeAttr(new Date(r.docGeneratedAt).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' }))}</span>` : r.docEdited ? '<span class="job-log-edited">Edited</span>' : ''}</td>
+      <td data-label="Logged as">${tag}<div>${r.docId ? `<button type="button" class="job-log-edit" data-doc-id="${escapeAttr(r.docId)}">Edit job log</button>` : ''}${r.pdfId || r.pdfUrl ? `<a class="job-log-pdf" href="${r.pdfId ? '/api/job-log?pdf=' + encodeURIComponent(r.pdfId) : escapeAttr(r.pdfUrl)}" target="_blank" rel="noopener" data-view-pdf>View PDF</a>` : ''}${r.docxId ? ` <a class="job-log-pdf" href="/api/job-log?pdf=${encodeURIComponent(r.docxId)}" download>Word .docx</a>` : ''}</div>${r.docGeneratedAt ? `<span class="job-log-edited">PDF sent ${escapeAttr(new Date(r.docGeneratedAt).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' }))}</span>` : r.docEdited ? '<span class="job-log-edited">Edited</span>' : ''}</td>
       <td data-label="Shift">${shift}</td>
       <td data-label="Crew">${crew}</td>
       <td data-label="Hours">${r.action === 'complete' && !r.hoursWorked ? '<span class="eod-muted">N/A</span>' : `<span class="eod-big">${eodHours(r.hoursWorked)}</span>`}</td>
@@ -6429,8 +6799,8 @@ jldEl('jldSave').addEventListener('click', () => saveJobLogDoc(false));
 jldEl('jldGenerate').addEventListener('click', () => saveJobLogDoc(true));
 
 // The same search box serves EOD Done (it stays put when you switch views).
-document.getElementById('jobSearch').addEventListener('input', () => { renderJobs(dashboardData.jobs || []); renderEodDoneView(); });
-document.getElementById('jobSearch').addEventListener('keydown', e => { if (e.key === 'Escape') { e.target.value = ''; renderJobs(dashboardData.jobs || []); renderEodDoneView(); } });
+document.getElementById('jobSearch').addEventListener('input', () => { renderJobs(dashboardData.jobs || []); renderEodDoneView(); renderTimeClockView(); });
+document.getElementById('jobSearch').addEventListener('keydown', e => { if (e.key === 'Escape') { e.target.value = ''; renderJobs(dashboardData.jobs || []); renderEodDoneView(); renderTimeClockView(); } });
 
 /* ---------- Worker sent home ---------- */
 // Top bar button. Dispatch picks a worker on any open job and the hours they
@@ -10114,18 +10484,26 @@ function applyBoardSplit(allJobs) {
 }
 // EOD Done is the third button on the same toggle: it swaps the job list for the
 // EOD Done section. Split / Current view stays remembered for when you go back.
+// Time Clock is the fourth button: same idea, it swaps the job list for the Time Clock section.
+let boardTcMode = false;
 function applyEodMode() {
+ const other = boardEodMode || boardTcMode;
  document.getElementById('jobsPanel').classList.toggle('eod-mode', boardEodMode);
+ document.getElementById('jobsPanel').classList.toggle('tc-mode', boardTcMode);
  document.getElementById('eodDoneDispatchView').hidden = !boardEodMode;
+ document.getElementById('timeClockView').hidden = !boardTcMode;
  document.getElementById('eodDoneViewBtn').setAttribute('aria-pressed', String(boardEodMode));
- document.getElementById('splitViewBtn').setAttribute('aria-pressed', String(!boardEodMode && boardSplit));
- document.getElementById('combinedViewBtn').setAttribute('aria-pressed', String(!boardEodMode && !boardSplit));
- document.getElementById('jobSearch').placeholder = boardEodMode ? 'Search address, client or worker' : 'Search address, client, crew or job ID';
+ document.getElementById('timeClockViewBtn').setAttribute('aria-pressed', String(boardTcMode));
+ document.getElementById('splitViewBtn').setAttribute('aria-pressed', String(!other && boardSplit));
+ document.getElementById('combinedViewBtn').setAttribute('aria-pressed', String(!other && !boardSplit));
+ document.getElementById('jobSearch').placeholder = other ? 'Search address, client or worker' : 'Search address, client, crew or job ID';
+ if (boardTcMode) startTimeClock(); else stopTimeClock();
 }
-function setBoardView(split){boardSplit=split;boardEodMode=false;localStorage.setItem('a2zBoardSplit',String(split));applyEodMode();renderJobs(dashboardData.jobs);}
+function setBoardView(split){boardSplit=split;boardEodMode=false;boardTcMode=false;localStorage.setItem('a2zBoardSplit',String(split));applyEodMode();renderJobs(dashboardData.jobs);}
 document.getElementById('splitViewBtn').onclick=()=>setBoardView(true);
 document.getElementById('combinedViewBtn').onclick=()=>setBoardView(false);
-document.getElementById('eodDoneViewBtn').onclick=()=>{boardEodMode=true;applyEodMode();renderEodDoneView();if(!closedJobsLoaded)loadClosedJobs();};
+document.getElementById('timeClockViewBtn').onclick=()=>{boardEodMode=false;boardTcMode=true;applyEodMode();};
+document.getElementById('eodDoneViewBtn').onclick=()=>{boardEodMode=true;boardTcMode=false;applyEodMode();renderEodDoneView();if(!closedJobsLoaded)loadClosedJobs();};
 for (const kind of ['labor', 'logistics']) {
   const select = document.getElementById(kind + 'CrewFilter');
   const saved = localStorage.getItem('a2zCrewView-' + kind);

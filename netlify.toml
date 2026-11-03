@@ -157,6 +157,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/time-clock"
+  to = "/.netlify/functions/time-clock"
+  status = 200
+
+[[redirects]]
+  from = "/api/field-clock"
+  to = "/.netlify/functions/field-clock"
+  status = 200
+
+[[redirects]]
   from = "/api/job-log"
   to = "/.netlify/functions/job-log"
   status = 200

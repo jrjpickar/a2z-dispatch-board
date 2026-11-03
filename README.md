@@ -1,5 +1,18 @@
 # A2Z Dispatch 1.9
 
+## Field app clock in / clock out with location (Nov 3, 2026)
+
+- **Clock In / Clock Out** on each of today's job cards in the field app (`/driver/`). Location is required for both: no location, no punch. A blocked phone gets iPhone / Android steps to turn it back on (English and Spanish).
+- **Live location while on the clock.** With the app open, the phone sends a reading every 5 minutes. Phones stop sending when the app is closed or the screen locks.
+- **Work summary on clock out.** Required "Work done today" (quick add buttons, each one goes in once) and an optional note for dispatch.
+- **Tomorrow's job** shows on its own card (and moves to the top right after clock out).
+- **Make:** every clock in and clock out posts one run to `https://hook.us2.make.com/l4gm9c07tjmikwnv3xhwvf65a4irt3ql` (override with `CLOCK_WEBHOOK`). See MAKE-SETUP.md.
+- **Dispatch board: Time Clock** (Jobs Scheduled, next to EOD Done). One expandable row per job for the picked day: who is on the clock, hours, clock in / live / clock out location, the work summary and note, and "Need a look" flags (off site, no update in 15 minutes, no clock out 30 minutes after the end time, a note for dispatch). **Map** opens a map on the board with the job pin, the on-site area, clock in / out spots, the path and a live dot; **Map the whole crew** shows everyone on that job. Refreshes every minute while open. Read only (`GET /api/time-clock`). The map uses Leaflet from cdnjs and OpenStreetMap tiles, loaded the first time a map opens. Everything else on the board works as before.
+- **View PDF on the page.** EOD Done > Completed job log: View PDF (on the row and in Edit job log) now opens the PDF in a viewer on the board, with Open in new tab and Download. It works inside GHL too (a new tab couldn't sign in there). Ctrl / Cmd click still opens a tab.
+- Shifts are saved in the new `field_shifts` table (created on the first request after deploy).
+- **Job map pins are free:** each job address is looked up once with the US Census Geocoder (free, no key), then OpenStreetMap if the Census has no match. No Google account needed.
+- New, optional env vars: `GOOGLE_MAPS_API_KEY` (only if you ever want Google's lookup first; not needed), `CLOCK_ONSITE_FT` (500), `CLOCK_NEAR_FT` (1000), `CLOCK_MAX_ACCURACY_FT` (1000). Tests: `test/field-clock.test.mjs`.
+
 ## Assign goes to Make right away (Nov 3, 2026)
 
 - **Assign selected** now posts each worker's `assign` run to the worker webhook (`dk8dm3t7...`) on the click, instead of waiting for the 6:30 PM run. Make has its own delay before it texts.

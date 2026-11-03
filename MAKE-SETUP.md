@@ -77,6 +77,25 @@ Google Sheets fields (top level, named to match the values batchUpdate placehold
 
 **Crew hours (no pay rates).** The EOD sheet lists every worker on the job plus anyone sent home from it that day. Each starts at 8 hours, and dispatch can change any of them. A worker sent home shows the hours picked on **Worker sent home**. They are in `crewHours` (`workerName`, `hoursWorked`, `sentHome`, `contactId`, `workerPhone`) and on the workbook under CREW HOURS, where Markup % and Total price to customer used to be.
 
+## Field app clock in / clock out (new webhook)
+
+Each **Clock In** and **Clock Out** in the field app posts one plain JSON run to `https://hook.us2.make.com/l4gm9c07tjmikwnv3xhwvf65a4irt3ql` (override with `CLOCK_WEBHOOK` in Netlify). The server sends it in the background, so the worker never waits on Make. End the scenario with the `{"ok":true}` Webhook response; a run Make doesn't confirm shows under Admin > Make / GHL problems as **Clock in / out** with Retry.
+
+Fields (both actions):
+
+- `action`: `clockIn` or `clockOut`
+- `jobId`, `jobAddress`, `clientName`, `jobScopeOfWork` (the job's scope from the board)
+- `date` (`MM/DD/YY`) and `time` (`07:05AM`): the punch's own date and time, Pacific
+- `hoursWorked`: `0` on clockIn; on clockOut the hours between clock in and clock out, two decimals (e.g. `8.52`)
+- `scopeOfWork`: the worker's "Work done today" summary (clockOut; empty on clockIn)
+- `notes`: the worker's note for dispatch (clockOut, optional; empty on clockIn)
+- `employeeName` (the worker's name, same as `workerName`), `workerName`, `workerPhone`
+- `clockInDate`, `clockInTime`, `clockOutDate`, `clockOutTime` (same formats; clock out fields empty on clockIn), `clockInAt`, `clockOutAt` (ISO), `timeZone`
+- `latitude`, `longitude`, `accuracyFt`, `distanceFt` (from the job), `locationStatus` (`onsite`, `near`, `away`, or `unknown` when the job has no map pin), `mapLink`
+- `language` (`en` / `es`, the language the summary was written in), `shiftId`, `eventId`
+
+To set it up: in Make, open the scenario with that webhook, click **Redetermine data structure**, then clock in and out once from the field app.
+
 ## Completed job log (EOD Done > Completed job log)
 
 Make sends the job log rows to the board, the board saves them, and the Completed job log tab reads them from there (fast, no waiting on Make).

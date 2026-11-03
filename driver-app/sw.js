@@ -1,6 +1,6 @@
 // Minimal shell cache so "Add to Home Screen" opens reliably even on a weak
 // signal. Never caches /api/* -- driver data must always be fetched fresh.
-const CACHE = 'a2z-driver-shell-v1';
+const CACHE = 'a2z-driver-shell-v2';
 const SHELL = ['/driver/', '/driver/index.html', '/driver/manifest.webmanifest', '/driver/icon-192.png', '/driver/icon-512.png'];
 
 self.addEventListener('install', event => {

@@ -186,5 +186,19 @@ async function createSchema(sql) {
     version integer not null default 1, sent_at timestamptz, sent_file text,
     updated_at timestamptz not null default now()
   )`;
+  // Field app clock in / clock out (lib/field-clock.mjs). One row per shift.
+  // At most one open shift per worker (the partial unique index).
+  await sql`create table if not exists field_shifts (
+    id text primary key, worker_key text not null, worker_name text not null default '', worker_phone text not null default '',
+    job_id text not null, job_address text not null default '', client_name text not null default '', job_scope text not null default '',
+    clock_in jsonb not null, clock_out jsonb, last_loc jsonb, trail jsonb not null default '[]'::jsonb, summary jsonb,
+    created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+  )`;
+  await sql`create unique index if not exists field_shifts_one_open on field_shifts (worker_key) where clock_out is null`;
+  await sql`create index if not exists field_shifts_worker_idx on field_shifts (worker_key, created_at desc)`;
+  // Job map pins for clock distances, looked up once per address.
+  await sql`create table if not exists job_geocode (
+    job_id text primary key, address text not null, lat double precision, lng double precision, updated_at timestamptz not null default now()
+  )`;
   });
 }
