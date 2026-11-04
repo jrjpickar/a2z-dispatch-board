@@ -42,7 +42,7 @@ function standaloneMove(opportunity, pipelineId) {
 
 export default async function handler(request) {
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
-  const denied = readDenied(request);
+  const denied = await readDenied(request);
   if (denied) return denied;
   const token = process.env.GHL_API_TOKEN;
   if (!token) return json({ error: "Server configuration is incomplete", missing: ["GHL_API_TOKEN"] }, 500);

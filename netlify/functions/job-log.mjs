@@ -103,7 +103,7 @@ async function readDoc(docId) {
     savedBy: row?.updated_by || '', savedAt: row?.updated_at || null, generatedAt: row?.generated_at || null, generatedBy: row?.generated_by || '' });
 }
 async function saveDoc(request, session, url, generate) {
-  authorizeWrite(request);
+  await authorizeWrite(request);
   let body; try { body = JSON.parse(await request.text()); } catch { throw new StateError('Request body must be valid JSON'); }
   const docId = String(body?.docId || '');
   if (!isDocId(docId)) throw new StateError('Unknown job log document');

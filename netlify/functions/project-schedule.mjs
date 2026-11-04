@@ -36,11 +36,11 @@ export default async function handler(request) {
         const input = normalizeScheduleInput(record.input);
         return pdfResponse(await projectSchedulePdf(input), scheduleFileName(input));
       }
-      authorizeRead(request);
+      await authorizeRead(request);
       return json({ schedules: await listProjectSchedules(sql) });
     }
 
-    authorizeWrite(request);
+    await authorizeWrite(request);
     const payload = await readPayload(request);
     const action = payload.action === 'submit' ? 'submit' : 'save';
     const input = normalizeScheduleInput(payload);

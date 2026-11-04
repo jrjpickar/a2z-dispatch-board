@@ -1799,6 +1799,18 @@
 
   .field-app-actions { white-space: nowrap; }
   #editWorkerSheet .ghl-hint { font-size: 12px; color: var(--ink-soft); }
+  /* Viewer profile (read only): every control that changes or sends something is hidden.
+     The server refuses viewer writes anyway (lib/http.mjs); this keeps the screen honest. */
+  .user-role.viewer { background: var(--grey-light); color: var(--ink); }
+  body.is-viewer #newJobBtn, body.is-viewer #newContainerBtn, body.is-viewer #sentHomeBtn,
+  body.is-viewer .dispatch-view :is(.crew-assign-wrap, .crew-chip-remove, .job-stage-actions, .job-stage-btn:not(.chart-table-btn), .unschedule-btn, .time-unlock, .logi-notes-edit, .addon-toggle, .no-text-toggle, .night-toggle, .stop-remove, .ps-remove, .psv-update, .hold-btn),
+  body.is-viewer :is(#psAddPhase, #savePsSheet, #submitPsSheet, #resetPsSheet, #jldSave, #jldGenerate, #jldAddEmployee, #submitBook, #submitEditJob, #submitEditContainer, #submitContainerBook, #submitEodSheet, #submitLogisticsEod, #sentHomeConfirm, #unschedConfirm, #removeWorkerConfirm) { display: none !important; }
+  body.is-viewer .dispatch-view :is(input:not([type="search"]), select, textarea) { pointer-events: none; opacity: .75; }
+  .viewer-banner { display: none; margin: 8px 14px 0; padding: 8px 12px; border-radius: var(--radius); background: var(--gold-tint); color: #7a5d10; font-size: 13px; }
+  body.is-viewer .viewer-banner { display: block; }
+  body.dark-mode .viewer-banner { color: #f0cf7a; }
+  .admin-pill.blocked { background: var(--danger); color: #fff; }
+  .people-type { font: inherit; font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface, #fff); color: var(--ink); }
 </style>
 
 <style>
@@ -1945,6 +1957,7 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
   <button class="dispatch-view-tab" id="adminViewTab" data-view="admin" role="tab" aria-selected="false" hidden>Admin</button>
 </div>
 
+<div class="viewer-banner" role="status">View only: you can look at the board, but changes and sends are turned off for your profile. Ask an admin if you need dispatch access.</div>
 <div class="dispatch-view" id="laborDispatchView">
 
 <div id="backendStatus" style="display:none; margin:10px 14px; padding:10px 12px; border:1px solid var(--danger); background:#fbeae7; color:var(--danger); font-size:12px; white-space:pre-wrap;"></div>
@@ -2129,6 +2142,12 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
       <div class="logistics-note" id="adminUsersNote">Admins can add and remove workers and manage Field App access. Senior admins can also enroll and revoke admins.</div>
       <div class="admin-search"><input type="search" id="adminUserSearch" placeholder="Search GHL users..." autocomplete="off"></div>
       <ul class="admin-list" id="adminUserList"><li class="load-state">Loading GHL users...</li></ul>
+    </div>
+    <div class="panel" data-panel="people">
+      <div class="panel-head"><h2>People and profile types</h2><span class="mono" id="peopleCount">0 VIEWERS</span></div>
+      <div class="logistics-note">Everyone in GHL can sign in unless blocked. <b>User</b> (the default) can dispatch: book, assign, close, EOD and logistics. <b>Viewer</b> sees the same board read only; nothing they do changes or sends anything. <b>Blocked</b> (senior admins only) can't sign in, and anyone already signed in is shut out on their next click. Admins and senior admins are set in the Admins panel. The Field App has its own access list.</div>
+      <div class="admin-search"><input type="search" id="peopleSearch" placeholder="Search GHL users..." autocomplete="off"></div>
+      <ul class="admin-list admin-list-scroll" id="peopleList"><li class="load-state">Loading GHL users...</li></ul>
     </div>
     <div class="panel" data-panel="laborers">
       <div class="panel-head"><h2>Workers</h2><button type="button" class="btn-primary" id="addGhlWorkerBtn">+ Add from GHL</button></div>
@@ -2794,6 +2813,13 @@ function setSessionToken(token) {
     const url = typeof input === 'string' ? input : (input && input.url) || '';
     const sameOriginApi = /^\/(api|\.netlify)\//.test(url) || url.startsWith(location.origin + '/api/');
     if (!sameOriginApi) return nativeFetch(input, init);
+    // Viewer profile: nothing that changes or sends leaves the browser (the server refuses it too).
+    const method = String(init.method || (typeof input !== 'string' && input.method) || 'GET').toUpperCase();
+    if (window.a2zViewOnly && method !== 'GET' && !/\/api\/session\b/.test(url)) {
+      const msg = 'View only: your profile can look at the board but not change it.';
+      if (typeof showToast === 'function') showToast(msg, true);
+      return Promise.resolve(new Response(JSON.stringify({ error: msg }), { status: 403, headers: { 'content-type': 'application/json' } }));
+    }
     const headers = new Headers(init.headers || (typeof input !== 'string' && input.headers) || {});
     if (a2zSessionToken) headers.set('X-A2Z-Session', a2zSessionToken);
     return nativeFetch(input, { ...init, headers, credentials: 'same-origin' });
@@ -9526,7 +9552,9 @@ async function fetchSessionUsers() {
   return sessionGhlUsers;
 }
 function applySession(info) {
-  currentSession = { signedIn: !!info?.signedIn, user: info?.user || null, isAdmin: !!info?.isAdmin, isSenior: !!info?.isSenior, needsAdminUnlock: !!info?.needsAdminUnlock, via: info?.via || '' };
+  currentSession = { signedIn: !!info?.signedIn, user: info?.user || null, isAdmin: !!info?.isAdmin, isSenior: !!info?.isSenior, needsAdminUnlock: !!info?.needsAdminUnlock, via: info?.via || '', isViewer: !!info?.isViewer, profileType: info?.profileType || '' };
+  window.a2zViewOnly = currentSession.signedIn && currentSession.isViewer;
+  document.body.classList.toggle('is-viewer', window.a2zViewOnly);
   if (info?.token) setSessionToken(info.token);
   if (!currentSession.signedIn) setSessionToken('');
   document.body.classList.toggle('is-admin', currentSession.isAdmin);
@@ -9535,8 +9563,8 @@ function applySession(info) {
   if (currentSession.signedIn) {
     text.textContent = [currentSession.user.name, currentSession.user.email].filter(Boolean).join(' · ');
     role.hidden = false;
-    role.textContent = currentSession.isSenior ? 'SENIOR ADMIN' : currentSession.isAdmin ? 'ADMIN' : currentSession.needsAdminUnlock ? 'ADMIN (LOCKED)' : 'USER';
-    role.className = 'user-role' + (currentSession.isAdmin ? ' admin' : currentSession.needsAdminUnlock ? ' locked' : '');
+    role.textContent = currentSession.isSenior ? 'SENIOR ADMIN' : currentSession.isAdmin ? 'ADMIN' : currentSession.needsAdminUnlock ? 'ADMIN (LOCKED)' : currentSession.isViewer ? 'VIEWER' : 'USER';
+    role.className = 'user-role' + (currentSession.isAdmin ? ' admin' : currentSession.needsAdminUnlock ? ' locked' : currentSession.isViewer ? ' viewer' : '');
   } else { text.textContent = 'Not signed in'; role.hidden = true; }
   // Inside GHL the sign-in follows the GHL user; Switch user is only for the picker.
   document.getElementById('switchUserBtn').hidden = !currentSession.signedIn || currentSession.via === 'ghl_sso';
@@ -9583,6 +9611,7 @@ async function initSession() {
     const res = await fetchWithTimeout('/api/session', { headers: { Accept: 'application/json' } }, 15000);
     const info = await res.json().catch(() => ({}));
     if (res.ok && info.signedIn) { applySession(info); return; }
+    if (info.blocked) { applySession({ signedIn: false }); openSignin(info.error); return; }
   } catch (err) { console.warn('Session check failed:', err); }
   applySession({ signedIn: false });
   openSignin();
@@ -9694,14 +9723,51 @@ function renderAdminUsers() {
     return `<li><div class="who">${sessionEsc(p.name)}${tags}<small>${sessionEsc(detail)}${idTag}</small></div>${action}</li>`;
   }).join('');
 }
+/* People and profile types: any admin switches a non-admin between User and Viewer. */
+let peopleRolesCache = [];
+function renderPeople() {
+  const list = document.getElementById('peopleList'); if (!list) return;
+  const admins = new Map((adminRowsCache || []).map(a => [a.userId, a]));
+  const roles = new Map((peopleRolesCache || []).map(r => [r.userId, r.role]));
+  const people = (sessionGhlUsers || []).map(u => ({ userId: u.id, name: u.name, email: u.email }));
+  const nView = [...roles.values()].filter(r => r === 'viewer').length, nBlock = [...roles.values()].filter(r => r === 'blocked').length;
+  document.getElementById('peopleCount').textContent = `${nView} VIEWER${nView === 1 ? '' : 'S'}${nBlock ? ` · ${nBlock} BLOCKED` : ''}`;
+  const senior = !!currentSession.isSenior;
+  const q = document.getElementById('peopleSearch').value.trim().toLowerCase();
+  const shown = people.filter(p => !q || `${p.name} ${p.email}`.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+  if (!shown.length) { list.innerHTML = `<li class="load-state">${people.length ? 'No one matches.' : 'GHL users could not load.'}</li>`; return; }
+  list.innerHTML = shown.map(p => {
+    const admin = admins.get(p.userId);
+    const type = roles.get(p.userId) || 'user';
+    const opt = (v, label) => `<option value="${v}"${type === v ? ' selected' : ''}>${label}</option>`;
+    const right = admin && type !== 'blocked' ? `<span class="admin-pill">${admin.addedBy === 'bootstrap' ? 'SENIOR ADMIN' : 'ADMIN'}</span>`
+      : type === 'blocked' && !senior ? '<span class="admin-pill blocked">BLOCKED</span>'
+      : `<select class="people-type" data-user-id="${sessionEsc(p.userId)}" data-name="${sessionEsc(p.name)}" data-current="${type}" aria-label="Profile type for ${sessionEsc(p.name)}">${opt('user', 'User')}${opt('viewer', 'Viewer (read only)')}${senior ? opt('blocked', 'Blocked (no access)') : ''}</select>`;
+    return `<li><div class="who">${sessionEsc(p.name)}<small>${sessionEsc(p.email || '')}</small></div>${right}</li>`;
+  }).join('');
+}
+document.getElementById('peopleSearch').addEventListener('input', renderPeople);
+document.getElementById('peopleList').addEventListener('change', async e => {
+  const sel = e.target.closest('.people-type'); if (!sel) return;
+  const before = sel.dataset.current || 'user';
+  if (sel.value === 'blocked' && !confirm(`Block ${sel.dataset.name}? They won't be able to sign in, and if they're signed in now they're shut out on their next click.`)) { sel.value = before; return; }
+  sel.disabled = true;
+  try {
+    const data = await adminApi({ action: 'set_role', userId: sel.dataset.userId, role: sel.value });
+    adminRowsCache = data.admins || adminRowsCache; peopleRolesCache = data.roles || [];
+    showToast(`${sel.dataset.name} is now ${sel.value === 'blocked' ? 'blocked' : sel.value === 'viewer' ? 'a Viewer (read only)' : 'a User (dispatcher)'}. It applies on their next click.`);
+    renderPeople();
+  } catch (err) { sel.value = before; showToast(err.message, true); }
+  finally { sel.disabled = false; }
+});
 async function renderAdminView(force) {
   if (!currentSession.isAdmin) return;
   renderAdminUsers(); renderManualWorkerList(); renderAdminLabor(); ensureAdminDriverRoster(force); loadFieldAppAccess();
   loadDashLayout().then(() => { loadSeniorTools(); loadDashCharts(); });
   try { await fetchSessionUsers(); } catch {}
-  try { adminRowsCache = (await adminApi()).admins || []; }
+  try { const data = await adminApi(); adminRowsCache = data.admins || []; peopleRolesCache = data.roles || []; }
   catch (e) { document.getElementById('adminUserList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; return; }
-  renderAdminUsers();
+  renderAdminUsers(); renderPeople();
   await loadManualWorkers(force); renderManualWorkerList();
 }
 document.getElementById('adminUserSearch').addEventListener('input', renderAdminUsers);
@@ -9751,7 +9817,7 @@ document.getElementById('adminUserList').addEventListener('click', async e => {
    drag a panel anywhere on a 12 column grid, drag the corner to resize, hide/show,
    and choose whether other admins see each panel. Panels float up to fill space
    above them (like a GHL dashboard). Collapsing a panel is per browser. */
-const DASH_DEFAULT_ALL = new Set(['admins', 'laborers', 'chartJobs', 'chartCrew', 'fieldApp', 'pending']);
+const DASH_DEFAULT_ALL = new Set(['admins', 'people', 'laborers', 'chartJobs', 'chartCrew', 'fieldApp', 'pending']);
 const DASH_DEFAULT_W = { fieldApp: 12 };
 const DASH_WIDTHS = [3, 4, 6, 8, 9, 12];
 const DASH_COLLAPSE_KEY = 'a2z.adminDash.collapsed';

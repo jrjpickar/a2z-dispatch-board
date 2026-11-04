@@ -8,7 +8,7 @@ import { publicSettings } from '../../lib/settings.mjs';
 export default async function handler(request) {
   try {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
-    authorizeWrite(request);
+    await authorizeWrite(request);
     const payload = await readPayload(request);
     // Assigned User is required: the Book Job sheet pre-fills the signed-in
     // user; if the browser sent none, fall back to that user, then the env default.

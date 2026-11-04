@@ -19,8 +19,8 @@ const idList = value => (Array.isArray(value) ? value : []).map(v => String(v ||
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
-    if (request.method === 'POST') authorizeWrite(request);
-    else authorizeRead(request);
+    if (request.method === 'POST') await authorizeWrite(request);
+    else await authorizeRead(request);
     const sql = db(); await ensureSchema(sql); await ensureHoldTables(sql);
     if (request.method === 'GET') {
       // ?waiting=jobs: crew changes waiting for their 12 hour mark, per job (Send now box).

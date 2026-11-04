@@ -15,8 +15,8 @@ function sinceParam(request) {
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405, { Allow: 'GET, POST' });
-    if (request.method === 'POST') authorizeWrite(request);
-    else authorizeRead(request);
+    if (request.method === 'POST') await authorizeWrite(request);
+    else await authorizeRead(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
       // ?view=closed: every job closed on the board, for the Completed tab (loaded only when it's opened).

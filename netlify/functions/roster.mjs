@@ -9,7 +9,7 @@ const SOURCES = {
 export default async function handler(request) {
   try {
     if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
-    authorizeRead(request);
+    await authorizeRead(request);
     const kind = new URL(request.url).searchParams.get('kind');
     if (!Object.hasOwn(SOURCES, kind)) throw new StateError('Unknown roster');
     const sql = db(); await ensureSchema(sql);

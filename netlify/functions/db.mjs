@@ -118,6 +118,14 @@ async function createSchema(sql) {
     user_id text primary key, name text not null default '', email text not null default '',
     added_by text not null default '', created_at timestamptz not null default now()
   )`;
+  // Profile type for people who are not admins: 'user' (dispatcher, the default for
+  // anyone not listed), 'viewer' (read only) or 'blocked' (no access, senior admins only).
+  // Admins and senior admins are decided by dispatch_admins / BOOTSTRAP_ADMINS.
+  await sql`create table if not exists dispatch_user_roles (
+    user_id text primary key, name text not null default '', email text not null default '',
+    role text not null default 'user' check (role in ('user', 'viewer', 'blocked')),
+    set_by text not null default '', updated_at timestamptz not null default now()
+  )`;
   // Workers an admin added by GHL contact search (not on the Make roster).
   // Merged into the crew and driver pickers and the Field App Access list.
   await sql`create table if not exists dispatch_manual_workers (

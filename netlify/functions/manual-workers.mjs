@@ -55,10 +55,10 @@ export default async function handler(request, context) {
           return json({ ok: true, contact: found, temperatureOptions: options });
         } catch { throw new StateError('Could not load that contact from GHL.', 502); }
       }
-      authorizeRead(request);
+      await authorizeRead(request);
       return json({ workers: await rows(sql), hidden: await hiddenRows(sql) });
     }
-    authorizeWrite(request);
+    await authorizeWrite(request);
     const session = await requirePanel(request, sql, 'laborers');
     const body = await readPayload(request);
     if (body.action === 'hide' || body.action === 'unhide') {

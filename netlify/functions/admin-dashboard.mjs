@@ -25,7 +25,7 @@ export default async function handler(request) {
       const layout = access.senior ? access.layout : { panels: access.layout.panels.filter(p => access.can(p.id)), updated: access.layout.updated };
       return json({ layout, panels: panelInfo(), senior: access.senior });
     }
-    authorizeWrite(request);
+    await authorizeWrite(request);
     const session = await requireSenior(request, sql);
     const body = await readPayload(request);
     if (body.action === 'save_layout') {

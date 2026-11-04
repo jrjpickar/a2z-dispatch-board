@@ -5,7 +5,7 @@ import { createDispatch } from '../../lib/create.mjs';
 export default async function handler(request) {
   try {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
-    authorizeWrite(request);
+    await authorizeWrite(request);
     const payload = await readPayload(request);
     Object.assign(payload, validateLogisticsBooking(payload));
     if (payload.documents) payload.documents = payload.documents.map(doc => ({ ...doc, url: new URL(doc.url, request.url).href }));

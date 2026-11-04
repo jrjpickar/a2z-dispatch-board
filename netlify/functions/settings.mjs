@@ -5,7 +5,7 @@ import { publicSettings } from '../../lib/settings.mjs';
 export default async function handler(request) {
   try {
     if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
-    authorizeRead(request);
+    await authorizeRead(request);
     const sql = db(); await ensureSchema(sql);
     return json(await publicSettings(sql));
   } catch (error) { return errorResponse(error); }

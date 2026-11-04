@@ -108,7 +108,7 @@ export default async function handler(request) {
       if (view === 'settings') return json(await seniorSettings(sql));
       throw new StateError('Unknown view');
     }
-    authorizeWrite(request);
+    await authorizeWrite(request);
     const session = await requireSenior(request, sql);
     const body = await readPayload(request);
     if (['resubmit_effect', 'resubmit_schedule'].includes(body.action)) {

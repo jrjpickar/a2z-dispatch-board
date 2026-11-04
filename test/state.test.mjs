@@ -53,13 +53,13 @@ test('driver-only mutations cannot rewrite schedules, assets or parent identity'
   assert.equal(next.data.sourceOpportunityId, 'parent'); assert.equal(next.data.scheduledDate, '2026-09-09'); assert.equal(next.data.assets.length, 1);
 });
 test('move creation/import cannot overwrite an existing row', () => assert.throws(() => mutateMove({ data: {} }, { action: 'create', notes: 'old' }), /already exists/));
-test('write authorization rejects cross-site and anonymous machine requests', () => {
+test('write authorization rejects cross-site and anonymous machine requests', async () => {
   delete process.env.STATE_SYNC_TOKEN;
-  assert.throws(() => authorizeWrite(new Request('https://board.test/api/shared-state', { method: 'POST' })), e => e.status === 403);
-  assert.throws(() => authorizeWrite(new Request('https://board.test/api/shared-state', { headers: { origin: 'https://evil.test' } })), e => e.status === 403);
-  authorizeWrite(new Request('https://board.test/api/shared-state', { headers: { origin: 'https://board.test' } }));
+  await assert.rejects(authorizeWrite(new Request('https://board.test/api/shared-state', { method: 'POST' })), e => e.status === 403);
+  await assert.rejects(authorizeWrite(new Request('https://board.test/api/shared-state', { headers: { origin: 'https://evil.test' } })), e => e.status === 403);
+  await authorizeWrite(new Request('https://board.test/api/shared-state', { headers: { origin: 'https://board.test' } }));
   process.env.STATE_SYNC_TOKEN = 'test-only-token';
-  authorizeWrite(new Request('https://board.test/api/shared-state', { headers: { authorization: 'Bearer test-only-token' } }));
+  await authorizeWrite(new Request('https://board.test/api/shared-state', { headers: { authorization: 'Bearer test-only-token' } }));
   delete process.env.STATE_SYNC_TOKEN;
 });
 test('GHL reset writes explicit empty custom fields', () => assert.ok(scheduleFields({}).every(f => f.field_value === '')));

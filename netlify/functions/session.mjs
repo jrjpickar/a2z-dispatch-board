@@ -11,7 +11,7 @@ import { storedPinMatches } from '../../lib/settings.mjs';
 import {
   sessionFromRequest, sessionInfo, signSession, sessionCookie, clearSessionCookie, ghlUsers,
   isBootstrapAdmin, secretMatches, ghlUserFromContext, userForId
-} from '../../lib/session.mjs';
+, isBlocked, BLOCKED_MESSAGE } from '../../lib/session.mjs';
 
 // Admin PIN: the Netlify env var, or the one a senior admin set on the Admin page.
 const pinOk = async (sql, pin) => !!pin && (secretMatches(pin, process.env.DASHBOARD_ADMIN_PIN) || await storedPinMatches(sql, pin));
@@ -45,6 +45,11 @@ export default async function handler(request) {
       via = body.pin && (await pinOk(sql, body.pin)) ? 'pin' : 'user_id';
     } else throw new StateError('Unknown session action');
 
+    // A senior admin blocked this person: no session is issued.
+    if (!isBootstrapAdmin(user) && await isBlocked(sql, user.id)) {
+      await new Promise(r => setTimeout(r, 800));
+      throw new StateError(BLOCKED_MESSAGE, 403);
+    }
     // Keep the bootstrap admin (Jesse Pickar) on the admin list so it shows up there.
     if (isBootstrapAdmin(user)) await sql`insert into dispatch_admins (user_id, name, email, added_by)
       values (${user.id}, ${user.name}, ${user.email || ''}, 'bootstrap') on conflict (user_id) do update set name = excluded.name, email = excluded.email`;

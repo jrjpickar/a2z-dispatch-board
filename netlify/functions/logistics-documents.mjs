@@ -6,7 +6,7 @@ import { StateError } from '../../lib/state.mjs';
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
-    if (request.method === 'POST') authorizeWrite(request);
+    if (request.method === 'POST') await authorizeWrite(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
       const id = new URL(request.url).searchParams.get('id') || '';

@@ -6,7 +6,7 @@ export default async function handler(request) {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   // Security (Nov 2026 audit): this relays straight to a Make scenario, so it now needs
   // the same signed board session (or STATE_SYNC_TOKEN) as every other board write.
-  try { authorizeWrite(request); } catch (error) { return errorResponse(error); }
+  try { await authorizeWrite(request); } catch (error) { return errorResponse(error); }
   try {
     const payload = await request.json();
     const upstream = await fetch(process.env.DRIVER_LOG_WEBHOOK || DRIVER_LOG_WEBHOOK, {

@@ -19,7 +19,7 @@ const phoneKey = p => { const d = String(p || '').replace(/\D/g, '').slice(-10);
 export default async function handler(request) {
   try {
     if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
-    authorizeRead(request);
+    await authorizeRead(request);
     const started = Date.now();
     const params = new URL(request.url).searchParams;
     const list = name => String(params.get(name) || '').split(',').map(s => s.trim()).filter(Boolean);

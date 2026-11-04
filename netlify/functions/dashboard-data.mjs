@@ -52,7 +52,7 @@ export default async function handler(request) {
   if (request.method !== "GET") {
     return json({ error: "Method not allowed" }, 405, { Allow: "GET" });
   }
-  const denied = readDenied(request);
+  const denied = await readDenied(request);
   if (denied) return denied;
 
   const token = process.env.GHL_API_TOKEN;

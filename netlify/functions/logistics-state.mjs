@@ -5,8 +5,8 @@ import { sessionFromRequest } from '../../lib/session.mjs';
 export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405, { Allow: 'GET, POST' });
-    if (request.method === 'POST') authorizeWrite(request);
-    else authorizeRead(request);
+    if (request.method === 'POST') await authorizeWrite(request);
+    else await authorizeRead(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
       // ?since=<serverTime from the last answer>: only moves changed after it.
