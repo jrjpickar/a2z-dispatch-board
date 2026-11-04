@@ -13,7 +13,7 @@ import { driverIdentityFromRequest, matchesWorker } from '../../lib/driver-token
 import { jobRecord } from '../../lib/store.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { queueEffectNow, sendHeldEffects } from '../../lib/effect-queue.mjs';
-import { AUTO_CLOSE_MS, clockRules, cleanReading, judge, jobPin, cachedPin, jobIsToday, cleanSummary, clockPayload, shiftView, pacificDay, PING_MIN_MS, TRAIL_MAX } from '../../lib/field-clock.mjs';
+import { AUTO_CLOSE_MS, clockRules, cleanReading, judge, jobPin, cachedPin, jobIsToday, cleanSummary, cleanSignature, clockPayload, shiftView, pacificDay, PING_MIN_MS, TRAIL_MAX } from '../../lib/field-clock.mjs';
 
 const asJson = v => typeof v === 'string' ? JSON.parse(v) : v;
 const fail = e => { throw new StateError(e.message, e.status || 400); };
@@ -129,13 +129,13 @@ export default async function handler(request, context) {
       if (done) return json({ ok: true, replayed: true, ...(await state(sql, workerKey)) });
       const open = await openShift(sql, workerKey);
       if (!open) throw new StateError("You're not clocked in. Refresh the app.", 409);
-      let summary, reading;
-      try { summary = cleanSummary(body, body.lang); reading = cleanReading(body.location, rules); } catch (e) { fail(e); }
+      let summary, reading, signature;
+      try { summary = cleanSummary(body, body.lang); signature = cleanSignature(body.signature); reading = cleanReading(body.location, rules); } catch (e) { fail(e); }
       const cached = await cachedPin(sql, open.job_id, open.job_address);
       const at = new Date().toISOString();
       const loc = { at, ...judge(reading, cached.pin, rules), requestId };
       const trail = [...(asJson(open.trail) || []), { at, lat: loc.lat, lng: loc.lng, status: loc.status, dist: loc.dist }].slice(-TRAIL_MAX);
-      const [row] = await sql`update field_shifts set clock_out = ${sql.json(loc)}, summary = ${sql.json({ ...summary, at })}, last_loc = ${sql.json(loc)}, trail = ${sql.json(trail)}, updated_at = now()
+      const [row] = await sql`update field_shifts set clock_out = ${sql.json(loc)}, summary = ${sql.json({ ...summary, at })}, signature = ${signature}, last_loc = ${sql.json(loc)}, trail = ${sql.json(trail)}, updated_at = now()
         where id = ${open.id} and clock_out is null returning *`;
       if (!row) throw new StateError("You're not clocked in. Refresh the app.", 409);
       sendClockRun(sql, 'clockOut', row, context, cached.known);

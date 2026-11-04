@@ -93,6 +93,7 @@ Fields (both actions):
 - `clockInDate`, `clockInTime`, `clockOutDate`, `clockOutTime` (same formats; clock out fields empty on clockIn), `clockInAt`, `clockOutAt` (ISO), `timeZone`
 - `latitude`, `longitude`, `accuracyFt`, `distanceFt` (from the job), `locationStatus` (`onsite`, `near`, `away`, or `unknown` when the job has no map pin), `mapLink`
 - `language` (`en` / `es`, the language the summary was written in), `shiftId`, `eventId`
+- Clock out sign-off (empty on clockIn and on an auto-closed shift): `breaksCertified` (`true`: the worker certified they were given their breaks), `locationConsent` (`true`), `certification` (the exact statement they agreed to, in English), `signedBy`, `signedAt` (ISO), `signature` (their finger signature as a base64 PNG; in Make use `{{toBinary(1.signature; "base64")}}` to save it as a file, e.g. `signature.png`).
 - `autoClosed`: `true` on a clockOut the server made for a forgotten clock out (closed at the worker's next clock in, 16+ hours later; the out time is the last location the phone sent). `scopeOfWork` is empty and `notes` says so.
 
 To set it up: in Make, open the scenario with that webhook, click **Redetermine data structure**, then clock in and out once from the field app.

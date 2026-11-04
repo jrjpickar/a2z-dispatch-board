@@ -807,6 +807,8 @@
   .tc-sumbox { background: var(--bg); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; display: grid; gap: 3px; }
   .tc-sumbox .k { font: 700 10.5px 'Oswald', sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin-right: 8px; }
   .tc-sumbox .note { color: var(--orange-dark); }
+  .tc-sig-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+  .tc-sig img { display: block; height: 44px; width: auto; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; }
   .tc-detail { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
   .tc-map-btn { background: none; border: 0; padding: 0; color: var(--orange-dark); font-weight: 600; font-size: 12px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
   .tc-trail { display: flex; gap: 3px; margin-top: 5px; }
@@ -6317,6 +6319,14 @@ function tcLocCell(s, which) {
   const rough = p.acc > 300 ? ` · accurate to ${Math.round(p.acc / 10) * 10} ft` : '';
   return `<span class="tc-chip ${escapeAttr(p.status)}"><i></i>${escapeAttr(tcStatusLabel(p))}</span><div class="tc-detail"><button type="button" class="tc-map-btn" data-tc-map="${escapeAttr(s.id)}">Map</button>${escapeAttr(rough)}</div>`;
 }
+// Clock out sign-off: breaks certified (or not), location consent, finger signature.
+function tcSignOff(s) {
+  const m = s.summary; if (!m || m.auto) return '';
+  const breaks = m.breaksCertified === true ? '<span class="tc-chip onsite"><i></i>Certified breaks given</span>'
+    : m.breaksCertified === false ? `<span class="tc-chip flag"><i></i>Not all breaks given</span>${m.breaksNote ? ' ' + escapeAttr(m.breaksNote) : ''}` : '<span class="eod-muted">Not asked</span>';
+  const sig = m.hasSignature ? `<a class="tc-sig" href="/api/time-clock?signature=${encodeURIComponent(s.id)}" target="_blank" rel="noopener" title="Open the signature"><img src="/api/time-clock?signature=${encodeURIComponent(s.id)}" alt="Signature of ${escapeAttr(s.workerName)}" loading="lazy"></a><span class="eod-muted">${escapeAttr(s.workerName)} · ${escapeAttr(new Date(m.signedAt || s.clockOut?.at).toLocaleString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</span>` : '<span class="eod-muted">No signature</span>';
+  return `<div><span class="k">Breaks</span>${breaks}</div><div><span class="k">Location consent</span>${m.locationConsent ? 'Yes' : '<span class="eod-muted">No</span>'}</div><div class="tc-sig-row"><span class="k">Signed</span>${sig}</div>`;
+}
 function tcStale(s) { return !s.clockOut && Date.now() - Date.parse(s.last?.at || s.clockIn.at) > TC_STALE_MS; }
 function tcLiveCell(s) {
   if (s.clockOut) return '<span class="eod-muted">Off the clock</span>';
@@ -6340,7 +6350,7 @@ function pacificToUtcIso(ymd, hhmm) {
   return new Date(guess - (Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - guess)).toISOString();
 }
 function tcFlag(s, job) {
-  return !!s.clockOut?.auto || s.clockIn?.status === 'away' || s.clockOut?.status === 'away' || (!s.clockOut && (s.last?.status === 'away' || tcStale(s))) || tcPastEnd(s, job) || !!s.summary?.notes;
+  return !!s.clockOut?.auto || s.summary?.breaksCertified === false || s.clockIn?.status === 'away' || s.clockOut?.status === 'away' || (!s.clockOut && (s.last?.status === 'away' || tcStale(s))) || tcPastEnd(s, job) || !!s.summary?.notes;
 }
 function tcGroups(day) {
   const feed = new Map((dashboardData.jobs || []).map(j => [j.id, j]));
@@ -6403,7 +6413,7 @@ function renderTimeClockView() {
     const rows = g.shifts.slice().sort((a, b) => a.workerName.localeCompare(b.workerName) || a.clockIn.at.localeCompare(b.clockIn.at)).map(s => {
       const hours = s.clockOut ? `${tcHours(s.clockIn.at, s.clockOut.at)} h` : `<span class="tc-chip live"><i></i>${tcHm(Date.now() - Date.parse(s.clockIn.at))}</span>`;
       const outCell = s.clockOut ? escapeAttr(tcFmt(s.clockOut.at)) + (s.clockOut.auto ? '<div><span class="tc-chip flag"><i></i>Never clocked out</span></div>' : '') : tcPastEnd(s, g.job) ? '<span class="tc-chip flag"><i></i>No clock out</span>' : '<span class="eod-muted">On the clock</span>';
-      const sum = s.summary ? `<tr class="tc-sum"><td colspan="7"><div class="tc-sumbox"><div><span class="k">Work done</span>${escapeAttr(s.summary.work)}${s.summary.lang === 'es' ? ' <span class="eod-muted">(Spanish)</span>' : ''}</div>${s.summary.notes ? `<div class="note"><span class="k">For dispatch</span>${escapeAttr(s.summary.notes)}</div>` : ''}</div></td></tr>` : '';
+      const sum = s.summary ? `<tr class="tc-sum"><td colspan="7"><div class="tc-sumbox"><div><span class="k">Work done</span>${escapeAttr(s.summary.work)}${s.summary.lang === 'es' ? ' <span class="eod-muted">(Spanish)</span>' : ''}</div>${s.summary.notes ? `<div class="note"><span class="k">For dispatch</span>${escapeAttr(s.summary.notes)}</div>` : ''}${tcSignOff(s)}</div></td></tr>` : '';
       return `<tr${s.summary ? ' class="tc-has-sum"' : ''}><td><b>${escapeAttr(s.workerName)}</b>${pacificDayOf(s.clockIn.at) !== day ? `<div class="eod-muted">since ${escapeAttr(new Date(s.clockIn.at).toLocaleDateString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric' }))}</div>` : ''}</td>
         <td class="mono">${escapeAttr(tcFmt(s.clockIn.at))}</td><td class="mono">${outCell}</td><td class="mono">${hours}</td>
         <td>${tcLocCell(s, 'in')}</td><td>${tcLiveCell(s)}</td><td>${tcLocCell(s, 'out')}</td></tr>${sum}`;

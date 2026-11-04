@@ -37,6 +37,8 @@ const at = (ft, bearing = 45) => { // a reading `ft` feet from the pin
   const lo2 = lo + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(la2));
   return { lat: la2 * 180 / Math.PI, lng: lo2 * 180 / Math.PI, acc: 40 };
 };
+const SIG = 'data:image/png;base64,' + 'iVBORw0KGgo'.padEnd(800, 'A');
+const SIGN = { breaks: 'certified', locationConsent: true, signature: SIG };
 let n = 0; const rid = () => 'req' + Date.now().toString(36) + (++n).toString().padStart(4, '0');
 
 test('Make formats: MM/DD/YY and 07:05AM Pacific, hours to two decimals', () => {
@@ -104,16 +106,27 @@ test('clock out needs a work summary and location; posts clockOut with hours, sc
   await sql`update field_shifts set clock_in = jsonb_set(clock_in, '{at}', to_jsonb((now() - interval '8 hours 30 minutes')::text)) where clock_out is null`;
   let r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(80), work: '' });
   assert.equal(r.status, 400); assert.match(r.data.error, /work done/);
-  r = await call(ana, { op: 'clockOut', requestId: rid(), work: 'Demo, Cleanup' });
+  r = await call(ana, { op: 'clockOut', requestId: rid(), work: 'Demo, Cleanup', ...SIGN });
   assert.equal(r.status, 400); assert.match(r.data.error, /Location is required/);
+  r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(80), work: 'Demo', ...SIGN, breaks: undefined });
+  assert.equal(r.status, 400); assert.match(r.data.error, /breaks/);
+  r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(80), work: 'Demo', ...SIGN, locationConsent: false });
+  assert.equal(r.status, 400); assert.match(r.data.error, /location consent/);
+  r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(80), work: 'Demo', ...SIGN, signature: '' });
+  assert.equal(r.status, 400); assert.match(r.data.error, /Sign with your finger/);
+  r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(80), work: 'Demo', ...SIGN, signature: 'data:image/png;base64,' + 'A'.repeat(95000) });
+  assert.equal(r.status, 400); assert.match(r.data.error, /too big/);
+  assert.equal(makeRuns.length, 0, 'nothing sent for refused clock outs');
   const id = rid();
-  r = await call(ana, { op: 'clockOut', requestId: id, location: at(80), work: 'Demo, Cleanup', notes: 'Need a dumpster swap', lang: 'es' });
+  r = await call(ana, { op: 'clockOut', requestId: id, location: at(80), work: 'Demo, Cleanup', notes: 'Need a dumpster swap', lang: 'es', ...SIGN });
   assert.equal(r.status, 200, JSON.stringify(r.data));
   assert.equal(r.data.open, null); assert.equal(r.data.hoursWorked, 8.5);
   assert.equal(makeRuns.length, 1);
   const run = makeRuns[0];
   assert.equal(run.action, 'clockOut'); assert.equal(run.jobId, 'j1'); assert.equal(run.hoursWorked, 8.5);
   assert.equal(run.scopeOfWork, 'Demo, Cleanup'); assert.equal(run.notes, 'Need a dumpster swap'); assert.equal(run.language, 'es');
+  assert.equal(run.breaksCertified, true); assert.equal(run.locationConsent, true); assert.match(run.certification, /^By signing I hereby certify/);
+  assert.equal(run.signedBy, 'Ana Lopez'); assert.ok(run.signedAt); assert.equal(run.signature, SIG.split(',')[1], 'signature as base64 PNG');
   assert.match(run.date, /^\d{2}\/\d{2}\/\d{2}$/); assert.match(run.time, /^\d{2}:\d{2}(AM|PM)$/); assert.match(run.clockInTime, /^\d{2}:\d{2}(AM|PM)$/);
   r = await call(ana, { op: 'clockOut', requestId: id, location: at(80), work: 'Demo, Cleanup' });
   assert.equal(r.data.replayed, true); assert.equal(makeRuns.length, 1, 'no second run on retry');
@@ -165,6 +178,10 @@ test('board Time Clock: signed-in board users read the day with locations, trail
   assert.equal(s.jobId, 'j1'); assert.equal(s.workerName, 'Ana Lopez');
   assert.ok(s.clockIn.lat && s.clockOut.lat); assert.equal(s.summary.work, 'Demo, Cleanup');
   assert.ok(s.trail.length >= 3); assert.deepEqual(data.pins.j1, PIN);
+  assert.equal(s.summary.breaksCertified, true); assert.equal(s.summary.locationConsent, true); assert.equal(s.summary.hasSignature, true);
+  const img = await board(new Request('https://board.test/api/time-clock?signature=' + s.id, { headers: { 'x-a2z-session': session } }));
+  assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/png');
+  assert.equal((await board(new Request('https://board.test/api/time-clock?signature=' + s.id))).status, 401, 'signature needs board sign-in');
   res = await board(new Request('https://board.test/api/time-clock?day=2001-01-01', { headers: { 'x-a2z-session': session } }));
   assert.equal((await res.json()).shifts.length, 0);
 });
@@ -184,6 +201,8 @@ test('forgotten clock out: after 16 hours the next clock in closes it (flagged) 
   assert.ok(out, 'the forgotten shift got its clockOut run'); assert.equal(out.autoClosed, true); assert.equal(out.hoursWorked, 8);
   assert.ok(makeRuns.find(m => m.action === 'clockIn'), 'and the new clock in went through');
   // Clock back out so later tests start clean.
-  r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(100), work: 'Demo' });
+  r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(100), work: 'Demo', ...SIGN, breaks: 'missed' });
+  assert.equal(r.status, 400, 'the breaks statement is the only choice'); assert.match(r.data.error, /breaks statement/);
+  r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(100), work: 'Demo', ...SIGN });
   assert.equal(r.status, 200);
 });

@@ -188,6 +188,16 @@
   .quick button[aria-pressed="true"] { background: var(--orange-tint); border-color: var(--orange); color: var(--orange-dark); }
   .sheet .err { color: var(--danger); font-size: 13px; font-weight: 600; min-height: 1em; }
   .sheet .btn-ghost { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .signoff { border-top: 1px solid var(--border); padding-top: 12px; display: grid; gap: 10px; }
+  .signoff h4 { margin: 0; font-family: 'Oswald', sans-serif; text-transform: uppercase; font-size: 14px; letter-spacing: 0.04em; }
+  .opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 13.5px; line-height: 1.4; cursor: pointer; background: #fff; }
+  .opt input { margin-top: 2px; width: 20px; height: 20px; flex: none; accent-color: var(--orange); }
+  .opt.on { border-color: var(--orange); background: var(--orange-tint-soft); }
+  .sig-wrap { position: relative; border: 1.5px dashed var(--grey); border-radius: 10px; background: #fff; touch-action: none; }
+  .sig-wrap canvas { display: block; width: 100%; height: 150px; touch-action: none; cursor: crosshair; }
+  .sig-wrap .sig-hint { position: absolute; left: 12px; bottom: 10px; right: 70px; font-size: 12px; color: var(--grey-dark); pointer-events: none; border-top: 1px solid var(--grey-light); padding-top: 4px; }
+  .sig-wrap .sig-clear { position: absolute; right: 8px; top: 8px; background: #fff; border: 1px solid var(--border); border-radius: 7px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .sig-who { font-size: 12px; color: var(--grey-dark); }
   .seg { display: flex; background: var(--bg); border-radius: 9px; padding: 3px; gap: 3px; }
   .seg button { flex: 1; border: 0; background: none; padding: 8px; border-radius: 7px; font-weight: 600; font-size: 13px; color: var(--grey-dark); cursor: pointer; }
   .seg button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
@@ -319,7 +329,10 @@
       tryAgain: 'Try again', close: 'Close', forgotOut: 'You never clocked out at {a}. Clocking in here closes it, and dispatch will see it. Or clock out there first.',
       sumT: 'Before you clock out', sumB: 'Tell dispatch what got done today.', workL: 'Work done today', workPh: 'Ex: Demoed the kitchen cabinets, loaded 2 trucks, swept the site',
       chips: ['Demo', 'Haul off', 'Loaded trucks', 'Cleanup', 'Moved materials'],
-      notesL: 'Anything dispatch should know? (optional)', notesPh: 'Ex: Ran out of bags, need a dumpster swap tomorrow', errWork: 'Write a few words about the work done.', cancel: 'Cancel', map: 'Map'
+      notesL: 'Anything dispatch should know? (optional)', notesPh: 'Ex: Ran out of bags, need a dumpster swap tomorrow', errWork: 'Write a few words about the work done.', cancel: 'Cancel', map: 'Map',
+      signOffT: 'Sign off', certBreaks: 'By signing I hereby certify that I was given my breaks in accordance with labor laws and the above information is true to the best of my knowledge.',
+      consent: 'I consent to my location being tracked during my shifts.', signHere: 'Sign here with your finger', clearSig: 'Clear', signedAs: 'Signing as {n}',
+      errBreaks: 'Check the breaks statement to clock out.', errConsent: 'Check the location consent to clock out.', errSign: 'Sign with your finger before you clock out.'
     },
     es: {
       signOut: 'Cerrar Sesión',
@@ -375,7 +388,10 @@
       tryAgain: 'Intentar de nuevo', close: 'Cerrar', forgotOut: 'Nunca marcaste salida en {a}. Marcar entrada aquí lo cierra, y despacho lo verá. O marca salida allí primero.',
       sumT: 'Antes de marcar salida', sumB: 'Dile a despacho qué se hizo hoy.', workL: 'Trabajo hecho hoy', workPh: 'Ej: Demolimos los gabinetes de la cocina, cargamos 2 camiones, barrimos el sitio',
       chips: ['Demolición', 'Retiro de escombros', 'Camiones cargados', 'Limpieza', 'Movimos material'],
-      notesL: '¿Algo que despacho deba saber? (opcional)', notesPh: 'Ej: Se acabaron las bolsas, hay que cambiar el contenedor mañana', errWork: 'Escribe unas palabras sobre el trabajo hecho.', cancel: 'Cancelar', map: 'Mapa'
+      notesL: '¿Algo que despacho deba saber? (opcional)', notesPh: 'Ej: Se acabaron las bolsas, hay que cambiar el contenedor mañana', errWork: 'Escribe unas palabras sobre el trabajo hecho.', cancel: 'Cancelar', map: 'Mapa',
+      signOffT: 'Firma', certBreaks: 'Al firmar, certifico que se me dieron mis descansos de acuerdo con las leyes laborales y que la información anterior es verdadera a mi leal saber y entender.',
+      consent: 'Doy mi consentimiento para que se rastree mi ubicación durante mis turnos.', signHere: 'Firma aquí con tu dedo', clearSig: 'Borrar', signedAs: 'Firmando como {n}',
+      errBreaks: 'Marca la declaración de descansos para marcar salida.', errConsent: 'Marca el consentimiento de ubicación para marcar salida.', errSign: 'Firma con tu dedo antes de marcar salida.'
     }
   };
 
@@ -611,7 +627,7 @@
   const TZ = 'America/Los_Angeles';
   let clock = { open: null, recent: [] };
   let clockBusy = '', clockMsg = null, permState = 'unknown', fixTab = /android/i.test(navigator.userAgent) ? 'android' : 'ios';
-  let sumDraft = { work: '', notes: '' }, sumReady = false;
+  let sumDraft = { work: '', notes: '', breaks: '', consent: false, signature: '' }, sumReady = false;
   let watchId = null, lastPingAt = 0, lastSent = null;
   const ICON_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -754,9 +770,9 @@
     clockBusy = jobId; clockMsg = null; redraw();
     try {
       const location = await getPosition();
-      const res = await api('/api/field-clock', { method: 'POST', body: JSON.stringify({ op: 'clockOut', requestId: sumReady, location, work: sumDraft.work, notes: sumDraft.notes, lang: currentLang }) });
+      const res = await api('/api/field-clock', { method: 'POST', body: JSON.stringify({ op: 'clockOut', requestId: sumReady, location, work: sumDraft.work, notes: sumDraft.notes, breaks: sumDraft.breaks, locationConsent: sumDraft.consent, signature: sumDraft.signature, lang: currentLang }) });
       clock = { open: res.open, recent: res.recent || [] };
-      sumDraft = { work: '', notes: '' }; sumReady = false;
+      sumDraft = { work: '', notes: '', breaks: '', consent: false, signature: '' }; sumReady = false;
       const r = res.clockOut || {};
       clockMsg = { jobId, tone: r.status === 'away' ? 'warn' : 'ok', text: t('outOk', { t: fmtTime(r.at || new Date().toISOString()), h: String(res.hoursWorked ?? ''), r: resultText(r) }) + tomorrowLine() };
     } catch (error) {
@@ -801,6 +817,25 @@
     document.body.appendChild(scrim);
     return scrim;
   }
+  // Finger signature on a canvas. Saved as a small PNG (500 px wide, ink only) so it
+  // fits in the clock out request. Keeps the last drawing if the sheet reopens.
+  function signaturePad(canvas, existing, onChange) {
+    const W = 500, H = 150, ctx = canvas.getContext('2d');
+    canvas.width = W; canvas.height = H;
+    ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111';
+    let drawing = false, last = null, inked = 0;
+    if (existing) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, W, H); img.src = existing; inked = 50; }
+    const at = e => { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
+    canvas.addEventListener('pointerdown', e => { e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true; last = at(e); ctx.beginPath(); ctx.arc(last.x, last.y, 1.2, 0, Math.PI * 2); ctx.fillStyle = '#111'; ctx.fill(); });
+    canvas.addEventListener('pointermove', e => {
+      if (!drawing) return; e.preventDefault();
+      const p = at(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      inked += Math.hypot(p.x - last.x, p.y - last.y); last = p;
+    });
+    const end = () => { if (!drawing) return; drawing = false; if (inked >= 40) onChange(canvas.toDataURL('image/png')); };
+    canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end); canvas.addEventListener('pointerleave', end);
+    return { clear() { ctx.clearRect(0, 0, W, H); inked = 0; } };
+  }
   function openSummary(jobId) {
     const el = sheet('<form class="sheet" id="sumForm" novalidate role="dialog" aria-labelledby="sumT">'
       + '<div><h3 id="sumT">' + escapeHtml(t('sumT')) + '</h3><div class="sub">' + escapeHtml(t('sumB')) + '</div></div>'
@@ -808,6 +843,11 @@
       + '<div class="quick">' + t('chips').map(c => '<button type="button" data-chip="' + escapeHtml(c) + '"></button>').join('') + '</div>'
       + '<textarea id="sumWork" maxlength="600" placeholder="' + escapeHtml(t('workPh')) + '"></textarea>'
       + '<label for="sumNotes">' + escapeHtml(t('notesL')) + '</label><textarea class="short" id="sumNotes" maxlength="400" placeholder="' + escapeHtml(t('notesPh')) + '"></textarea>'
+      + '<div class="signoff"><h4>' + escapeHtml(t('signOffT')) + '</h4>'
+      + '<label class="opt" id="optCert"><input type="checkbox" id="sumCert"><span>' + escapeHtml(t('certBreaks')) + '</span></label>'
+      + '<label class="opt" id="optConsent"><input type="checkbox" id="sumConsent"><span>' + escapeHtml(t('consent')) + '</span></label>'
+      + '<div class="sig-wrap"><canvas id="sigPad" aria-label="' + escapeHtml(t('signHere')) + '"></canvas><div class="sig-hint">' + escapeHtml(t('signHere')) + '</div><button type="button" class="sig-clear" id="sigClear">' + escapeHtml(t('clearSig')) + '</button></div>'
+      + '<div class="sig-who">' + escapeHtml(t('signedAs', { n: localStorage.getItem(NAME_KEY) || '' })) + '</div></div>'
       + '<div class="err" id="sumErr" role="alert"></div>'
       + '<button type="submit" class="clock-btn out">' + ICON_PIN + escapeHtml(t('clockOut')) + '</button>'
       + '<button type="button" class="btn-ghost" id="sumCancel">' + escapeHtml(t('cancel')) + '</button></form>');
@@ -825,10 +865,24 @@
       work.value = sumDraft.work; sync();
     }));
     sync();
+    // Breaks certification and location consent: both required.
+    const syncOpts = () => {
+      $('sumCert').checked = sumDraft.breaks === 'certified'; $('optCert').classList.toggle('on', $('sumCert').checked);
+      $('sumConsent').checked = sumDraft.consent; $('optConsent').classList.toggle('on', sumDraft.consent);
+    };
+    $('sumCert').addEventListener('change', () => { sumDraft.breaks = $('sumCert').checked ? 'certified' : ''; syncOpts(); });
+    $('sumConsent').addEventListener('change', () => { sumDraft.consent = $('sumConsent').checked; syncOpts(); });
+    syncOpts();
+    const pad = signaturePad($('sigPad'), sumDraft.signature, url => { sumDraft.signature = url; $('sumErr').textContent = ''; });
+    $('sigClear').addEventListener('click', () => { pad.clear(); sumDraft.signature = ''; });
     $('sumCancel').addEventListener('click', closeSheet);
     $('sumForm').addEventListener('submit', e => {
       e.preventDefault();
-      if (sumDraft.work.trim().length < 3) { $('sumErr').textContent = t('errWork'); work.focus(); return; }
+      const err = m => { $('sumErr').textContent = m; };
+      if (sumDraft.work.trim().length < 3) { err(t('errWork')); work.focus(); return; }
+      if (!sumDraft.breaks) { err(t('errBreaks')); $('optCert').scrollIntoView({ block: 'center' }); return; }
+      if (!sumDraft.consent) { err(t('errConsent')); $('optConsent').scrollIntoView({ block: 'center' }); return; }
+      if (!sumDraft.signature) { err(t('errSign')); $('sigPad').scrollIntoView({ block: 'center' }); return; }
       sumReady = createRequestId(); closeSheet(); clockOut(jobId);
     });
     if (!sumDraft.work) work.focus();
@@ -871,7 +925,7 @@
   function goToLogin(message) {
     stopPolling();
     clearSession();
-    clock = { open: null, recent: [] }; sumDraft = { work: '', notes: '' }; sumReady = false; clockMsg = null; closeSheet(); syncLiveLocation();
+    clock = { open: null, recent: [] }; sumDraft = { work: '', notes: '', breaks: '', consent: false, signature: '' }; sumReady = false; clockMsg = null; closeSheet(); syncLiveLocation();
     topbarWho.hidden = true;
     homeView.hidden = true; loginView.hidden = false;
     loginError.classList.remove('show');

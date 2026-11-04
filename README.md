@@ -11,6 +11,7 @@
 
 - **Clock In / Clock Out** on each of today's job cards in the field app (`/driver/`). Location is required for both: no location, no punch. A blocked phone gets iPhone / Android steps to turn it back on (English and Spanish).
 - **Live location while on the clock.** With the app open, the phone sends a reading when the worker moves 150 ft or more, and every 15 minutes either way (moves only after 10 hours on the clock, nothing after 16). Phones stop sending when the app is closed or the screen locks.
+- **Sign-off on clock out.** Below the work summary the worker checks "By signing I hereby certify that I was given my breaks in accordance with labor laws and the above information is true to the best of my knowledge." and "I consent to my location being tracked during my shifts.", and signs with a finger. All three are required to clock out (English and Spanish). The Time Clock shows each worker's certification, consent and signature.
 - **Work summary on clock out.** Required "Work done today" (quick add buttons, each one goes in once) and an optional note for dispatch.
 - **Tomorrow's job** shows on its own card (and moves to the top right after clock out).
 - **Forgotten clock out:** a shift still open 16 hours later is closed when the worker next clocks in, at the last location the phone sent, sent to Make with `autoClosed: true` and flagged "Never clocked out" on the Time Clock.

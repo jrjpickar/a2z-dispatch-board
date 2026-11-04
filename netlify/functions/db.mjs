@@ -194,6 +194,7 @@ async function createSchema(sql) {
     clock_in jsonb not null, clock_out jsonb, last_loc jsonb, trail jsonb not null default '[]'::jsonb, summary jsonb,
     created_at timestamptz not null default now(), updated_at timestamptz not null default now()
   )`;
+  await sql`alter table field_shifts add column if not exists signature text`;
   await sql`create unique index if not exists field_shifts_one_open on field_shifts (worker_key) where clock_out is null`;
   await sql`create index if not exists field_shifts_worker_idx on field_shifts (worker_key, created_at desc)`;
   // Job map pins for clock distances, looked up once per address.
