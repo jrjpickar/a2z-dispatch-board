@@ -1,21 +1,21 @@
-// 6:30 PM Pacific trigger for the daily dispatch (lib/daily-dispatch.mjs).
-// Netlify cron is UTC, so it fires at 01:30 UTC (6:30 PM Pacific in summer) and
-// 02:30 UTC (6:30 PM in winter) and only acts between 6:30 and 7:59 PM Pacific. The day's run is
-// claimed once, then handed to nightly-dispatch-background, which can run for up to
-// 15 minutes (one batch of workers every 15 seconds).
-import { createHmac } from 'node:crypto';
+// Crew hold timer check, every 5 minutes (lib/hold-timer.mjs). File name kept from the
+// old 6:30 PM run. It reads one small Netlify Blob and does nothing else unless a held
+// crew run is due within 6 minutes, so the database keeps sleeping. Every 6 hours (or if
+// the blob can't be read) it checks the database instead, and sweeps any Completed /
+// Cancelled send whose own timer never ran.
 import { db, ensureSchema } from './db.mjs';
-import { pacificParts, claimNightly } from '../../lib/daily-dispatch.mjs';
-export const nightlyKey = date => createHmac('sha256', process.env.SESSION_SECRET || process.env.GHL_API_TOKEN || 'a2z-dispatch').update(`nightly:${date}`).digest('hex');
+import { cronTick } from '../../lib/hold-timer.mjs';
+import { ensureHoldTables } from '../../lib/daily-dispatch.mjs';
+import { sendHeldEffects } from '../../lib/effect-queue.mjs';
 export default async function handler() {
-  const { date, hour, minute } = pacificParts();
-  const minutes = hour * 60 + minute;
-  if (minutes < 18 * 60 + 30 || minutes >= 20 * 60) return new Response(null, { status: 204 });
-  const sql = db(); await ensureSchema(sql);
-  if (!(await claimNightly(sql, date))) return new Response(null, { status: 204 }); // already ran today
-  const base = (process.env.URL || process.env.PUBLIC_APP_URL || '').replace(/\/$/, '');
-  const res = await fetch(`${base}/.netlify/functions/nightly-dispatch-background`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-nightly-key': nightlyKey(date) }, body: JSON.stringify({ date }) });
-  console.log('Nightly dispatch started', date, res.status);
+  try {
+    const result = await cronTick({ getSql: async () => {
+      const sql = db(); await ensureSchema(sql); await ensureHoldTables(sql);
+      try { await sendHeldEffects(sql, { timeoutMs: 25000 }); } catch (error) { console.error('Held send sweep failed', error); }
+      return sql;
+    } });
+    if (result.checked !== 'blob' || result.started) console.log('Crew hold timer', JSON.stringify(result));
+  } catch (error) { console.error('Crew hold timer failed', error); }
   return new Response(null, { status: 204 });
 }
-export const config = { schedule: '30 1,2 * * *' };
+export const config = { schedule: '*/5 * * * *' };

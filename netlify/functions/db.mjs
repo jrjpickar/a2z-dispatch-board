@@ -197,6 +197,14 @@ async function createSchema(sql) {
   await sql`alter table field_shifts add column if not exists signature text`;
   await sql`create unique index if not exists field_shifts_one_open on field_shifts (worker_key) where clock_out is null`;
   await sql`create index if not exists field_shifts_worker_idx on field_shifts (worker_key, created_at desc)`;
+  // Field app sign in activity (lib/field-signins.mjs), shown under Admin > Field App Access.
+  await sql`create table if not exists field_app_signins (
+    id bigserial primary key, at timestamptz not null default now(), driver_key text not null default '', name text not null default '',
+    phone text not null default '', ok boolean not null default false, reason text not null default '', device text not null default ''
+  )`;
+  await sql`create index if not exists field_app_signins_at_idx on field_app_signins (at desc)`;
+  await sql`alter table dispatch_driver_codes add column if not exists last_signin_at timestamptz`;
+  await sql`alter table dispatch_driver_codes add column if not exists last_seen_at timestamptz`;
   // Job map pins for clock distances, looked up once per address.
   await sql`create table if not exists job_geocode (
     job_id text primary key, address text not null, lat double precision, lng double precision, updated_at timestamptz not null default now()

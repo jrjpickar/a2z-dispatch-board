@@ -5,6 +5,7 @@
 // pipeline IDs, or other dispatcher-only data.
 import { db, ensureSchema } from './db.mjs';
 import { moveRecord, jobRecord } from '../../lib/store.mjs';
+import { touchSeen } from '../../lib/field-signins.mjs';
 import { driverIdentityFromRequest, matchesDriver, matchesWorker, isSameIdentity } from '../../lib/driver-token.mjs';
 import { json, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
@@ -59,7 +60,8 @@ export default async function handler(request) {
     const sql = db(); await ensureSchema(sql);
     const [moveRows, jobRows] = await Promise.all([
       sql`select * from logistics_move_state order by updated_at desc`,
-      sql`select * from job_shared_state order by updated_at desc`
+      sql`select * from job_shared_state order by updated_at desc`,
+      touchSeen(sql, identity.driverKey) // "Last opened" on Admin > Field App Access
     ]);
     const routes = moveRows.map(moveRecord)
       .filter(m => m.active !== false && !/complete|cancel/.test(m.status || '') && matchesDriver(m, identity))

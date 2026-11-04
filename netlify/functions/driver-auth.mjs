@@ -7,6 +7,7 @@ import { db, ensureSchema } from './db.mjs';
 import { json, readPayload, errorResponse } from '../../lib/http.mjs';
 import { driverKeyFor, signDriverToken } from '../../lib/driver-token.mjs';
 import { StateError } from '../../lib/state.mjs';
+import { recordSignin, deviceOf } from '../../lib/field-signins.mjs';
 
 export default async function handler(request) {
   try {
@@ -18,7 +19,11 @@ export default async function handler(request) {
     const sql = db(); await ensureSchema(sql);
     const driverKey = driverKeyFor({ name, phone });
     const [row] = await sql`select * from dispatch_driver_codes where driver_key = ${driverKey}`;
-    if (!row) throw new StateError("That phone number isn't enabled yet. Check with dispatch.", 401);
+    if (!row) {
+      await recordSignin(sql, { driverKey, name, phone, ok: false, reason: 'Not enabled', device: deviceOf(request) });
+      throw new StateError("That phone number isn't enabled yet. Check with dispatch.", 401);
+    }
+    await recordSignin(sql, { driverKey, name: row.name, phone: row.phone, ok: true, device: deviceOf(request) });
     const token = signDriverToken({ driverKey, name: row.name, phone: row.phone });
     return json({ ok: true, token, name: row.name });
   } catch (error) { return errorResponse(error); }

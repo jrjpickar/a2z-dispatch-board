@@ -1,5 +1,5 @@
 // Optional browser QA: Send now is always next to Unschedule, shows how many crew changes
-// are waiting for 6:30 PM, needs a 5 second hold in its box, and posts job_send_now.
+// are waiting for the job's 12 hour mark, needs a 5 second hold in its box, and posts job_send_now.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); const fs = require('fs'), path = require('path'), assert = require('assert/strict');
 (async () => {
   const browser = await chromium.launch({ headless: true }); const context = await browser.newContext();
@@ -14,7 +14,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
     if (u.pathname === '/api/roster') return reply([]);
     if (u.pathname === '/api/shared-state') return reply({ sharedState: [job], pendingSync: [] });
     if (u.pathname === '/api/workflow-effect') {
-      if (req.method() === 'GET' && u.searchParams.get('waiting') === 'jobs') return reply({ jobs: held ? { job1: { changes: 2, names: ['Ana Lopez'] } } : {}, nextRun: '2026-11-01T01:30:00.000Z' });
+      if (req.method() === 'GET' && u.searchParams.get('waiting') === 'jobs') return reply({ jobs: held ? { job1: { changes: 2, names: ['Ana Lopez'], dueAt: '2026-11-01T01:30:00.000Z' } } : {}, holdHours: 12 });
       if (req.method() === 'POST') { posts.push(req.postDataJSON()); held = false; return reply({ ok: true, jobId: 'job1', makeSent: 1, makeFailed: 0, makeDropped: 1, texted: 1, textOk: true }); }
       return reply({ issues: [] });
     }
@@ -28,7 +28,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   assert.ok(sameLine, 'Send now sits next to Unschedule');
   await page.click('.job-crewtext-now');
   await page.waitForSelector('#crewTextNowBackdrop:not([hidden])');
-  assert.match(await page.textContent('#crewTextNowBody'), /2 crew changes \(Ana Lopez\) are waiting for the Sat 6:30 PM run.*Make gets only what changed/s);
+  assert.match(await page.textContent('#crewTextNowBody'), /2 crew changes \(Ana Lopez\) are waiting for Sat 6:30 PM. .*Make gets only what changed/s);
   await page.click('#crewTextNowConfirm'); await page.waitForTimeout(300);
   assert.equal(posts.length, 0, 'a plain click does not send');
   const box = await page.locator('#crewTextNowConfirm').boundingBox();

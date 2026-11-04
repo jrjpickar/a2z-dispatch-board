@@ -1,5 +1,23 @@
 # A2Z Dispatch 1.9
 
+## Crew texts held on the server until 12 hours before the job (Nov 4, 2026)
+
+- **Assign selected** no longer goes to Make on the click. The server holds it and, 12 hours before the job's start (`CREW_HOLD_HOURS`, default 12; no start time counts as 6:30 AM), sends each worker still on the job their `assign` run to the worker webhook and the schedule text (Twilio, that job only). Assigned inside the 12 hours: it all goes right away. **Send schedule now** still goes right away.
+- **Moves and removals:** a worker taken off before being notified gets nothing. A worker who was already notified (inside the 12 hours or Send schedule now) gets the `remove` run right away. Moved to another job: only the new job is sent.
+- **Cancelled job:** when the cancel goes out (after the 30 second undo), only `s2ijm...` is hit for a crew that was never notified, waiting runs are wiped, and nobody is texted. Workers already notified get their `remove` run. Completed and EOD sheets close the day quietly.
+- **No duplicates:** the new `crew_notify` table records who was sent each job and day, decided under a per job lock before anything is sent. The schedule text is claimed per job, day and phone before Twilio is called. A second Send schedule now for the same worker and job is skipped.
+- **Don't text** workers are never sent or texted, even at the 12 hour mark.
+- **Timer that lets the database sleep:** `nightly-dispatch.mjs` now runs every 5 minutes and only reads a Netlify Blob with the next due time; `nightly-dispatch-background.mjs` waits for the exact moment and sends (several jobs due together go one every 15 seconds). New dependency `@netlify/blobs`. The old 6:30 PM run is gone.
+- **First deploy:** workers whose assign already went to Make are marked as notified and texted, so the server never texts them again.
+- **Send now** on a job row shows when its changes go out.
+- **New times after the crew was sent the job:** saving new times on a job whose crew already got it opens **Crew already has this job** with the old and new time. **Text the new times** sends each of those workers a new `assign` run (`timesChanged: true` plus `previousReportDate`, `previousReportTime`, `previousReportEndDate`, `previousReportEndTime`) and the schedule text again with the new times, once (a double click or a second board sends nothing more). **Don't text** sends nothing. Both show in the Activity log. Workers not sent the job yet need nothing: theirs goes out 12 hours before the new start.
+
+## Field app sign in activity, logistics notes, dark mode (Nov 4, 2026)
+
+- **Admin > Field App Access:** new Last opened column and a Sign in activity list (every try, signed in or refused, with device). New table `field_app_signins`.
+- **Logistics:** a Notes box on each open move (saves when you click away, Esc undoes). Lunch is gone from Logistics and from the driver log runs. Split view lanes are now **Rentals** and **Contract**.
+- Dark mode: the Field App Access and Logistics table headers are readable again.
+
 ## Crew schedule text is editable (Nov 3, 2026)
 
 - **Admin > Crew schedule text** (senior admins). Edit the layout of the text each worker gets (6:30 PM run, Send now, Send schedule now). Tap a field like `{DATE}`, `{ADDRESS}`, `{TIME}` or `{CREW}` to drop it in; the crew line (`* {NAME}{SPLIT}`) sets how each worker is listed. A line whose fields come out empty (no end time, not hourly) is left out.

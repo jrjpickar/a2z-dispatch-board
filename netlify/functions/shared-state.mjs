@@ -5,6 +5,7 @@ import { syncJobSchedule, ghl, changeOrderPipelineId } from '../../lib/ghl.mjs';
 import { linkChangeOrder, unlinkChangeOrder } from '../../lib/change-order.mjs';
 import { sessionFromRequest } from '../../lib/session.mjs';
 import { logActivity } from '../../lib/activity.mjs';
+import { refreshTimer } from '../../lib/hold-timer.mjs';
 // A since time a little in the past so a save that landed while the last poll ran is never missed.
 function sinceParam(request) {
   const raw = new URL(request.url).searchParams.get('since');
@@ -63,6 +64,10 @@ export default async function handler(request) {
     if (['save_times', 'reset_dispatch'].includes(payload.action)) {
       try { result.crmSync = await syncJobSchedule(sql, result.record.jobId); }
       catch { result.crmSync = { ok: false, error: 'Dispatch saved. GHL schedule sync needs a retry.' }; }
+    }
+    // New times can move a job's 12 hour crew send (lib/daily-dispatch.mjs): re-time it.
+    if (['save_times', 'reset_dispatch', 'reopen'].includes(payload.action) && !result.replayed) {
+      try { await refreshTimer(sql); } catch (error) { console.error('Crew hold timer refresh failed', error); }
     }
     return json(result);
   } catch (error) { return errorResponse(error); }

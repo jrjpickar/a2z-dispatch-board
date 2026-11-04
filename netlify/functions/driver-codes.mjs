@@ -10,6 +10,7 @@ import { driverKeyFor } from '../../lib/driver-token.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { requirePanel } from '../../lib/layout.mjs';
 import { logActivity } from '../../lib/activity.mjs';
+import { recentSignins } from '../../lib/field-signins.mjs';
 
 export default async function handler(request) {
   try {
@@ -17,7 +18,12 @@ export default async function handler(request) {
     if (request.method === 'POST') authorizeWrite(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
-      const enabled = await sql`select driver_key as "driverKey", name, phone, updated_at as "updatedAt" from dispatch_driver_codes order by name`;
+      // ?view=signins: field app sign in activity (admins who can see Field App Access).
+      if (new URL(request.url).searchParams.get('view') === 'signins') {
+        await requirePanel(request, sql, 'fieldApp');
+        return json({ signins: await recentSignins(sql, 100) });
+      }
+      const enabled = await sql`select driver_key as "driverKey", name, phone, updated_at as "updatedAt", last_signin_at as "lastSigninAt", last_seen_at as "lastSeenAt" from dispatch_driver_codes order by name`;
       return json({ enabled });
     }
     const session = await requirePanel(request, sql, 'fieldApp');

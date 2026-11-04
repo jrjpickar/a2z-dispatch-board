@@ -1012,6 +1012,8 @@
   .logi-id { margin-top:4px; font-size:10px; color:#8a8d91; }
   .logi-move { font-weight:700; font-size:13px; }
   .logi-detail { margin-top:2px; font-size:12px; color:var(--ink); }
+  .logi-notes-edit{margin-top:6px}.logistics-notes-input{width:100%;min-width:160px;font:12px 'Inter',sans-serif;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--ink);resize:vertical}.logistics-notes-input.saving{opacity:.6}.logi-notes-status{display:block;font-size:10px;color:var(--ink-soft);min-height:12px}
+  body.dark-mode .logistics-notes-input{background:#1b1d20;color:#f1f3f4;border-color:#4a4f55}
   .logi-note { margin-top:5px; padding:4px 7px; border-radius:5px; background:var(--stripe); font-size:11px; color:var(--ink-soft); }
   .logi-value { font-weight:700; white-space:nowrap; }
   .logi-who { display:grid; gap:1px; margin-bottom:6px; font-size:12px; font-weight:600; }
@@ -1325,6 +1327,9 @@
      caused the washed-out look in the first place, so this removes the
      possibility entirely rather than just picking different gradient stops. */
   body.dark-mode table.jobs th{background:#1a1c1f!important}
+  .field-signins{margin-top:14px}.field-signins-title{font:600 13px 'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px 2px}.field-signins-title span{font:400 12px 'Inter',sans-serif;text-transform:none;letter-spacing:0;color:var(--ink-soft);margin-left:6px}.signin-refused{color:#b3261e;font-weight:600;font-size:12px}body.dark-mode .signin-refused{color:#ff8a80}
+  /* Field App Access, Logistics and every other logistics-table: the light mode header used var(--ink), which is light in dark mode (white to black gradient under white text). */
+  body.dark-mode table.logistics-table th,body.dark-mode #logisticsDispatchView table.logistics-table th{background:#1a1c1f!important;color:#f1f3f4;border-bottom:1px solid #3b3f43}
   body.dark-mode .job-group-header{background:#1a1c1f!important;border-color:#3a3c40}
   body.dark-mode .segmented{border-color:#3b3f43}
   body.dark-mode .segmented-option{background:#222427;color:#b3b8bd;border-color:#3b3f43}
@@ -2150,7 +2155,11 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
       <div class="panel-head"><h2>Field App Access</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit" id="refreshFieldAppAccess">Refresh</button></div></div>
       <div class="logistics-note">Give each driver or crew member the link below. Once you enable them here, they sign in with just their phone number (no code) to see only their own route or job. Drivers can also check off stops.</div>
       <div class="logistics-note mono" id="fieldAppLink" style="user-select:all;">/driver/</div>
-      <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="5" class="load-state">Loading roster...</td></tr></tbody></table></div>
+      <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Access</th><th>Last opened</th><th></th></tr></thead><tbody id="fieldAppAccessList"><tr><td colspan="6" class="load-state">Loading roster...</td></tr></tbody></table></div>
+      <div class="field-signins" id="fieldAppSignins" hidden>
+        <h3 class="field-signins-title">Sign in activity <span>last 100 tries</span></h3>
+        <div class="jobs-table-wrap"><table class="logistics-table"><thead><tr><th>When</th><th>Name</th><th>Phone</th><th>Result</th><th>Device</th></tr></thead><tbody id="fieldAppSigninList"><tr><td colspan="5" class="load-state">Loading...</td></tr></tbody></table></div>
+      </div>
     </div>
     <div class="panel" data-panel="chartValue">
       <div class="panel-head"><h2>Job value by week</h2><div class="logistics-toolbar"><button type="button" class="job-stage-btn edit chart-table-btn" data-chart="chartValue" aria-pressed="false">Table</button></div></div>
@@ -2179,7 +2188,7 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
     <div class="panel" data-panel="crewText">
       <div class="panel-head"><h2>Crew schedule text</h2><span class="mono" id="ctState"></span></div>
       <div class="senior-form ct-form">
-        <p class="ct-help">The text each worker gets at 6:30 PM, on Send now and on Send schedule now. Tap a field to put it where the cursor is. A line whose fields come out empty (no end time, not hourly) is left out.</p>
+        <p class="ct-help">The text each worker gets 12 hours before their job (right away when assigned inside the 12 hours), on Send now and on Send schedule now. Tap a field to put it where the cursor is. A line whose fields come out empty (no end time, not hourly) is left out.</p>
         <div class="field"><label for="ctTemplate">Text layout</label><textarea id="ctTemplate" rows="12" spellcheck="false"></textarea></div>
         <div class="ct-fields" id="ctFields"></div>
         <div class="field"><label for="ctCrewLine">Crew line (one per worker, for {CREW})</label><input type="text" id="ctCrewLine" maxlength="120" spellcheck="false"></div>
@@ -2529,6 +2538,15 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
     <p class="unsched-body" id="removeWorkerBody"></p>
     <label class="no-text-toggle"><input type="checkbox" id="removeWorkerNoText"><span>Don't text <span id="removeWorkerNoTextName">them</span><small>The removed from job text goes out through the worker webhook <code class="worker-hook-url"></code>. Tick this and that webhook is not hit.</small></span></label>
     <div class="unsched-actions"><button type="button" class="btn-primary unsched-keep remove-worker-cancel">Keep</button><button type="button" class="unsched-go" id="removeWorkerConfirm">Remove</button></div>
+  </div>
+</div>
+<!-- New times after the crew was sent the job: text them the new times, or not. -->
+<div class="sent-home-backdrop" id="timesChangedBackdrop" hidden>
+  <div class="sent-home-card unsched-card" role="dialog" aria-modal="true" aria-labelledby="timesChangedTitle">
+    <h2 id="timesChangedTitle">Crew already has this job</h2>
+    <div class="sent-home-job" id="timesChangedWhat"></div>
+    <p class="unsched-body" id="timesChangedBody"></p>
+    <div class="unsched-actions"><button type="button" class="unsched-go times-changed-skip">Don't text</button><button type="button" class="btn-primary unsched-keep times-changed-send">Text the new times</button></div>
   </div>
 </div>
 <!-- Daily Job Log editor: the jobLogTemplateForAccountingV4 layout, filled from the
@@ -4309,22 +4327,22 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
   }));
   // Crew schedule text (that job only), built, texted (Twilio) and logged in GHL on
   // the server. Send schedule now: right away, to the workers in this assignment.
-  // Assign selected: nothing here; the 6:30 PM run (or Send now on the row) texts
-  // everyone on the job who hasn't gotten it. The assign runs above go to Make right
-  // away (Make delays its own text); split day runs still wait for 6:30 PM (the server decides).
+  // Assign selected: nothing here. The server holds the assign runs above and texts the
+  // crew 12 hours before the job starts (right away when that is already past), or when
+  // Send now is held on the row (lib/daily-dispatch.mjs).
   const scheduleDate = getReportDate(job);
   const crewText = !rapid ? [{ status: 'fulfilled' }] : await Promise.allSettled([runSideEffect(CONFIG.MOVE_WORKER_URL,
     { action: 'crewText', jobId, jobAddress: job.name || '', reportDate: scheduleDate, reportTime: getReportTime(job), timeZone: BOARD_TZ, triggeredBy: effectBase.action, rapidAssign: rapid,
       textWorkers: assignedWorkers.map(w => ({ contactId: w.contactId || '', workerName: w.workerName, workerPhone: w.workerPhone })) },
     'Crew schedule text', 'crew_text', 'crew-text-' + (scheduleDate || 'nodate') + '-' + assignedWorkers.map(w => String(w.workerPhone || '').replace(/\D/g, '').slice(-4)).join('-').slice(0, 40))]);
   if (crewText[0].status === 'rejected') console.warn('Crew schedule text not confirmed', crewText[0].reason);
-  // Split day runs from Assign selected wait for 6:30 PM: show the count on Send now.
+  // Assign selected waits for the job's 12 hour mark: show the count on Send now.
   if (!rapid) watchDispatchWaiting();
   const failed = assignedWorkers.filter((_, i) => results[i].status === 'rejected' && !splitFailed.has(assignedWorkers[i].workerName)).map(w => w.workerName);
   if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only and nothing was sent for them. Take them off with the x and try again.`, true);
   else if (failed.length) showToast(`Crew saved, but notification not confirmed for ${failed.join(', ')}. Check Make’s execution history before resending.`, true);
   else if (rapid) showToast(assignedWorkers.length === 1 ? 'Crew assigned. Schedule sent now.' : `Crew assigned. Schedule sent now to ${assignedWorkers.length} workers.`);
-  else showToast(`Crew assigned and sent to Make. The schedule text goes out at 6:30 PM, or hold Send now on the job.`);
+  else showToast(holdNotice(job));
   render();
 }
 
@@ -4528,7 +4546,7 @@ function updateCrewAssignSelection(panel) {
   const noText = panel.classList.contains('no-text');
   if (summary) summary.innerHTML = !names.length ? '' : noText
     ? `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. Saved on the board only. Nobody gets a text.`
-    : `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> goes to Make now and texts the schedule at 6:30 PM (or hold <b>Send now</b> on the job). <b>Send schedule now</b> sends it right away.`;
+    : `<b>${names.map(escapeLogisticsHtml).join(', ')}</b>. <b>Assign selected</b> sends the schedule text and Make run 12 hours before the start (right away inside the 12 hours, or hold <b>Send now</b> on the job). <b>Send schedule now</b> sends it right away.`;
   if (btn && !btn.textContent.endsWith('...')) btn.textContent = noText ? 'Assign without texting' : 'Assign selected';
   setPickerButtons(panel, renderSplitPicks(panel));
   // The jobs table scrolls horizontally, which also clips this dropdown on the
@@ -4548,7 +4566,7 @@ function removeWorkerFlow({ name, what }) {
   const setBody = () => {
     body.textContent = box.checked
       ? `Takes ${name} off this job on the board only. No text goes out.`
-      : `Takes ${name} off this job. They get the usual removed from job text at 6:30 PM (or when Send now is held on the job).`;
+      : `Takes ${name} off this job. If they were already sent this job (inside the 12 hours or Send schedule now), they get the removed from job text right away. If not, nothing goes out.`;
   };
   document.getElementById('removeWorkerWhat').textContent = what;
   document.getElementById('removeWorkerNoTextName').textContent = name;
@@ -4866,16 +4884,17 @@ document.addEventListener('keydown', e => {
 }, true);
 document.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { if (e.target.closest?.('.hold-btn')) e.preventDefault(); endHold(true); } }, true);
 
-/* ---------- Send now (job row) and the 6:30 PM run ----------
-   Remove worker and split day runs to Make wait on the server until 6:30 PM Pacific
-   every day (lib/daily-dispatch.mjs). Assign runs go to Make right away. Then each job goes out as it sits: Make gets
-   only the net change per worker, and tomorrow's crews get the schedule text for
-   their own job (once each). Send schedule now in the picker still goes right away.
+/* ---------- Send now (job row) and the 12 hour crew send ----------
+   Assign selected runs wait on the server until 12 hours before the job starts
+   (lib/daily-dispatch.mjs). Then the job goes out as it sits: Make gets each worker
+   still on it once, and they get the schedule text for their own job (once each).
+   Inside the 12 hours it all goes right away. A removed worker only gets a remove run
+   if they were already sent the job. Send schedule now in the picker goes right away.
    Every job row has Send now next to Unschedule: hold it in the box and that job
    goes out now, the same way (Make changes plus the schedule text to anyone on it
    who hasn't gotten it). */
 window.dispatchWaiting = {}; // jobId -> { changes, names }
-let dispatchWaitingAt = 0, dispatchWaitingBusy = false, dispatchNextRun = '';
+let dispatchWaitingAt = 0, dispatchWaitingBusy = false;
 // Redraws once nobody is mid edit (a box open, typing, a hold in progress).
 function drawWhenFree(tries = 20) {
   if (!editingDispatch()) return render();
@@ -4883,11 +4902,29 @@ function drawWhenFree(tries = 20) {
 }
 function waitingFor(jobId) { return window.dispatchWaiting[String(jobId)] || null; }
 function sendNowWhen(iso) {
-  return iso ? new Date(iso).toLocaleString('en-US', { timeZone: BOARD_TZ, weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '6:30 PM';
+  return iso ? new Date(iso).toLocaleString('en-US', { timeZone: BOARD_TZ, weekday: 'short', hour: 'numeric', minute: '2-digit' }) : 'its 12 hour mark (needs a date)';
+}
+// When a job's crew gets texted: 12 hours before the start (no start time: 6:30 AM).
+function holdDueMs(job) {
+  const date = getReportDate(job); if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return null;
+  const time = /^\d{2}:\d{2}$/.test(getReportTime(job) || '') ? getReportTime(job) : '06:30';
+  const [y, m, d] = date.split('-').map(Number), [hh, mm] = time.split(':').map(Number);
+  // Pacific wall clock to UTC: try both offsets and keep the one that reads back right.
+  for (const off of [7, 8]) {
+    const t = Date.UTC(y, m - 1, d, hh + off, mm);
+    const p = new Intl.DateTimeFormat('en-US', { timeZone: BOARD_TZ, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' }).format(t);
+    if (p === time) return t - 12 * 3600e3;
+  }
+  return Date.UTC(y, m - 1, d, hh + 8, mm) - 12 * 3600e3;
+}
+function holdNotice(job) {
+  const due = holdDueMs(job);
+  if (due != null && due <= Date.now()) return 'Crew assigned. Inside 12 hours, so the schedule text and Make run went out now.';
+  return `Crew assigned. The schedule text and Make run go out ${due == null ? 'once the job has a date (or hold Send now)' : sendNowWhen(new Date(due).toISOString())}, 12 hours before the start. Changes before then only send what still stands.`;
 }
 function sendNowTitle(jobId) {
   const w = waitingFor(jobId);
-  return w ? `${w.changes} crew change${w.changes === 1 ? '' : 's'} (${w.names.join(', ')}) waiting for ${sendNowWhen(dispatchNextRun)}. Send this job now.` : 'Send this job now: crew changes to Make and the schedule text to anyone on it who hasn\'t gotten it.';
+  return w ? `${w.changes} crew change${w.changes === 1 ? '' : 's'} (${w.names.join(', ')}) waiting for ${sendNowWhen(w.dueAt)}. Send this job now.` : 'Send this job now: crew changes to Make and the schedule text to anyone on it who hasn\'t gotten it.';
 }
 async function refreshDispatchWaiting({ redraw = true } = {}) {
   if (dispatchWaitingBusy) { await new Promise(r => setTimeout(r, 400)); if (dispatchWaitingBusy) return; }
@@ -4898,7 +4935,7 @@ async function refreshDispatchWaiting({ redraw = true } = {}) {
     const data = await res.json();
     const next = data.jobs || {};
     const changed = JSON.stringify(next) !== JSON.stringify(window.dispatchWaiting);
-    window.dispatchWaiting = next; dispatchNextRun = data.nextRun || ''; dispatchWaitingAt = Date.now();
+    window.dispatchWaiting = next; dispatchWaitingAt = Date.now();
     if (changed && redraw) drawWhenFree();
   } catch { /* the count just stays as it was */ }
   finally { dispatchWaitingBusy = false; }
@@ -4931,7 +4968,7 @@ async function sendJobNow(jobId, btn) {
   await refreshDispatchWaiting({ redraw: false });
   const w = waitingFor(jobId);
   const ok = await crewTextNowFlow({ what: [job.name, getClientName(job)].filter(Boolean).join(' · '),
-    body: `${w ? `${w.changes} crew change${w.changes === 1 ? '' : 's'} (${w.names.join(', ')}) ${w.changes === 1 ? 'is' : 'are'} waiting for the ${sendNowWhen(dispatchNextRun)} run. ` : 'No crew changes are waiting for this job. '}This sends the job now as it sits: Make gets only what changed, and anyone on the job who hasn't gotten the schedule text gets it.` });
+    body: `${w ? `${w.changes} crew change${w.changes === 1 ? '' : 's'} (${w.names.join(', ')}) ${w.changes === 1 ? 'is' : 'are'} waiting for ${sendNowWhen(w.dueAt)}. ` : 'No crew changes are waiting for this job. '}This sends the job now as it sits: Make gets only what changed, and anyone on the job who hasn't gotten the schedule text gets it.` });
   if (!ok) return;
   btn.disabled = true; btn.textContent = 'Sending...';
   try {
@@ -4980,7 +5017,7 @@ async function resetJobDay(jobId, btn, eodSheet, { unschedule = false, completin
   let noText = false;
   if (unschedule) {
     const ok = await unscheduleFlow({ what: [job.name, getClientName(job)].filter(Boolean).join(' · '),
-      body: `This clears its start and end times${crewBeforeReset.length ? ` and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job (they get the usual removed from job text at 6:30 PM, or when Send now is held)` : ''}. The job moves to Unscheduled. Job details are kept.`,
+      body: `This clears its start and end times${crewBeforeReset.length ? ` and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job (anyone already sent this job gets the removed from job text right away; anyone not sent it yet gets nothing)` : ''}. The job moves to Unscheduled. Job details are kept.`,
       bodyNoText: crewBeforeReset.length ? `This clears its start and end times and takes ${crewBeforeReset.length === 1 ? crewBeforeReset[0].name : crewBeforeReset.length + ' workers'} off the job. No text goes out. The job moves to Unscheduled. Job details are kept.` : '' });
     if (!ok) return false;
     noText = !!crewBeforeReset.length && document.getElementById('unschedNoText').checked;
@@ -5498,12 +5535,54 @@ async function saveJobTimes(jobId, reportDate, reportTime, endDate, endTime, sav
   const start = parseJobDateTime(reportDate, reportTime), end = parseJobDateTime(endDate, endTime);
   if (start && end && end <= start) { showToast(nightWork ? 'End has to be after the start.' : 'End time must be after the start. Working overnight? Tick Night.', true); return; }
   const original = saveBtn.textContent; saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+  // The times before this save, for the new times prompt.
+  const previous = job ? { reportDate: getReportDate(job) || '', reportTime: getReportTime(job) || '', reportEndDate: getReportEndDate(job) || '', reportEndTime: getReportEndTime(job) || '', nightWork: !!getNightWork(job) } : null;
+  const changed = previous && (previous.reportDate !== (reportDate || '') || previous.reportTime !== (reportTime || '') || previous.reportEndDate !== (endDate || '') || previous.reportEndTime !== (endTime || '') || previous.nightWork !== !!nightWork);
+  const hadCrew = job && getCrew(job).some(w => w && w.name);
   try {
     await commitState(CONFIG.SHARED_STATE_SYNC_URL, { action: 'save_times', jobId, reportDate, reportTime, reportEndDate: endDate, reportEndTime: endTime, nightWork });
     delete window.jobTimesLocked[jobId];
     render(); showToast('Report and end times saved.');
+    if (changed && hadCrew && previous.reportDate) offerNewTimesText(jobId, previous, { reportDate, reportTime, reportEndDate: endDate, reportEndTime: endTime });
   } catch (error) { showToast(error.message, true); }
   finally { saveBtn.disabled = false; saveBtn.textContent = original; }
+}
+/* New times after the crew was sent the job (inside the 12 hours, or Send schedule now).
+   Asks whether to text them the new times. Text: each of them gets a new assign run
+   (timesChanged: true, with the old times) and the schedule text again, once. Don't text:
+   nothing goes out (logged). Workers not sent the job yet need nothing: theirs goes out
+   at the new 12 hour mark with the new times. */
+const fmtJobWhen = (date, time) => [date ? new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }) : '', time ? formatTime12(time) : ''].filter(Boolean).join(' ');
+function formatTime12(hhmm) { const [h, m] = String(hhmm).split(':').map(Number); if (!Number.isFinite(h)) return hhmm; return `${((h + 11) % 12) + 1}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; }
+async function offerNewTimesText(jobId, previous, next) {
+  let workers = [];
+  try {
+    const res = await fetch('/api/workflow-effect?notified=' + encodeURIComponent(jobId) + '&_=' + Date.now(), { cache: 'no-store' });
+    if (res.ok) workers = (await res.json()).workers || [];
+  } catch { return; }
+  if (!workers.length) return;
+  const job = (dashboardData.jobs || []).find(j => j.id === jobId) || {};
+  const names = workers.map(w => w.workerName).filter(Boolean);
+  const back = document.getElementById('timesChangedBackdrop');
+  document.getElementById('timesChangedWhat').textContent = [job.name, getClientName(job)].filter(Boolean).join(' · ');
+  document.getElementById('timesChangedBody').textContent = `${names.length === 1 ? names[0] + ' was' : names.length + ' workers (' + names.join(', ') + ') were'} already sent this job for ${fmtJobWhen(previous.reportDate, previous.reportTime)}. The new time is ${fmtJobWhen(next.reportDate, next.reportTime)}${next.reportEndTime ? ' to ' + formatTime12(next.reportEndTime) : ''}. Text ${names.length === 1 ? 'him' : 'them'} the new times now? Anyone on the job who wasn't sent it yet gets the new times 12 hours before the start either way.`;
+  back.hidden = false;
+  back.querySelector('.times-changed-send').focus();
+  const resend = await new Promise(resolve => {
+    const done = v => { back.hidden = true; back.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey, true); resolve(v); };
+    const onClick = e => { if (e.target.closest('.times-changed-send')) done(true); else if (e.target.closest('.times-changed-skip')) done(false); };
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
+    back.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey, true);
+  });
+  try {
+    const res = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'times_changed', jobId, jobAddress: job.name || '', resend, previous }) }, 60000);
+    const data = await res.json().catch(() => ({}));
+    if (!resend) showToast('Times saved. The crew was not texted.');
+    else if (!res.ok || data.ok !== true) showToast(data.error || `New times text not confirmed (HTTP ${res.status}). Check Admin > Make / GHL problems.`, true);
+    else if (data.duplicate) showToast('The crew already got these times.');
+    else showToast(`New times sent to ${data.texted || data.makeSent} worker${(data.texted || data.makeSent) === 1 ? '' : 's'}.`);
+  } catch (error) { showToast(`New times text not confirmed: ${error.message}. Check Admin > Make / GHL problems.`, true); }
 }
 
 document.getElementById('jobsBody').addEventListener('click', (e) => {
@@ -7500,7 +7579,6 @@ function renderLogistics() {
       : `${escapeLogisticsHtml(pickup)} &rarr; ${escapeLogisticsHtml(destination)}`;
     const moveKey = String(m.moveId || m.id || oppId);
     const scheduleOverride = window.logisticsScheduleOverride[moveKey];
-    const breakSchedule = window.logisticsBreakSchedule[moveKey] || {};
     const date = (scheduleOverride && scheduleOverride.date) || m.scheduledDate || m.requestedDate || m.reportDate || m.date || (m.scheduledStart ? String(m.scheduledStart).slice(0,10) : '');
     const time = (scheduleOverride && scheduleOverride.time) || m.scheduledTime || m.requestedTime || m.reportTime || m.time || (m.scheduledStart && String(m.scheduledStart).includes('T') ? String(m.scheduledStart).split('T')[1].slice(0,5) : '');
     const backendScheduleLocked = ['scheduled', 'assigned', 'ready', 'en_route', 'en route', 'in_transit', 'in transit'].includes(String(m.status || '').toLowerCase()) && date && time;
@@ -7549,7 +7627,7 @@ function renderLogistics() {
     const driverEditing = Boolean(window.logisticsDriverEdit[moveKey]);
     const assetEditing = Boolean(window.logisticsAssetEdit[moveKey]);
     const removeDriver = (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
-    const driverEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit driver</span><button type="button" class="job-stage-btn logistics-done-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div><div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}<div class="driver-break-schedule" data-move-id="${escapeLogisticsHtml(moveKey)}"><label class="driver-break-field">Lunch <input type="time" class="logistics-lunch" aria-label="Lunch time" value="${escapeLogisticsHtml(breakSchedule.lunch || '')}"></label></div></div></div>`;
+    const driverEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit driver</span><button type="button" class="job-stage-btn logistics-done-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div><div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}</div></div>`;
     const driverAssignment = assignable ? ((assignedDriverId || assignedDriverName) && !driverEditing ? `<div class="assignment-lock"><span class="assignment-lock-copy"><span class="assignment-lock-label">Driver locked</span><span class="assignment-lock-value">${escapeLogisticsHtml(assignedDriverName || assignedDriverId)}</span></span><button type="button" class="job-stage-btn edit logistics-edit-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit Driver</button></div>` : driverEditor) : '';
     const assignedAssetEditors = assignedAssets.map(asset => `<span class="assignment-edit-item"><span>${escapeLogisticsHtml(asset.name || asset.assetName || asset.id || asset.assetId)}</span><button type="button" class="job-stage-btn cancel logistics-remove-asset" data-move-id="${escapeLogisticsHtml(moveKey)}" data-asset-id="${escapeLogisticsHtml(asset.id || asset.assetId || '')}">Remove</button></span>`).join('');
     const assetEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit vehicle</span><button type="button" class="job-stage-btn logistics-done-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div>${assignedAssetEditors ? `<div class="assignment-edit-items">${assignedAssetEditors}</div>` : ''}<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Add Vehicle</button></div><div class="job-stage-actions"><select class="logistics-dump-truck-select" aria-label="Select dump truck"><option value="">${availableDumpTruckOptions ? 'Select dump truck…' : 'No dump trucks available'}</option>${availableDumpTruckOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-asset-kind="dump-truck" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${availableDumpTruckOptions ? '' : 'disabled'}>Add Dump Truck</button></div></div>`;
@@ -7586,7 +7664,7 @@ function renderLogistics() {
       + `<div class="logi-dest">${link ? `<a class="logistics-job-link" href="${escapeLogisticsHtml(link)}" target="_blank" rel="noopener">${escapeLogisticsHtml(sourceLabel)} ↗</a>` : escapeLogisticsHtml(sourceLabel)}</div>`
       + `${contactName ? `<div class="logi-client">${escapeLogisticsHtml(contactName)}${contactSecondary ? ` · ${escapeLogisticsHtml(contactSecondary)}` : ''}</div>` : ''}`
       + `<div class="logi-id mono">${escapeLogisticsHtml(m.moveId || m.id || '')}</div>${missingBadges}</td>`
-      + `<td data-label="Move"><div class="logi-move">${escapeLogisticsHtml(moveName)}</div>${moveDetail ? `<div class="logi-detail">${escapeLogisticsHtml(moveDetail)}</div>` : ''}${notes ? `<div class="logi-note">${escapeLogisticsHtml(notes)}</div>` : ''}</td>`
+      + `<td data-label="Move"><div class="logi-move">${escapeLogisticsHtml(moveName)}</div>${moveDetail ? `<div class="logi-detail">${escapeLogisticsHtml(moveDetail)}</div>` : ''}${terminal ? (notes ? `<div class="logi-note">${escapeLogisticsHtml(notes)}</div>` : '') : `<div class="logi-notes-edit"><textarea class="logistics-notes-input" data-move-id="${escapeLogisticsHtml(moveKey)}" rows="2" maxlength="2000" placeholder="Add notes" aria-label="Notes for this move">${escapeLogisticsHtml(notes)}</textarea><span class="logi-notes-status" aria-live="polite">${m.notesBy ? 'by ' + escapeLogisticsHtml(m.notesBy) : ''}</span></div>`}</td>`
       + `<td data-label="Value"><span class="logi-value">${escapeLogisticsHtml(standaloneValueDisplay === 'N/A' ? 'On the job' : standaloneValueDisplay)}</span></td>`
       + `<td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td>`
       + `<td data-label="Schedule" class="mono"><div class="schedule-time-color ${scheduleDateTone(date)}">${scheduleCell}</div></td>`
@@ -7868,8 +7946,23 @@ async function loadFieldAppAccess() {
     fieldAppEnabled = data.enabled || [];
     renderFieldAppAccess();
   } catch (err) {
-    list.innerHTML = `<tr><td colspan="5" class="empty-state">Access list could not be loaded: ${escapeLogisticsHtml(err.message)}</td></tr>`;
+    list.innerHTML = `<tr><td colspan="6" class="empty-state">Access list could not be loaded: ${escapeLogisticsHtml(err.message)}</td></tr>`;
   }
+  loadFieldAppSignins();
+}
+// Field app sign in activity (admins): every sign in try, newest first.
+const fieldAppStamp = v => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d.toLocaleString('en-US', { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; };
+async function loadFieldAppSignins() {
+  const box = document.getElementById('fieldAppSignins'), list = document.getElementById('fieldAppSigninList');
+  if (!currentSession.isAdmin) { box.hidden = true; return; }
+  box.hidden = false;
+  try {
+    const data = await fetchJsonStrict(CONFIG.DRIVER_CODES_URL + '?view=signins', 'Field app sign in activity');
+    const rows = data.signins || [];
+    list.innerHTML = rows.length ? rows.map(r => `<tr><td data-label="When">${escapeLogisticsHtml(fieldAppStamp(r.at))}</td><td data-label="Name">${escapeLogisticsHtml(r.name || '')}</td><td data-label="Phone">${escapeLogisticsHtml(r.phone || '')}</td>`
+      + `<td data-label="Result">${r.ok ? '<span class="logistics-status assigned">Signed in</span>' : `<span class="signin-refused">${escapeLogisticsHtml(r.reason || 'Refused')}</span>`}</td><td data-label="Device">${escapeLogisticsHtml(r.device || '')}</td></tr>`).join('')
+      : '<tr><td colspan="5" class="load-state">No sign ins yet.</td></tr>';
+  } catch (err) { list.innerHTML = `<tr><td colspan="5" class="empty-state">Sign in activity could not be loaded: ${escapeLogisticsHtml(err.message)}</td></tr>`; }
 }
 function renderFieldAppAccess() {
   const list = document.getElementById('fieldAppAccessList');
@@ -7885,13 +7978,15 @@ function renderFieldAppAccess() {
     else merged.set(key, { ...p });
   });
   const people = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
-  if (!people.length) { list.innerHTML = '<tr><td colspan="5" class="load-state">No drivers or crew found in the rosters yet.</td></tr>'; return; }
+  if (!people.length) { list.innerHTML = '<tr><td colspan="6" class="load-state">No drivers or crew found in the rosters yet.</td></tr>'; return; }
   list.innerHTML = people.map(p => {
     const key = fieldAppKeyFor(p);
     const isEnabled = fieldAppEnabled.some(e => e.driverKey === key);
     const statusCell = isEnabled ? '<span class="logistics-status assigned">Enabled</span>' : '<span class="logistics-route">Not enabled</span>';
-    if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${tempTag(p)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td><td></td></tr>`;
-    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${tempTag(p)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>`
+    const rec = fieldAppEnabled.find(e => e.driverKey === key);
+    const seenCell = `<td data-label="Last opened">${rec ? (rec.lastSeenAt ? escapeLogisticsHtml(fieldAppStamp(rec.lastSeenAt)) : '<span class="logistics-route">Never signed in</span>') : ''}</td>`;
+    if (!admin) return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${tempTag(p)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>${seenCell}<td></td></tr>`;
+    return `<tr><td data-label="Name">${escapeLogisticsHtml(p.name)}${tempTag(p)}${p.manual ? '<span class="manual-tag">GHL</span>' : ''}</td><td data-label="Phone">${escapeLogisticsHtml(p.phone || 'N/A')}</td><td data-label="Role">${escapeLogisticsHtml(p.role)}</td><td data-label="Access">${statusCell}</td>${seenCell}`
       + `<td class="field-app-actions">${p.id || p.phone ? `<button type="button" class="job-stage-btn edit worker-edit" data-id="${escapeLogisticsHtml(p.id || '')}" data-phone="${escapeLogisticsHtml(p.phone || '')}" data-name="${escapeLogisticsHtml(p.name)}">Edit</button> ` : ''}${isEnabled
         ? `<button type="button" class="job-stage-btn cancel field-app-revoke" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}">Revoke</button>`
         : `<button type="button" class="job-stage-btn edit field-app-enable" data-name="${escapeLogisticsHtml(p.name)}" data-phone="${escapeLogisticsHtml(p.phone || '')}" ${p.phone ? '' : 'disabled title="Needs a phone number on file"'}>Enable</button>`}</td></tr>`;
@@ -7960,7 +8055,6 @@ async function setContainerStage(jobId, action, button) {
     const completionDriverName = getLogisticsDriverName(move);
     const completionDriver = (logisticsData.drivers || []).find(item => item.name === completionDriverName) || {};
     const completionMoveKey = String(move.moveId || move.id || jobId);
-    const completionBreaks = window.logisticsBreakSchedule[completionMoveKey] || {};
     const payload = isAddon ? {
       ...move,
       action,
@@ -7976,7 +8070,6 @@ async function setContainerStage(jobId, action, button) {
       employee: completionDriverName,
       hours: completionDriver.hours || move.hours || '',
       signature: completionDriverName,
-      lunch: completionBreaks.lunch || '',
       rows: buildDriverLogRows(completionDriverName, move)
     } : {
       // Carry the full booking record (client, address, schedule, notes, equipment,
@@ -8168,7 +8261,6 @@ async function resetLogisticsDay(jobId, button, eodSheet) {
   const row = button.closest('tr');
   const driverName = getLogisticsDriverName(move);
   const driver = (logisticsData.drivers || []).find(item => item.name === driverName) || {};
-  const lunch = row?.querySelector('.logistics-lunch')?.value || '';
   const logDate = eodSheet.date || move.scheduledDate || move.requestedDate || move.reportDate || move.date || '';
   const moveKey = String(move.moveId || move.id || jobId);
   // Loads saved for this day (read now: the move record is updated in place after the reset saves).
@@ -8198,7 +8290,6 @@ async function resetLogisticsDay(jobId, button, eodSheet) {
     employee: driverName,
     hours: driver.hours || move.hours || '',
     signature: driverName,
-    lunch,
     rows: buildDriverLogRows(driverName, move),
     ...eodSheet, dayOfWeek: jobDayOfWeek(logDate), ...jobWeekFields(logDate)
   };
@@ -8331,6 +8422,26 @@ function buildDriverLogRows(driverName, currentMove) {
   });
 }
 
+// Logistics notes: saved when the box loses focus (or Ctrl/Cmd+Enter); Esc puts it back.
+async function saveLogisticsNotes(input) {
+  const move = logisticsMoveByKey(input.dataset.moveId); if (!move) return;
+  const notes = input.value.trim();
+  if (notes === String(move.notes || '').trim()) return;
+  const status = input.parentElement.querySelector('.logi-notes-status');
+  input.classList.add('saving'); if (status) status.textContent = 'Saving...';
+  try {
+    await commitState(CONFIG.LOGISTICS_STATE_URL, { ...logisticsIdentity(move), action: 'set_notes', moveId: String(move.moveId || move.id || ''), notes });
+    move.notes = notes;
+    if (status) status.textContent = 'Saved';
+    input.classList.remove('saving');
+  } catch (err) { showToast(err.message, true); input.classList.remove('saving'); if (status) status.textContent = 'Not saved'; }
+}
+document.getElementById('logisticsMoves').addEventListener('focusout', e => { if (e.target.matches?.('.logistics-notes-input')) saveLogisticsNotes(e.target); });
+document.getElementById('logisticsMoves').addEventListener('keydown', e => {
+  if (!e.target.matches?.('.logistics-notes-input')) return;
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.target.blur(); }
+  if (e.key === 'Escape') { const move = logisticsMoveByKey(e.target.dataset.moveId); if (move) e.target.value = move.notes || ''; e.target.blur(); }
+});
 document.getElementById('logisticsMoves').addEventListener('click', event => {
   const loadsSave = event.target.closest('.logistics-loads-save');
   if (loadsSave) { saveTruckLoads(loadsSave); return; }
@@ -8482,16 +8593,6 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
   else setContainerStage(button.dataset.id, button.dataset.action, button);
 });
 
-document.getElementById('logisticsMoves').addEventListener('change', event => {
-  if (!event.target.matches('.logistics-lunch')) return;
-  const schedule = event.target.closest('.driver-break-schedule');
-  const moveId = schedule && schedule.dataset.moveId;
-  if (!moveId) return;
-  window.logisticsBreakSchedule[moveId] = {
-    lunch: schedule.querySelector('.logistics-lunch')?.value || ''
-  };
-  persistTimeOverride('logisticsBreakSchedule', window.logisticsBreakSchedule);
-});
 
 const containerOverlay = document.getElementById('containerOverlay');
 const containerSheet = document.getElementById('containerSheet');
@@ -8825,7 +8926,7 @@ async function pollSharedState() {
     clearPersistentIssue('read');
     if (jobRecords.length) render();
     if (moveRecords.length && logisticsOpen) renderLogistics();
-    // Send now counts: crew changes waiting for 6:30 PM, checked every 2 minutes at most.
+    // Send now counts: crew changes waiting for their 12 hour mark, checked every 2 minutes at most.
     if (Date.now() - dispatchWaitingAt > 120000) refreshDispatchWaiting();
   } catch { showPersistentIssue('read', 'Live updates paused. Showing the last confirmed data. Retrying automatically.'); }
   finally { sharedPollBusy = false; }
@@ -10553,7 +10654,7 @@ function applyLogisticsSplit(){
  document.getElementById('logiCombinedBtn').setAttribute('aria-pressed',String(!logisticsSplit));
  if(!logisticsSplit)return;
  const rows=[...body.querySelectorAll('tr[data-move-key]')];
- const lanes=['Job add-ons','Standalone jobs'].map((title,i)=>{
+ const lanes=['Rentals','Contract'].map((title,i)=>{
   const lane=document.createElement('tr');lane.className='split-lane '+(i?'contract':'');
   lane.innerHTML='<td colspan="7"><h3 class="lane-title">'+title+'<small></small></h3><table class="lane-table"><tbody></tbody></table></td>';return lane;
  });

@@ -23,6 +23,7 @@ export default async function handler(request) {
     // Who closed a move (KPI history).
     if (['complete', 'cancel'].includes(payload.action) && !payload.closedBy) { const session = sessionFromRequest(request); if (session) payload.closedBy = session.name; }
     if (payload.action === 'set_loads' && !payload.truckLoadsBy) { const session = sessionFromRequest(request); if (session) payload.truckLoadsBy = session.name; }
+    if (payload.action === 'set_notes' && !payload.notesBy) { const session = sessionFromRequest(request); if (session) payload.notesBy = session.name; }
     return json(await saveState(sql, 'move', payload));
   } catch (error) { return errorResponse(error); }
 }

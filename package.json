@@ -8,6 +8,7 @@
     "test": "node --experimental-test-module-mocks --test test/*.test.mjs"
   },
   "dependencies": {
+    "@netlify/blobs": "^11.0.3",
     "@netlify/database": "latest",
     "pdf-lib": "1.17.1",
     "postgres": "latest"
