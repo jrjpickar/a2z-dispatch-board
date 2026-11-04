@@ -1,5 +1,5 @@
 import { db, ensureSchema } from './db.mjs';
-import { authorizeWrite, readPayload, json, errorResponse } from '../../lib/http.mjs';
+import { authorizeWrite, readPayload, json, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { jobRecord, saveState } from '../../lib/store.mjs';
 import { syncJobSchedule, ghl, changeOrderPipelineId } from '../../lib/ghl.mjs';
 import { linkChangeOrder, unlinkChangeOrder } from '../../lib/change-order.mjs';
@@ -16,6 +16,7 @@ export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405, { Allow: 'GET, POST' });
     if (request.method === 'POST') authorizeWrite(request);
+    else authorizeRead(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
       // ?view=closed: every job closed on the board, for the Completed tab (loaded only when it's opened).

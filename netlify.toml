@@ -5,6 +5,10 @@
   # Skip the deploy when a push only touches docs, tests or blueprints (saves credits).
   ignore = "bash scripts/netlify-ignore.sh"
 
+[build.environment]
+  # Node.js 24 LTS (security support until April 2028). Matches .nvmrc.
+  NODE_VERSION = "24"
+
 [[redirects]]
   from = "/api/dashboard-data"
   to = "/.netlify/functions/dashboard-data"

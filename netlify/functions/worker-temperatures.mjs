@@ -8,7 +8,7 @@
 // Values are cached per contact for WORKER_TEMPERATURE_CACHE_SECONDS (default 600).
 // Read only: nothing is written to GHL.
 import { db, ensureSchema } from './db.mjs';
-import { json, errorResponse } from '../../lib/http.mjs';
+import { json, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { temperatureFieldId, getContactRaw, customFieldValue, findContactIdByPhone } from '../../lib/ghl.mjs';
 
 const ID = /^[A-Za-z0-9_-]{1,80}$/;
@@ -19,6 +19,7 @@ const phoneKey = p => { const d = String(p || '').replace(/\D/g, '').slice(-10);
 export default async function handler(request) {
   try {
     if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+    authorizeRead(request);
     const started = Date.now();
     const params = new URL(request.url).searchParams;
     const list = name => String(params.get(name) || '').split(',').map(s => s.trim()).filter(Boolean);

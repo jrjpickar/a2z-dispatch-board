@@ -8,8 +8,8 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   const errors = []; const posts = [];
   let manual = [], hidden = [], seniorPosts = [], editPosts = [];
   let problemsData = { effects: [{ id: 'req1:eod_sheet', kind: 'eod_sheet', label: 'EOD sheet', status: 'uncertain', error: 'Make did not confirm completion (HTTP 500)', jobId: 'job1', name: 'Test job', action: 'eod_sheet', canRetry: true, at: new Date().toISOString() }], crm: [{ jobId: 'job1', error: 'GHL HTTP 429', at: new Date().toISOString(), name: 'Test job' }] };
-  const PANELS = ['admins','laborers','chartJobs','chartCrew','fieldApp','chartValue','chartHealth','problems','settings','activity','history'];
-  const ALL = new Set(['admins','laborers','chartJobs','chartCrew','fieldApp']);
+  const PANELS = ['admins','laborers','chartJobs','chartCrew','fieldApp','chartValue','chartHealth','problems','pending','settings','activity','history'];
+  const ALL = new Set(['admins','laborers','chartJobs','chartCrew','fieldApp','pending']);
   let layout = { panels: PANELS.map(id => ({ id, w: id === 'fieldApp' ? 12 : 6, h: 0, hidden: false, audience: ALL.has(id) ? 'all' : 'senior' })), updated: null };
   const layoutPosts = [];
   const labels = Array.from({ length: 14 }, (_, i) => new Date(Date.UTC(2026, 8, 30 + i)).toISOString().slice(0, 10));
@@ -51,6 +51,7 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
         if (req.method() === 'POST') { const b = req.postDataJSON(); seniorPosts.push(b); if (b.action === 'save_settings') return reply({ ok: true, settings: { defaultAssignedUserId: b.defaultAssignedUserId, defaultMarkupPercent: Number(b.defaultMarkupPercent), adminPinSet: !!b.adminPin, envPinSet: false, updated: {} } }); problemsData = { effects: [], crm: [] }; return reply({ ok: true, ...problemsData }); }
         const view = u.searchParams.get('view');
         if (view === 'problems') return reply(problemsData);
+        if (view === 'pending') return reply({ holdHours: 12, jobs: [{ jobId: 'job1', name: '17 Seabreeze, Dana Point', dueAt: new Date(Date.now() + 36e5).toISOString(), start: new Date(Date.now() + 13 * 36e5).toISOString(), waiting: '', items: [{ id: 'w1', label: 'Schedule text + worker notification', workers: ['Ana Lopez'] }] }], held: [] });
         if (view === 'activity') return reply({ activity: [{ id: 1, at: new Date().toISOString(), actor: 'Jesse Pickar', action: 'Enrolled admin', target: 'Sam Dispatcher' }] });
         if (view === 'history') return reply({ sends: [{ id: 1, at: new Date().toISOString(), kind: 'eod_sheet', jobId: 'job1', jobName: 'Test job', fileName: 'EOD Sheet - Test job.xlsx', status: 'sent' }, { id: 2, at: new Date().toISOString(), kind: 'project_schedule', jobId: 'job1', jobName: 'Test job', fileName: 'Project Schedule - Test job.pdf', status: 'sent' }] });
         if (view === 'settings') return reply({ defaultAssignedUserId: '', defaultMarkupPercent: 15, adminPinSet: false, envPinSet: false, updated: {} });
@@ -161,6 +162,9 @@ const ROOT = process.argv[2] || path.resolve(__dirname, '..');
   // Senior admin tools
   assert.ok(await page.isVisible('[data-panel="problems"]') && await page.isVisible('[data-panel="settings"]'));
   await page.waitForFunction(() => document.getElementById('problemCount').textContent === '2' && document.getElementById('historyList').textContent.includes('Project Schedule PDF'));
+  // Pending sends: waiting crew texts, not problems.
+  await page.waitForFunction(() => document.getElementById('pendingCount').textContent === '1');
+  { const t = await page.textContent('#pendingList'); assert.ok(t.includes('17 Seabreeze, Dana Point') && t.includes('Sends ') && t.includes('Ana Lopez'), t); }
   assert.ok((await page.textContent('#activityList')).includes('Jesse Pickar'));
   await page.click('#problemList .problem-btn[data-action="retry_effect"]');
   await page.waitForFunction(() => document.getElementById('problemCount').textContent === '0');

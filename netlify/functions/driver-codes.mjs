@@ -5,7 +5,7 @@
 // being on this enabled list, plus knowing your own phone number, is the
 // whole login (see driver-auth.mjs).
 import { db, ensureSchema } from './db.mjs';
-import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
+import { json, authorizeWrite, readPayload, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { driverKeyFor } from '../../lib/driver-token.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { requirePanel } from '../../lib/layout.mjs';
@@ -16,6 +16,7 @@ export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405, { Allow: 'GET, POST' });
     if (request.method === 'POST') authorizeWrite(request);
+    else authorizeRead(request);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') {
       // ?view=signins: field app sign in activity (admins who can see Field App Access).

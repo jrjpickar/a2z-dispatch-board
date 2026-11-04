@@ -1,6 +1,7 @@
 import { searchOpportunities as searchContainerOpportunities } from '../../lib/ghl.mjs';
 import { moveRecord } from '../../lib/store.mjs';
 import { db, ensureSchema } from "./db.mjs";
+import { readDenied } from '../../lib/http.mjs';
 
 const DEFAULT_LOCATION_ID = "QUcu2PEAxPV1sQm1GQCq";
 const DEFAULT_CONTAINER_PIPELINE_ID = "F8i8hB7E5xHrJbJUXFr4";
@@ -41,6 +42,8 @@ function standaloneMove(opportunity, pipelineId) {
 
 export default async function handler(request) {
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+  const denied = readDenied(request);
+  if (denied) return denied;
   const token = process.env.GHL_API_TOKEN;
   if (!token) return json({ error: "Server configuration is incomplete", missing: ["GHL_API_TOKEN"] }, 500);
 

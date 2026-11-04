@@ -6,7 +6,7 @@
 //   POST /api/project-schedule { action: "submit", ... } -> save, draw the PDF, send it to Make
 // Make receives multipart/form-data: the PDF as binary in field "file", plus flat fields.
 import { db, ensureSchema } from './db.mjs';
-import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
+import { json, authorizeWrite, authorizeRead, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { logSend } from '../../lib/activity.mjs';
 import {
@@ -36,6 +36,7 @@ export default async function handler(request) {
         const input = normalizeScheduleInput(record.input);
         return pdfResponse(await projectSchedulePdf(input), scheduleFileName(input));
       }
+      authorizeRead(request);
       return json({ schedules: await listProjectSchedules(sql) });
     }
 

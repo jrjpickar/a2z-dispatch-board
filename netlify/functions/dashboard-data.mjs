@@ -2,6 +2,7 @@ import { cachedGhlJobs } from '../../lib/feed-cache.mjs';
 import { searchOpportunities, changeOrderPipelineId as configuredChangeOrderPipelineId } from '../../lib/ghl.mjs';
 import { jobRecord } from '../../lib/store.mjs';
 import { db, ensureSchema } from "./db.mjs";
+import { readDenied } from '../../lib/http.mjs';
 
 const DEFAULTS = {
   locationId: "QUcu2PEAxPV1sQm1GQCq",
@@ -51,6 +52,8 @@ export default async function handler(request) {
   if (request.method !== "GET") {
     return json({ error: "Method not allowed" }, 405, { Allow: "GET" });
   }
+  const denied = readDenied(request);
+  if (denied) return denied;
 
   const token = process.env.GHL_API_TOKEN;
   if (!token) {

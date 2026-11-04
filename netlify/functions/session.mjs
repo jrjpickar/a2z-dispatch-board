@@ -5,7 +5,7 @@
 //   POST /api/session { action: "unlock", pin }     (admin PIN for this browser)
 //   POST /api/session { action: "signout" }
 import { db, ensureSchema } from './db.mjs';
-import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
+import { json, authorizeOrigin, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { storedPinMatches } from '../../lib/settings.mjs';
 import {
@@ -20,7 +20,7 @@ export default async function handler(request) {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
     const sql = db(); await ensureSchema(sql);
     if (request.method === 'GET') return json(await sessionInfo(sql, sessionFromRequest(request)));
-    authorizeWrite(request);
+    authorizeOrigin(request);
     const body = await readPayload(request);
     if (body.action === 'signout') return json({ ok: true, signedIn: false }, 200, { 'set-cookie': clearSessionCookie() });
 

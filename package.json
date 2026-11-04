@@ -5,17 +5,17 @@
   "scripts": {
     "dev": "netlify dev",
     "build": "node scripts/build.mjs",
-    "test": "node --experimental-test-module-mocks --test test/*.test.mjs"
+    "test": "node --experimental-test-module-mocks --import ./test/legacy-auth-off.mjs --test test/*.test.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^11.0.3",
-    "@netlify/database": "latest",
+    "@netlify/database": "^2.0.1",
     "pdf-lib": "1.17.1",
-    "postgres": "latest"
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.16",
-    "netlify-cli": "latest"
+    "netlify-cli": "^27.14.3"
   },
   "engines": {
     "node": ">=22"

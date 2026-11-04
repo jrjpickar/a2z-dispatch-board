@@ -2176,6 +2176,11 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
       <div class="logistics-note">Runs Make didn't confirm within 45 seconds and GHL schedule syncs that failed. Check Make's history first if a notification may already have gone out; Retry sends the same run again, Acknowledge just clears it.</div>
       <ul class="admin-list admin-list-scroll" id="problemList"><li class="load-state">Loading...</li></ul>
     </div>
+    <div class="panel" data-panel="pending">
+      <div class="panel-head"><h2>Pending sends</h2><div class="logistics-toolbar"><span class="mono" id="pendingCount">0</span></div></div>
+      <div class="logistics-note" id="pendingNote">Crew texts and worker notifications waiting on the server to go out 12 hours before each job. Nothing here needs fixing; use Send now on the job to send early.</div>
+      <ul class="admin-list admin-list-scroll" id="pendingList"><li class="load-state">Loading...</li></ul>
+    </div>
     <div class="panel" data-panel="settings">
       <div class="panel-head"><h2>Settings</h2></div>
       <div class="senior-form">
@@ -9602,6 +9607,8 @@ document.getElementById('signinSubmit').addEventListener('click', async () => {
     applySession(info);
     document.getElementById('signinBackdrop').hidden = true;
     showToast(`Signed in as ${info.user.name}.`);
+    // Load the board now that the API will answer (it needs a signed session).
+    loadBoardDefaults(); refreshAll().catch(() => {}); loadProjectSchedules();
     if (info.needsAdminUnlock) showToast('You are on the admin list. Open the board inside GHL, or use Unlock admin tools, to turn admin tools on.');
   } catch (e) { err.hidden = false; err.textContent = e.message; }
   finally { btn.disabled = false; btn.textContent = 'Sign in'; }
@@ -9744,7 +9751,7 @@ document.getElementById('adminUserList').addEventListener('click', async e => {
    drag a panel anywhere on a 12 column grid, drag the corner to resize, hide/show,
    and choose whether other admins see each panel. Panels float up to fill space
    above them (like a GHL dashboard). Collapsing a panel is per browser. */
-const DASH_DEFAULT_ALL = new Set(['admins', 'laborers', 'chartJobs', 'chartCrew', 'fieldApp']);
+const DASH_DEFAULT_ALL = new Set(['admins', 'laborers', 'chartJobs', 'chartCrew', 'fieldApp', 'pending']);
 const DASH_DEFAULT_W = { fieldApp: 12 };
 const DASH_WIDTHS = [3, 4, 6, 8, 9, 12];
 const DASH_COLLAPSE_KEY = 'a2z.adminDash.collapsed';
@@ -10160,6 +10167,18 @@ function renderProblems(data) {
   ];
   list.innerHTML = rows.length ? rows.join('') : '<li class="load-state">Nothing stuck. Every Make run and GHL sync went through.</li>';
 }
+function renderPending(data) {
+  const jobs = data.jobs || [], held = data.held || [];
+  const count = jobs.reduce((n, j) => n + j.items.length, 0) + held.length;
+  document.getElementById('pendingCount').textContent = String(count);
+  if (data.holdHours != null) document.getElementById('pendingNote').textContent = `Crew texts and worker notifications waiting on the server to go out ${data.holdHours} hours before each job. Nothing here needs fixing; use Send now on the job to send early.`;
+  const rows = [
+    ...jobs.map(j => `<li><div class="who"><b>${sessionEsc(j.name)}</b><small>${sessionEsc(j.dueAt ? 'Sends ' + seniorWhen(j.dueAt) : j.waiting)}${j.start ? ' · job starts ' + sessionEsc(seniorWhen(j.start)) : ''}</small>`
+      + j.items.map(i => `<small>${sessionEsc(i.label)}${i.workers.length ? ': ' + sessionEsc(i.workers.join(', ')) : ''}</small>`).join('') + '</div></li>'),
+    ...held.map(h => `<li><div class="who">${sessionEsc(h.label)}${h.name ? ' · ' + sessionEsc(h.name) : ''}<small>${sessionEsc(['Undo window', h.action, h.dueAt ? 'sends ' + seniorWhen(h.dueAt) : ''].filter(Boolean).join(' · '))}</small></div></li>`)
+  ];
+  document.getElementById('pendingList').innerHTML = rows.length ? rows.join('') : '<li class="load-state">Nothing waiting. Every crew text has gone out.</li>';
+}
 function renderActivity(items) {
   document.getElementById('activityCount').textContent = String(items.length);
   document.getElementById('activityList').innerHTML = items.length ? items.map(a => `<li class="activity-row"><div class="who"><b>${sessionEsc(a.actor || 'Someone')}</b> ${sessionEsc(a.action.charAt(0).toLowerCase() + a.action.slice(1))}${a.target ? ': ' + sessionEsc(a.target) : ''}</div><span class="when">${seniorWhen(a.at)}</span></li>`).join('') : '<li class="load-state">No activity yet.</li>';
@@ -10170,7 +10189,7 @@ function renderHistory() {
   const shown = seniorSends.filter(s => !q || `${s.jobName} ${s.jobId}`.toLowerCase().includes(q));
   document.getElementById('historyCount').textContent = String(seniorWebhookRuns.length + seniorSends.length);
   const runs = seniorWebhookRuns.filter(r => !q || [r.jobName, r.jobId, r.label, r.kind, r.date, r.webhook].join(' ').toLowerCase().includes(q));
-  document.getElementById('webhookHistoryList').innerHTML = '<h4>Webhook runs</h4>' + (runs.length ? runs.map(r => `<div class="history-job"><h4>${sessionEsc(r.label)} · ${sessionEsc(r.jobName || r.jobId || 'Job')}</h4><small>${sessionEsc([r.date, ({confirmed:'Confirmed',uncertain:'Needs checking',sending:'Sending',scheduled:'Waiting',cancelled:'Cancelled'})[r.status] || r.status, seniorWhen(r.at)].filter(Boolean).join(' · '))}</small><div class="logistics-note" style="overflow-wrap:anywhere">${sessionEsc(r.webhook || '')}${r.error ? '<br>' + sessionEsc(r.error) : ''}</div>${currentSession.isSenior && r.canResubmit ? `<button type="button" class="job-stage-btn edit webhook-resubmit" data-effect-id="${sessionEsc(r.id)}">Resubmit</button>` : ''}</div>`).join('') : '<p class="load-state">No matching stored webhook runs.</p>');
+  document.getElementById('webhookHistoryList').innerHTML = '<h4>Webhook runs</h4>' + (runs.length ? runs.map(r => `<div class="history-job"><h4>${sessionEsc(r.label)} · ${sessionEsc(r.jobName || r.jobId || 'Job')}</h4><small>${sessionEsc([r.date, ({confirmed:'Confirmed',uncertain:'Needs checking',sending:'Sending',scheduled:'Waiting',nightly:'Waiting for 12 hour send',cancelled:'Cancelled'})[r.status] || r.status, seniorWhen(r.at)].filter(Boolean).join(' · '))}</small><div class="logistics-note" style="overflow-wrap:anywhere">${sessionEsc(r.webhook || '')}${r.error ? '<br>' + sessionEsc(r.error) : ''}</div>${currentSession.isSenior && r.canResubmit ? `<button type="button" class="job-stage-btn edit webhook-resubmit" data-effect-id="${sessionEsc(r.id)}">Resubmit</button>` : ''}</div>`).join('') : '<p class="load-state">No matching stored webhook runs.</p>');
   const groups = new Map();
   for (const item of shown) { const k = item.jobId || item.jobName; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(item); }
   const kindLabel = k => k === 'eod_sheet' ? 'EOD sheet' : k === 'job_log' ? 'Job log' : k === 'worker_sent_home' ? 'Worker sent home' : k === 'split_day' ? 'Split day booking' : k === 'project_schedule' ? 'Project Schedule PDF' : k;
@@ -10266,6 +10285,7 @@ async function loadSeniorTools() {
   const see = id => dashCanSee(id);
   const jobs = [
     see('problems') && seniorApi('problems').then(renderProblems).catch(e => { document.getElementById('problemList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
+    see('pending') && seniorApi('pending').then(renderPending).catch(e => { document.getElementById('pendingList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
     see('activity') && seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(e => { document.getElementById('activityList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
     see('history') && seniorApi('history').then(d => { seniorSends = d.sends || []; seniorWebhookRuns = d.runs || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
     currentSession.isSenior && seniorApi('settings').then(renderSettings).catch(e => showToast(e.message, true))
@@ -10726,11 +10746,14 @@ for (const kind of ['labor', 'logistics']) {
 }
 /* ---------- Init ---------- */
 enhanceQuarterTimes(document);
-initSession();
-loadBoardDefaults();
 fmtDateHeader();
-refreshAll({ fresh: false });
-loadProjectSchedules();
+// The API needs a signed session (Nov 2026 security update), so the first data load waits
+// for sign-in to settle. The 15 second poll keeps running either way.
+initSession().catch(err => console.warn('Sign-in check failed:', err)).finally(() => {
+  loadBoardDefaults();
+  refreshAll({ fresh: false });
+  loadProjectSchedules();
+});
 schedulePoll(15000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastActivity = Date.now(); schedulePoll(300); } });
 </script>

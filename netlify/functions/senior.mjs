@@ -3,6 +3,7 @@
 //   GET  /api/senior?view=activity   -> { activity: [...] }       who did what, newest first
 //   GET  /api/senior?view=problems   -> { effects: [...], crm: [...] } Make runs and GHL syncs that didn't go through
 //   GET  /api/senior?view=history    -> { sends: [...] }          EOD sheets + Project Schedule PDFs sent
+//   GET  /api/senior?view=pending    -> { jobs: [...], held: [...] } crew sends waiting for their 12 hour mark, and undo-window holds
 //   GET  /api/senior?view=settings   -> senior settings
 //   POST /api/senior { action: "retry_effect" | "resolve_effect", effectId }
 //   POST /api/senior { action: "retry_crm" | "resolve_crm", jobId }
@@ -17,6 +18,8 @@ import { logActivity, recentActivity, logSend, sendHistory } from '../../lib/act
 import { seniorSettings, saveSettings, previewCrewText } from '../../lib/settings.mjs';
 import { sendWorkflow, workflows, webhookUrl } from '../../lib/effects.mjs';
 import { syncJobSchedule } from '../../lib/ghl.mjs';
+import { QUIET_STATUSES } from '../../lib/effect-queue.mjs';
+import { holdSchedule, rowWorkers, holdHours } from '../../lib/daily-dispatch.mjs';
 
 const KIND_LABELS = { project_schedule: 'Project Schedule PDF', workers: 'Worker notification', drivers: 'Driver notification', job_details: 'Job details update', job_stage: 'Job stage (complete/cancel)', container: 'Container update', driver_log: 'Driver log', eod_sheet: 'EOD sheet', job_log: 'Job log', worker_sent_home: 'Worker sent home', split_day: 'Split day booking', job_hours: 'Job hours', labor_added: 'Laborer added', logistics_reminder: 'Logistics reminder', labor_reminder: 'Labor reminder', crew_text: 'Crew schedule text', clock: 'Clock in / out' };
 const recordName = p => p ? String(p.jobName || p.jobAddress || p.clientName || p.workerName || p.driverName || '') : '';
@@ -24,8 +27,10 @@ const recordName = p => p ? String(p.jobName || p.jobAddress || p.clientName || 
 async function problems(sql) {
   // Nothing counts as a problem until Make has had 45 s to answer. A run still
   // marked "sending" after that never got an answer (Make or Netlify timed out).
+  // Runs still waiting on purpose are not problems: 'scheduled' (undo window) and
+  // 'nightly' (crew hold, waiting for 12 hours before the job). Those show under Pending sends.
   const effects = (await sql`select effect_id, kind, status, last_error, payload, created_at, updated_at from dispatch_effects
-    where status not in ('confirmed', 'cancelled', 'scheduled') and updated_at < now() - interval '45 seconds'
+    where not (status = any(${QUIET_STATUSES})) and updated_at < now() - interval '45 seconds'
     order by updated_at desc limit 100`).map(r => ({
       id: r.effect_id, kind: r.kind, webhook: workflows[r.kind] ? webhookUrl(r.kind) : '', label: KIND_LABELS[r.kind] || r.kind, status: r.status,
       error: r.status === 'sending' ? 'No answer from Make (timed out). Check Make history.' : (r.last_error || ''),
@@ -37,6 +42,34 @@ async function problems(sql) {
       jobId: r.job_id, error: r.last_error || '', at: r.updated_at, name: String(r.data?.jobAddress || r.data?.clientName || '')
     }));
   return { effects, crm };
+}
+// Pending sends: crew runs held until 12 hours before the job (grouped per job, with
+// when they go out), plus undo-window holds that have not gone yet.
+const ACTION_LABELS = { assign: 'Schedule text + worker notification', remove: 'Remove notification', split_day_assign: 'Split day text + notification' };
+async function pending(sql) {
+  const schedule = await holdSchedule(sql);
+  const ids = schedule.map(j => j.jobId);
+  const states = new Map(ids.length ? (await sql`select job_id, data, active from job_shared_state where job_id = any(${ids})`).map(r => [r.job_id, { ...(typeof r.data === 'string' ? JSON.parse(r.data) : (r.data || {})), active: r.active }]) : []);
+  const iso = ms => ms == null ? '' : new Date(ms).toISOString();
+  const jobs = schedule.map(j => {
+    const state = states.get(j.jobId) || {};
+    const first = j.rows[0]?.payload || {};
+    return {
+      jobId: j.jobId,
+      name: String(state.jobAddress || state.clientName || recordName(first) || j.jobId),
+      start: iso(j.start), dueAt: iso(j.dueAt),
+      waiting: j.dueAt == null ? (state.active === false ? 'Job is closed; these will be dropped' : 'Waits for a job date, or Send now') : '',
+      items: j.rows.map(r => ({
+        id: r.effect_id, kind: r.kind, action: String(r.payload?.action || ''),
+        label: ACTION_LABELS[r.payload?.action] || KIND_LABELS[r.kind] || r.kind,
+        workers: rowWorkers(r.payload || {}).map(w => String(w.workerName || w.workerPhone || '').trim()).filter(Boolean)
+      }))
+    };
+  }).sort((a, b) => (a.dueAt || '9999') < (b.dueAt || '9999') ? -1 : 1);
+  const held = (await sql`select effect_id, kind, payload, due_at, created_at from dispatch_effects where status = 'scheduled' order by due_at nulls last limit 100`).map(r => ({
+    id: r.effect_id, kind: r.kind, label: KIND_LABELS[r.kind] || r.kind, name: recordName(r.payload), action: String(r.payload?.action || ''), dueAt: r.due_at
+  }));
+  return { holdHours: holdHours(), jobs, held };
 }
 async function history(sql) {
   const sends = await sendHistory(sql);
@@ -57,17 +90,18 @@ export default async function handler(request) {
       const view = new URL(request.url).searchParams.get('view');
       // Problems, activity and send history can be shared with every admin (read-only)
       // from the Admin page layout. Settings stay senior only.
-      const panel = { problems: 'problems', activity: 'activity', history: 'history' }[view];
+      const panel = { problems: 'problems', activity: 'activity', history: 'history', pending: 'pending' }[view];
       if (panel) await requirePanel(request, sql, panel); else await requireSenior(request, sql);
       if (view === 'activity') return json({ activity: await recentActivity(sql) });
       if (view === 'problems') return json(await problems(sql));
+      if (view === 'pending') return json(await pending(sql));
       if (view === 'history') {
         const runs = (await sql`select effect_id, kind, status, last_error, payload, created_at, updated_at from dispatch_effects order by created_at desc limit 500`).map(r => ({
           id: r.effect_id, kind: r.kind, label: KIND_LABELS[r.kind] || r.kind, status: r.status,
           jobId: String(r.payload?.jobId || r.payload?.moveId || r.payload?.opportunityId || ''),
           jobName: recordName(r.payload), date: String(r.payload?.date || r.payload?.reportDate || ''),
           at: r.created_at, error: r.last_error || '', webhook: workflows[r.kind] ? webhookUrl(r.kind) : '',
-          canResubmit: !!r.payload && !!workflows[r.kind] && !['scheduled', 'cancelled'].includes(r.status) && (r.status !== 'sending' || Date.now() - new Date(r.updated_at).getTime() >= 60000)
+          canResubmit: !!r.payload && !!workflows[r.kind] && !['scheduled', 'cancelled', 'nightly'].includes(r.status) && (r.status !== 'sending' || Date.now() - new Date(r.updated_at).getTime() >= 60000)
         }));
         return json({ sends: await history(sql), runs });
       }
@@ -86,6 +120,9 @@ export default async function handler(request) {
       const [row] = await sql`select * from dispatch_effects where effect_id = ${effectId}`;
       if (!row) throw new StateError('That workflow was not found.', 404);
       if (row.status === 'confirmed') return json({ ok: true, ...(await problems(sql)) });
+      // A crew run waiting for its 12 hour mark is not stuck: Retry would send it early and
+      // Acknowledge would stop it from ever going out. It is handled by Pending sends / Send now.
+      if (row.status === 'nightly' || row.status === 'scheduled') throw new StateError('This run is waiting to send on schedule, not stuck. See Pending sends, or use Send now on the job.', 409);
       const label = KIND_LABELS[row.kind] || row.kind, name = recordName(row.payload);
       if (body.action === 'resolve_effect') {
         await sql`update dispatch_effects set status = 'confirmed', last_error = 'Acknowledged by ' || ${session.name}, updated_at = now() where effect_id = ${effectId}`;
@@ -108,7 +145,7 @@ export default async function handler(request) {
     }
     if (body.action === 'resolve_all') {
       const cleared = await sql`update dispatch_effects set status = 'confirmed', last_error = 'Acknowledged by ' || ${session.name}, updated_at = now()
-        where status not in ('confirmed', 'cancelled', 'scheduled') and updated_at < now() - interval '45 seconds' returning effect_id`;
+        where not (status = any(${QUIET_STATUSES})) and updated_at < now() - interval '45 seconds' returning effect_id`;
       await logActivity(sql, session, 'Acknowledged all Make problems', `${cleared.length} runs`);
       return json({ ok: true, ...(await problems(sql)) });
     }

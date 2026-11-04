@@ -18,7 +18,7 @@
 // Added workers show in the crew picker (labor) and/or driver picker (driver)
 // next to the Make roster, and "fieldApp: true" also enables Field App sign-in.
 import { db, ensureSchema } from './db.mjs';
-import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
+import { json, authorizeWrite, authorizeRead, readPayload, errorResponse } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { requirePanel } from '../../lib/layout.mjs';
 import { getContact, updateContactNamePhone, getWorkerContact, temperatureOptions, pickTemperature, temperatureFieldId, findContactIdByPhone } from '../../lib/ghl.mjs';
@@ -55,6 +55,7 @@ export default async function handler(request, context) {
           return json({ ok: true, contact: found, temperatureOptions: options });
         } catch { throw new StateError('Could not load that contact from GHL.', 502); }
       }
+      authorizeRead(request);
       return json({ workers: await rows(sql), hidden: await hiddenRows(sql) });
     }
     authorizeWrite(request);

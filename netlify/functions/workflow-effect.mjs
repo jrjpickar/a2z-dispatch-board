@@ -1,5 +1,5 @@
 import { db, ensureSchema } from './db.mjs';
-import { json, authorizeWrite, readPayload, errorResponse } from '../../lib/http.mjs';
+import { json, authorizeWrite, readPayload, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
 import { waitsForHold, isRapid, claimRapid, syncJob, waitingSummary, ensureHoldTables, holdSchedule, notifiedOnJob, resendTimes } from '../../lib/daily-dispatch.mjs';
 import { sessionFromRequest } from '../../lib/session.mjs';
@@ -20,6 +20,7 @@ export default async function handler(request) {
   try {
     if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
     if (request.method === 'POST') authorizeWrite(request);
+    else authorizeRead(request);
     const sql = db(); await ensureSchema(sql); await ensureHoldTables(sql);
     if (request.method === 'GET') {
       // ?waiting=jobs: crew changes waiting for their 12 hour mark, per job (Send now box).

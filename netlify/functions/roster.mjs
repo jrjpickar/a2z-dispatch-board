@@ -1,5 +1,5 @@
 import { db, ensureSchema } from './db.mjs';
-import { json, errorResponse } from '../../lib/http.mjs';
+import { json, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
 const SOURCES = {
   labor: ['LABOR_ROSTER_WEBHOOK', 'https://hook.us2.make.com/3otyoay8td91lhm4u2yuk3gem4d14ajc'],
@@ -9,6 +9,7 @@ const SOURCES = {
 export default async function handler(request) {
   try {
     if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+    authorizeRead(request);
     const kind = new URL(request.url).searchParams.get('kind');
     if (!Object.hasOwn(SOURCES, kind)) throw new StateError('Unknown roster');
     const sql = db(); await ensureSchema(sql);
