@@ -124,7 +124,7 @@ test('clock out needs a work summary and location; posts clockOut with hours, sc
   assert.equal(makeRuns.length, 1);
   const run = makeRuns[0];
   assert.equal(run.action, 'clockOut'); assert.equal(run.jobId, 'j1'); assert.equal(run.hoursWorked, 8.5);
-  assert.equal(run.scopeOfWork, 'Demo, Cleanup'); assert.equal(run.notes, 'Need a dumpster swap'); assert.equal(run.language, 'es');
+  assert.equal(run.scopeOfWork, 'Demo; Cleanup'); assert.equal(run.notes, 'Need a dumpster swap'); assert.equal(run.language, 'es');
   assert.equal(run.breaksCertified, true); assert.equal(run.locationConsent, true); assert.match(run.certification, /^By signing I hereby certify/);
   assert.equal(run.signedBy, 'Ana Lopez'); assert.ok(run.signedAt); assert.equal(run.signature, SIG.split(',')[1], 'signature as base64 PNG');
   assert.match(run.date, /^\d{2}\/\d{2}\/\d{2}$/); assert.match(run.time, /^\d{2}:\d{2}(AM|PM)$/); assert.match(run.clockInTime, /^\d{2}:\d{2}(AM|PM)$/);
@@ -205,4 +205,19 @@ test('forgotten clock out: after 16 hours the next clock in closes it (flagged) 
   assert.equal(r.status, 400, 'the breaks statement is the only choice'); assert.match(r.data.error, /breaks statement/);
   r = await call(ana, { op: 'clockOut', requestId: rid(), location: at(100), work: 'Demo', ...SIGN });
   assert.equal(r.status, 200);
+});
+
+test('Make clock payload carries no JSON-sensitive characters', () => {
+  assert.equal(fc.jsonSafe('Said "done"\nC:\\yard\t“bags” ‘x’ \u0007end\u2028'), "Said 'done' C:/yard 'bags' 'x' end");
+  assert.equal(fc.jsonSafe('Demolición, baño 👍'), 'Demolición; baño 👍');
+  assert.equal(fc.jsonSafe('Demo,haul off ,, 1,200 sq ft, 12,5'), 'Demo; haul off; 1200 sq ft; 12; 5');
+  const s = fc.cleanSummary({ work: 'Tore out "old" cabinets\r\nand \\ tile, 1,200 sq ft', notes: 'Need\t“more” bags', breaks: 'certified', locationConsent: true }, 'es');
+  assert.equal(s.work, "Tore out 'old' cabinets and / tile, 1,200 sq ft"); // saved as typed for the board assert.equal(s.notes, "Need 'more' bags");
+  const cin = { at: '2026-11-03T15:00:00Z', lat: 33.6, lng: -117.9, acc: 20, dist: 10, status: 'onsite' };
+  const p = fc.clockPayload('clockOut', { id: 'shift-x', worker_name: 'Ana "AJ" Lopez', worker_phone: '+15550000001', job_id: 'j1', job_address: '1 Main St, Unit "B"\nCosta Mesa, CA', client_name: 'O\\Brien', job_scope: 'Line1\r\nLine2',
+    clock_in: cin, clock_out: { ...cin, at: '2026-11-03T23:00:00Z' }, summary: s, signature: 'iVBORw0KGgo+/=' });
+  for (const [k, v] of Object.entries(p)) if (typeof v === 'string') assert.doesNotMatch(v, /[",\\\u0000-\u001F\u2028\u2029\u201C\u201D]/, k);
+  assert.equal(p.workerName, "Ana 'AJ' Lopez"); assert.equal(p.jobAddress, "1 Main St; Unit 'B' Costa Mesa; CA"); assert.equal(p.clientName, 'O/Brien'); assert.equal(p.jobScopeOfWork, 'Line1 Line2');
+  assert.equal(p.scopeOfWork, "Tore out 'old' cabinets and / tile; 1200 sq ft");
+  assert.equal(p.signature, 'iVBORw0KGgo+/='); assert.equal(p.mapLink, 'https://www.google.com/maps/search/?api=1&query=33.6%2C-117.9'); assert.equal(p.hoursWorked, 8); assert.equal(p.latitude, 33.6);
 });
