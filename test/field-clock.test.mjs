@@ -221,3 +221,31 @@ test('Make clock payload carries no JSON-sensitive characters', () => {
   assert.equal(p.scopeOfWork, "Tore out 'old' cabinets and / tile; 1200 sq ft");
   assert.equal(p.signature, 'iVBORw0KGgo+/='); assert.equal(p.mapLink, 'https://www.google.com/maps/search/?api=1&query=33.6%2C-117.9'); assert.equal(p.hoursWorked, 8); assert.equal(p.latitude, 33.6);
 });
+
+test('jobAddress: source of truth is the board job name (GHL feed), then saved details; never blank', async () => {
+  assert.equal(fc.pickJobAddress('  12 Feed Ave ', { jobAddress: 'Old' }), '12 Feed Ave');
+  assert.equal(fc.pickJobAddress('', { jobAddress: '', closedJobName: '5 Closed Rd' }), '5 Closed Rd');
+  assert.equal(fc.pickJobAddress(null, { changeOrderName: 'CO 7 Pine St' }), 'CO 7 Pine St');
+  assert.equal(fc.pickJobAddress('', {}), '');
+  stubFetch();
+  const today = fc.pacificDay();
+  // j3 has no saved jobAddress (only ever assigned on the board); the GHL feed has its name.
+  await sql`insert into job_shared_state (job_id, version, active, data) values ('j3', 1, true, ${JSON.stringify({ reportDate: today, crew: [{ name: 'Bo Diaz', phone: '+15550000002' }] })})`;
+  await sql`insert into dispatch_feed_cache (key, data) values ('ghl-jobs', ${JSON.stringify([{ id: 'other', name: 'Nope' }, { id: 'j3', name: '267 E 16th St, Costa Mesa, CA 92627' }])})
+    on conflict (key) do update set data = excluded.data`;
+  let r = await call(bo, { op: 'clockIn', jobId: 'j3', requestId: rid(), location: at(60) });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(makeRuns.at(-1).action, 'clockIn'); assert.equal(makeRuns.at(-1).jobAddress, '267 E 16th St; Costa Mesa; CA 92627');
+  // Dispatch corrects the job name in GHL while Bo is on the clock: clock out carries the current one.
+  await sql`update dispatch_feed_cache set data = ${JSON.stringify([{ id: 'j3', name: '269 E 16th St, Costa Mesa, CA 92627' }])} where key = 'ghl-jobs'`;
+  r = await call(bo, { op: 'clockOut', requestId: rid(), location: at(60), work: 'Demo', ...SIGN });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(makeRuns.at(-1).action, 'clockOut'); assert.equal(makeRuns.at(-1).jobAddress, '269 E 16th St; Costa Mesa; CA 92627');
+  // Feed gone and the shift row blank: the send fills it from the saved job details.
+  await sql`delete from dispatch_feed_cache where key = 'ghl-jobs'`;
+  await sql`update job_shared_state set data = data || ${JSON.stringify({ jobAddress: '1 Saved St, Irvine, CA' })}::jsonb where job_id = 'j3'`;
+  r = await call(bo, { op: 'clockIn', jobId: 'j3', requestId: rid(), location: at(60) });
+  assert.equal(makeRuns.at(-1).jobAddress, '1 Saved St; Irvine; CA');
+  r = await call(bo, { op: 'clockOut', requestId: rid(), location: at(60), work: 'Demo', ...SIGN });
+  assert.equal(r.status, 200); assert.equal(makeRuns.at(-1).jobAddress, '1 Saved St; Irvine; CA');
+});

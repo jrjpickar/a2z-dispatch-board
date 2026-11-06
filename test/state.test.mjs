@@ -130,3 +130,11 @@ test('night work: PM start to next-morning end saves, the flag rides along, and 
   assert.equal(untouched.data.nightWork, true);
   assert.equal(mutateJob({ ...job, data: saved.data }, { action: 'reset_dispatch' }).data.nightWork, true);
 });
+
+test('jobAddress the board sends with assign / remove / reopen keeps the saved copy current', () => {
+  const start = { data: { crew: [] }, active: true };
+  let next = mutateJob(start, { action: 'assign', jobAddress: ' 12 Feed Ave ', crewChanges: [{ workerName: 'Ana', workerPhone: '+15555550100' }] });
+  assert.equal(next.data.jobAddress, '12 Feed Ave');
+  next = mutateJob({ data: next.data, active: true }, { action: 'remove', jobAddress: '', removedWorkers: [{ workerName: 'Ana', workerPhone: '+15555550100' }] });
+  assert.equal(next.data.jobAddress, '12 Feed Ave', 'a blank address never clears it');
+});
