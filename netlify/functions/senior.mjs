@@ -4,7 +4,9 @@
 //   GET  /api/senior?view=problems   -> { effects: [...], crm: [...] } Make runs and GHL syncs that didn't go through
 //   GET  /api/senior?view=history    -> { sends: [...] }          EOD sheets + Project Schedule PDFs sent
 //   GET  /api/senior?view=pending    -> { jobs: [...], held: [...] } crew sends waiting for their 12 hour mark, and undo-window holds
+//   GET  /api/senior?view=texts      -> schedule text tracker (per job and worker: waiting, sent, delivered, failed, overdue)
 //   GET  /api/senior?view=settings   -> senior settings
+//   POST /api/senior { action: "text_now", jobId, keys? }  send the job + text to crew members missing it (senior)
 //   POST /api/senior { action: "retry_effect" | "resolve_effect", effectId }
 //   POST /api/senior { action: "retry_crm" | "resolve_crm", jobId }
 //   POST /api/senior { action: "save_settings", defaultAssignedUserId?, defaultMarkupPercent?, adminPin?, clearAdminPin? }
@@ -19,7 +21,9 @@ import { seniorSettings, saveSettings, previewCrewText } from '../../lib/setting
 import { sendWorkflow, workflows, webhookUrl } from '../../lib/effects.mjs';
 import { syncJobSchedule } from '../../lib/ghl.mjs';
 import { QUIET_STATUSES } from '../../lib/effect-queue.mjs';
-import { holdSchedule, rowWorkers, holdHours } from '../../lib/daily-dispatch.mjs';
+import { holdSchedule, rowWorkers, holdHours, sendWorkersNow } from '../../lib/daily-dispatch.mjs';
+import { textTracker } from '../../lib/text-tracker.mjs';
+import { refreshTimer } from '../../lib/hold-timer.mjs';
 
 const KIND_LABELS = { project_schedule: 'Project Schedule PDF', workers: 'Worker notification', drivers: 'Driver notification', job_details: 'Job details update', job_stage: 'Job stage (complete/cancel)', container: 'Container update', driver_log: 'Driver log', eod_sheet: 'EOD sheet', job_log: 'Job log', worker_sent_home: 'Worker sent home', split_day: 'Split day booking', job_hours: 'Job hours', labor_added: 'Laborer added', logistics_reminder: 'Logistics reminder', labor_reminder: 'Labor reminder', crew_text: 'Crew schedule text', clock: 'Clock in / out' };
 const recordName = p => p ? String(p.jobName || p.jobAddress || p.clientName || p.workerName || p.driverName || '') : '';
@@ -41,7 +45,10 @@ async function problems(sql) {
     left join job_shared_state s on s.job_id = c.job_id where c.pending = true and c.updated_at < now() - interval '45 seconds' order by c.updated_at desc limit 100`).map(r => ({
       jobId: r.job_id, error: r.last_error || '', at: r.updated_at, name: String(r.data?.jobAddress || r.data?.clientName || '')
     }));
-  return { effects, crm };
+  // Schedule texts that should have gone out and didn't (Admin > Schedule text tracker).
+  let texts = { problems: 0, jobs: 0 };
+  try { const t = await textTracker(sql); texts = { problems: t.summary.problems, jobs: t.jobs.filter(j => j.problems).length }; } catch (error) { console.error('Text tracker check failed', error); }
+  return { effects, crm, texts };
 }
 // Pending sends: crew runs held until 12 hours before the job (grouped per job, with
 // when they go out), plus undo-window holds that have not gone yet.
@@ -57,7 +64,7 @@ async function pending(sql) {
     return {
       jobId: j.jobId,
       name: String(state.jobAddress || state.clientName || recordName(first) || j.jobId),
-      start: iso(j.start), dueAt: iso(j.dueAt),
+      start: iso(j.start), dueAt: iso(j.dueAt), overdue: j.dueAt != null && j.dueAt < Date.now() - 5 * 60e3,
       waiting: j.dueAt == null ? (state.active === false ? 'Job is closed; these will be dropped' : 'Waits for a job date, or Send now') : '',
       items: j.rows.map(r => ({
         id: r.effect_id, kind: r.kind, action: String(r.payload?.action || ''),
@@ -90,11 +97,12 @@ export default async function handler(request) {
       const view = new URL(request.url).searchParams.get('view');
       // Problems, activity and send history can be shared with every admin (read-only)
       // from the Admin page layout. Settings stay senior only.
-      const panel = { problems: 'problems', activity: 'activity', history: 'history', pending: 'pending' }[view];
+      const panel = { problems: 'problems', activity: 'activity', history: 'history', pending: 'pending', texts: 'textTracker' }[view];
       if (panel) await requirePanel(request, sql, panel); else await requireSenior(request, sql);
       if (view === 'activity') return json({ activity: await recentActivity(sql) });
       if (view === 'problems') return json(await problems(sql));
       if (view === 'pending') return json(await pending(sql));
+      if (view === 'texts') return json(await textTracker(sql));
       if (view === 'history') {
         const runs = (await sql`select effect_id, kind, status, last_error, payload, created_at, updated_at from dispatch_effects order by created_at desc limit 500`).map(r => ({
           id: r.effect_id, kind: r.kind, label: KIND_LABELS[r.kind] || r.kind, status: r.status,
@@ -167,6 +175,16 @@ export default async function handler(request) {
       });
       if (cleared.length) await logActivity(sql, session, 'Acknowledged GHL schedule sync', jobId);
       return json({ ok: true, ...(await problems(sql)) });
+    }
+    if (body.action === 'text_now') {
+      const jobId = String(body.jobId || '').slice(0, 160);
+      if (!jobId) throw new StateError('Pick the job');
+      const keys = (Array.isArray(body.keys) ? body.keys : []).map(k => String(k).slice(0, 160)).slice(0, 40);
+      const result = await sendWorkersNow(sql, jobId, { keys });
+      try { await refreshTimer(sql); } catch {}
+      await logActivity(sql, session, 'Sent schedule text from the text tracker', String(body.jobName || jobId).slice(0, 200), { jobId, keys, makeSent: result.makeSent, texted: result.texted, ok: result.ok });
+      const error = result.skipped === 'closed' ? 'This job is closed.' : result.skipped === 'no_date' ? 'This job has no date yet.' : 'Some of it did not finish. Check Make / GHL problems.';
+      return json({ ...(result.ok ? { ok: true } : { error }), ...result, tracker: await textTracker(sql) }, result.ok ? 200 : 502);
     }
     if (body.action === 'preview_crew_text') return json(previewCrewText(body.crewText));
     if (body.action === 'save_settings') {

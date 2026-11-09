@@ -48,6 +48,7 @@ function workerJob(j, identity) {
     reportTime: j.reportTime || '',
     reportEndDate: j.reportEndDate || '',
     reportEndTime: j.reportEndTime || '',
+    nightWork: j.nightWork === true || j.nightWork === 'true',
     crew: crew.filter(w => w.name).map(w => ({ name: w.name, isYou: isSameIdentity(w, identity) }))
   };
 }

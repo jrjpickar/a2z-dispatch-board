@@ -1,7 +1,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
-import { waitsForHold, isRapid, claimRapid, syncJob, waitingSummary, ensureHoldTables, holdSchedule, notifiedOnJob, resendTimes } from '../../lib/daily-dispatch.mjs';
+import { waitsForHold, isRapid, claimRapid, syncJob, waitingSummary, ensureHoldTables, holdSchedule, notifiedOnJob, resendTimes, owedTexts, recordDontText } from '../../lib/daily-dispatch.mjs';
 import { sessionFromRequest } from '../../lib/session.mjs';
 import { logActivity } from '../../lib/activity.mjs';
 import { refreshTimer, startRunner } from '../../lib/hold-timer.mjs';
@@ -14,6 +14,7 @@ async function overdueCheck(sql) {
   lastOverdueCheck = Date.now();
   const late = (await holdSchedule(sql)).map(j => j.dueAt).filter(d => d != null && d < Date.now() - 120e3);
   if (late.length) await startRunner(Math.min(...late));
+  else if ((await owedTexts(sql)).length) await refreshTimer(sql); // a text cut off after its Make run
 }
 const idList = value => (Array.isArray(value) ? value : []).map(v => String(v || '').slice(0, 240)).filter(Boolean).slice(0, 20);
 export default async function handler(request) {
@@ -60,6 +61,12 @@ export default async function handler(request) {
       const result = await resendTimes(sql, jobId, { previous: prev, by: session?.name || '' });
       if (!result.duplicate) await logActivity(sql, session, 'Texted crew new job times', String(body.jobAddress || jobId).slice(0, 200), { jobId, previous: prev, was, makeSent: result.makeSent, texted: result.texted });
       return json(result.ok ? result : { ...result, error: result.skipped ? 'This job is closed.' : 'Some of it did not finish. Check Admin > Make / GHL problems.' });
+    }
+    // "Don't text workers": recorded only, so the text tracker shows it as Don't text, not missed.
+    if (body.op === 'dont_text') {
+      const session = sessionFromRequest(request);
+      const n = await recordDontText(sql, { jobId: String(body.jobId || '').slice(0, 160), reportDate: String(body.reportDate || ''), workers: body.workers, by: session?.name || '' });
+      return json({ ok: true, recorded: n });
     }
     // Undo window controls for held sends.
     if (body.op === 'cancel') {

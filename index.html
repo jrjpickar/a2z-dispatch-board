@@ -1712,6 +1712,38 @@
 
   /* ---------- Admin page: customizable panel grid (shared layout, senior admins edit) ---------- */
   :root { --chart-1: #e8622c; --chart-ok: #2f74c0; --chart-bad: #c0392b; --chart-grid: #e6e6e3; --chart-axis: #6b6d70; }
+  /* Schedule text tracker (Admin) */
+  .tt-summary { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px 0; }
+  .tt-stat { flex: 1 1 110px; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--card); }
+  .tt-stat b { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 20px; line-height: 1.1; }
+  .tt-stat span { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--grey-dark); }
+  .tt-stat.bad { border-color: var(--danger); } .tt-stat.bad b { color: var(--danger); }
+  .tt-stat.ok b { color: #2e7d4f; }
+  .tt-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; }
+  .tt-filters button { border: 1px solid var(--border); background: var(--card); color: var(--ink); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .tt-filters button[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+  .tt-day { font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: .05em; font-size: 13px; color: var(--grey-dark); padding: 10px 14px 4px; }
+  .tt-job { border-top: 1px solid var(--stripe); padding: 8px 14px 10px; }
+  .tt-job-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 10px; }
+  .tt-job-head b { font-size: 13.5px; }
+  .tt-job-head small { font-size: 12px; color: var(--grey-dark); }
+  .tt-job.has-problem { box-shadow: inset 3px 0 0 var(--danger); }
+  .tt-rows { list-style: none; margin: 6px 0 0; padding: 0; }
+  .tt-rows li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 6px 0; border-bottom: 1px dashed var(--stripe); font-size: 13px; }
+  .tt-rows li:last-child { border-bottom: 0; }
+  .tt-who small { display: block; font-size: 11.5px; color: var(--grey-dark); overflow-wrap: anywhere; }
+  .tt-side { display: flex; align-items: center; gap: 6px; justify-self: end; flex-wrap: wrap; justify-content: flex-end; }
+  .tt-pill { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; border-radius: 999px; padding: 3px 9px; white-space: nowrap; border: 1px solid transparent; }
+  .tt-pill.ok { background: #e2f1e6; color: #2e7d4f; }
+  .tt-pill.wait { background: var(--gold-tint); color: #7a5d10; }
+  .tt-pill.bad { background: #fbeae7; color: var(--danger); border-color: var(--danger); }
+  .tt-pill.muted { background: var(--stripe); color: var(--grey-dark); }
+  .tt-side .job-stage-btn { padding: 4px 10px; font-size: 11px; }
+  body.dark-mode .tt-pill.ok { background: #1f3a2a; color: #7fd19b; }
+  body.dark-mode .tt-pill.wait { color: #f0d57a; }
+  body.dark-mode .tt-pill.bad { background: #3d1f1b; color: #f08a7c; }
+  body.dark-mode .tt-stat.ok b { color: #7fd19b; }
+  @media (max-width: 600px) { .tt-rows li { grid-template-columns: 1fr; } .tt-side { justify-self: start; justify-content: flex-start; } }
   body.dark-mode { --chart-1: #e8622c; --chart-ok: #4a8bd4; --chart-bad: #e0604f; --chart-grid: #33373b; --chart-axis: #9ea3a8; }
   .dash-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 12px; }
   .dash-toolbar-note { font-size: 12px; color: var(--ink-soft); }
@@ -2199,6 +2231,15 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
       <div class="panel-head"><h2>Pending sends</h2><div class="logistics-toolbar"><span class="mono" id="pendingCount">0</span></div></div>
       <div class="logistics-note" id="pendingNote">Crew texts and worker notifications waiting on the server to go out 12 hours before each job. Nothing here needs fixing; use Send now on the job to send early.</div>
       <ul class="admin-list admin-list-scroll" id="pendingList"><li class="load-state">Loading...</li></ul>
+    </div>
+    <div class="panel" data-panel="textTracker">
+      <div class="panel-head"><h2>Schedule text tracker</h2><div class="logistics-toolbar"><span class="mono" id="ttCount"></span><button type="button" class="job-stage-btn edit" id="ttRefresh">Refresh</button></div></div>
+      <div class="logistics-note">Every worker on an open job from yesterday through the next 7 days, and what happened to their schedule text. <b>Sent</b> means Twilio took it; <b>Delivered</b> means the carrier confirmed it. Anything red needs you: it should have gone out and didn't.</div>
+      <div class="tt-summary" id="ttSummary"></div>
+      <div class="tt-filters" role="group" aria-label="Show">
+        <button type="button" data-tt-filter="problems" aria-pressed="false">Needs attention</button><button type="button" data-tt-filter="pending" aria-pressed="false">Waiting</button><button type="button" data-tt-filter="sent" aria-pressed="false">Sent</button><button type="button" data-tt-filter="all" aria-pressed="true">All</button>
+      </div>
+      <div class="admin-list-scroll tt-list" id="ttList"><p class="load-state">Loading...</p></div>
     </div>
     <div class="panel" data-panel="settings">
       <div class="panel-head"><h2>Settings</h2></div>
@@ -4313,6 +4354,8 @@ async function assignCrew(jobId, workers, confirmBtn, { rapid = false, noText = 
     } catch (error) { list.forEach(w => splitFailed.set(w.workerName, `${other.name || otherId}: ${error.message}`)); }
   }
   if (noText) {
+    // Recorded on the server so the Schedule text tracker shows "Don't text", not a missed text. Sends nothing.
+    effectRequest({ op: 'dont_text', jobId, reportDate: getReportDate(job), workers: assignedWorkers }).catch(() => {});
     if (splitFailed.size) showToast(`Split day not finished for ${[...splitFailed].map(([n, why]) => `${n} (${why})`).join('; ')}. They are on this job only. No texts were sent.`, true);
     else showToast(assignedWorkers.length === 1 ? `${assignedWorkers[0].workerName} assigned. No text sent.` : `Crew assigned. No texts sent to the ${assignedWorkers.length} workers.`);
     render();
@@ -10221,11 +10264,13 @@ async function seniorApi(view, body) {
 const seniorWhen = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
 function renderProblems(data) {
   const effects = data.effects || [], crm = data.crm || [];
-  document.getElementById('problemCount').textContent = String(effects.length + crm.length);
+  const texts = data.texts || { problems: 0 };
+  document.getElementById('problemCount').textContent = String(effects.length + crm.length + (texts.problems || 0));
   const canAct = !!currentSession.isSenior;
   document.getElementById('resolveAllProblems').hidden = !canAct || effects.length < 2;
   const list = document.getElementById('problemList');
   const rows = [
+    ...(texts.problems ? [`<li><div class="who"><b>Schedule texts not sent: ${texts.problems}</b><small>${texts.jobs} ${texts.jobs === 1 ? 'job' : 'jobs'}. Open Schedule text tracker (Needs attention) to see who and send them.</small></div><div class="problem-actions"><button type="button" class="job-stage-btn edit" data-tt-jump="1">Show</button></div></li>`] : []),
     ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.webhook ? `<small>Webhook: ${sessionEsc(p.webhook)}</small>` : ''}${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
       + (!canAct ? '' : `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Acknowledge</button></div>`) + '</li>'),
     ...crm.map(c => `<li><div class="who">GHL schedule sync${c.name ? ' · ' + sessionEsc(c.name) : ''}<small>${sessionEsc([c.jobId, seniorWhen(c.at)].filter(Boolean).join(' · '))}</small>${c.error ? `<small class="err">${sessionEsc(c.error)}</small>` : ''}</div>`
@@ -10237,14 +10282,81 @@ function renderPending(data) {
   const jobs = data.jobs || [], held = data.held || [];
   const count = jobs.reduce((n, j) => n + j.items.length, 0) + held.length;
   document.getElementById('pendingCount').textContent = String(count);
-  if (data.holdHours != null) document.getElementById('pendingNote').textContent = `Crew texts and worker notifications waiting on the server to go out ${data.holdHours} hours before each job. Nothing here needs fixing; use Send now on the job to send early.`;
+  const overdue = jobs.filter(j => j.overdue).length;
+  if (data.holdHours != null) document.getElementById('pendingNote').textContent = overdue
+    ? `${overdue} ${overdue === 1 ? 'job is' : 'jobs are'} past the send time and still waiting (red). The server is retrying; use Send now on the job, or the Schedule text tracker, to send it yourself.`
+    : `Crew texts and worker notifications waiting on the server to go out ${data.holdHours} hours before each job. Use Send now on the job to send early.`;
   const rows = [
-    ...jobs.map(j => `<li><div class="who"><b>${sessionEsc(j.name)}</b><small>${sessionEsc(j.dueAt ? 'Sends ' + seniorWhen(j.dueAt) : j.waiting)}${j.start ? ' · job starts ' + sessionEsc(seniorWhen(j.start)) : ''}</small>`
+    ...jobs.map(j => `<li${j.overdue ? ' class="tt-overdue"' : ''}><div class="who"><b>${sessionEsc(j.name)}</b><small${j.overdue ? ' class="err"' : ''}>${sessionEsc(j.dueAt ? (j.overdue ? 'OVERDUE: should have sent ' : 'Sends ') + seniorWhen(j.dueAt) : j.waiting)}${j.start ? ' · job starts ' + sessionEsc(seniorWhen(j.start)) : ''}</small>`
       + j.items.map(i => `<small>${sessionEsc(i.label)}${i.workers.length ? ': ' + sessionEsc(i.workers.join(', ')) : ''}</small>`).join('') + '</div></li>'),
     ...held.map(h => `<li><div class="who">${sessionEsc(h.label)}${h.name ? ' · ' + sessionEsc(h.name) : ''}<small>${sessionEsc(['Undo window', h.action, h.dueAt ? 'sends ' + seniorWhen(h.dueAt) : ''].filter(Boolean).join(' · '))}</small></div></li>`)
   ];
   document.getElementById('pendingList').innerHTML = rows.length ? rows.join('') : '<li class="load-state">Nothing waiting. Every crew text has gone out.</li>';
 }
+/* Schedule text tracker (Admin, senior by default): GET /api/senior?view=texts.
+   Text now: POST { action: 'text_now', jobId, keys } sends the job + schedule text to those
+   workers (never twice). Retry resends a failed text run (same run, so nobody gets it twice). */
+let ttData = null, ttFilter = 'all', ttBusy = false;
+const TT_TONE = { delivered: 'ok', sent: 'ok', sent_before: 'ok', sending: 'wait', pending: 'wait', overdue: 'bad', failed: 'bad', undelivered: 'bad', missed: 'bad', no_phone: 'bad', dont_text: 'muted', not_queued: 'muted' };
+const ttDay = ymd => { const d = new Date(ymd + 'T12:00:00Z'); return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' }); };
+function ttMatches(w) {
+  if (ttFilter === 'problems') return w.problem;
+  if (ttFilter === 'pending') return ['pending', 'sending'].includes(w.status);
+  if (ttFilter === 'sent') return ['sent', 'delivered', 'sent_before'].includes(w.status);
+  return true;
+}
+async function loadTextTracker() {
+  try { ttData = await seniorApi('texts'); if (!ttData.summary.problems && ttFilter === 'problems') ttFilter = 'all'; renderTextTracker(); }
+  catch (e) { document.getElementById('ttList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }
+}
+function renderTextTracker() {
+  document.querySelectorAll('[data-tt-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ttFilter === ttFilter)));
+  if (!ttData) return;
+  const sm = ttData.summary || {};
+  document.getElementById('ttCount').textContent = sm.problems ? `${sm.problems} NEED ATTENTION` : `${sm.workers || 0} WORKERS`;
+  document.getElementById('ttSummary').innerHTML = [
+    ['Need attention', sm.problems, sm.problems ? 'bad' : ''], ['Waiting', sm.pending, ''], ['Sent', sm.sent, 'ok'], ['Delivered', sm.delivered, 'ok']
+  ].map(([l, n, c]) => `<div class="tt-stat ${c}"><b>${Number(n || 0)}</b><span>${l}</span></div>`).join('');
+  const canAct = !!currentSession.isSenior;
+  let html = '', lastDay = '';
+  for (const j of ttData.jobs || []) {
+    const rows = j.workers.filter(ttMatches);
+    if (!rows.length) continue;
+    if (j.date !== lastDay) { lastDay = j.date; html += `<div class="tt-day">${sessionEsc(j.date === ttData.today ? 'Today · ' + ttDay(j.date) : ttDay(j.date))}</div>`; }
+    const missing = j.workers.filter(w => w.canTextNow).map(w => w.key);
+    html += `<div class="tt-job${j.problems ? ' has-problem' : ''}"><div class="tt-job-head"><div><b>${sessionEsc(j.name)}</b> <small>${sessionEsc([j.client, j.start ? 'starts ' + seniorWhen(j.start) : '', j.dueAt ? 'text time ' + seniorWhen(j.dueAt) : ''].filter(Boolean).join(' · '))}</small></div>`
+      + (canAct && missing.length > 1 ? `<button type="button" class="job-stage-btn edit" data-tt-send="${sessionEsc(j.jobId)}" data-tt-keys="${sessionEsc(missing.join('|'))}" data-tt-name="${sessionEsc(j.name)}">Text all ${missing.length} now</button>` : '') + '</div><ul class="tt-rows">'
+      + rows.map(w => `<li><div class="tt-who">${sessionEsc(w.name)}<small>${sessionEsc([w.phone, w.at ? (w.status === 'pending' ? 'sends ' : '') + seniorWhen(w.at) : '', w.detail].filter(Boolean).join(' · '))}</small></div><div class="tt-side"><span class="tt-pill ${TT_TONE[w.status] || 'muted'}">${sessionEsc(w.label)}</span>`
+        + (canAct && w.canTextNow ? `<button type="button" class="job-stage-btn edit" data-tt-send="${sessionEsc(j.jobId)}" data-tt-keys="${sessionEsc(w.key)}" data-tt-name="${sessionEsc(w.name)}">Text now</button>` : '')
+        + (canAct && w.canRetry && w.effectId ? `<button type="button" class="job-stage-btn edit" data-tt-retry="${sessionEsc(w.effectId)}" data-tt-name="${sessionEsc(w.name)}">Retry</button>` : '')
+        + '</div></li>').join('') + '</ul></div>';
+  }
+  const empty = { problems: 'Nothing needs attention. Every text that was due went out.', pending: 'No texts waiting.', sent: 'No texts sent yet in this range.', all: 'No crew on open jobs from yesterday through the next 7 days.' }[ttFilter];
+  document.getElementById('ttList').innerHTML = html || `<p class="load-state">${empty}</p>`;
+}
+document.querySelector('[data-panel="textTracker"]').addEventListener('click', async e => {
+  const f = e.target.closest('[data-tt-filter]');
+  if (f) { ttFilter = f.dataset.ttFilter; renderTextTracker(); return; }
+  if (e.target.closest('#ttRefresh')) { document.getElementById('ttList').innerHTML = '<p class="load-state">Loading...</p>'; loadTextTracker(); return; }
+  const send = e.target.closest('[data-tt-send]'), retry = e.target.closest('[data-tt-retry]');
+  if ((!send && !retry) || ttBusy || !currentSession.isSenior) return;
+  const name = (send || retry).dataset.ttName || '';
+  if (send && !confirm(`Send the schedule text now to ${name}? Anyone not yet sent this job also gets their worker notification (Make). Nobody gets it twice.`)) return;
+  if (retry && !confirm(`Retry the schedule text for ${name}? Only the parts that didn't finish are sent again.`)) return;
+  ttBusy = true; (send || retry).disabled = true; (send || retry).textContent = 'Sending...';
+  try {
+    if (send) {
+      const job = (ttData.jobs || []).find(j => j.jobId === send.dataset.ttSend) || {};
+      const data = await seniorApi('', { action: 'text_now', jobId: send.dataset.ttSend, keys: send.dataset.ttKeys.split('|').filter(Boolean), jobName: job.name || '' });
+      if (data.tracker) { ttData = data.tracker; renderTextTracker(); }
+      showToast(data.texted ? `Texted ${data.texted} ${data.texted === 1 ? 'worker' : 'workers'}.` : 'Nothing new to send: they already have it.');
+    } else {
+      await seniorApi('', { action: 'retry_effect', effectId: retry.dataset.ttRetry });
+      showToast('Retried. Twilio took the text.');
+    }
+  } catch (err) { if (err.data?.tracker) { ttData = err.data.tracker; renderTextTracker(); } showToast(err.message, true); }
+  finally { ttBusy = false; loadTextTracker(); seniorApi('problems').then(renderProblems).catch(() => {}); seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {}); }
+});
 function renderActivity(items) {
   document.getElementById('activityCount').textContent = String(items.length);
   document.getElementById('activityList').innerHTML = items.length ? items.map(a => `<li class="activity-row"><div class="who"><b>${sessionEsc(a.actor || 'Someone')}</b> ${sessionEsc(a.action.charAt(0).toLowerCase() + a.action.slice(1))}${a.target ? ': ' + sessionEsc(a.target) : ''}</div><span class="when">${seniorWhen(a.at)}</span></li>`).join('') : '<li class="load-state">No activity yet.</li>';
@@ -10352,6 +10464,7 @@ async function loadSeniorTools() {
   const jobs = [
     see('problems') && seniorApi('problems').then(renderProblems).catch(e => { document.getElementById('problemList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
     see('pending') && seniorApi('pending').then(renderPending).catch(e => { document.getElementById('pendingList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
+    see('textTracker') && loadTextTracker(),
     see('activity') && seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(e => { document.getElementById('activityList').innerHTML = `<li class="load-state">${sessionEsc(e.message)}</li>`; }),
     see('history') && seniorApi('history').then(d => { seniorSends = d.sends || []; seniorWebhookRuns = d.runs || []; renderHistory(); }).catch(e => { document.getElementById('historyList').innerHTML = `<p class="load-state">${sessionEsc(e.message)}</p>`; }),
     currentSession.isSenior && seniorApi('settings').then(renderSettings).catch(e => showToast(e.message, true))
@@ -10386,6 +10499,7 @@ document.getElementById('webhookHistoryList').addEventListener('click', resubmit
 document.getElementById('historyList').addEventListener('click', resubmitFromHistory);
 
 document.getElementById('problemList').addEventListener('click', async e => {
+  if (e.target.closest('[data-tt-jump]')) { ttFilter = 'problems'; renderTextTracker(); const el = dashEl('textTracker'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   const btn = e.target.closest('.problem-btn'); if (!btn) return;
   const { action } = btn.dataset;
   if (action === 'retry_effect' && !confirm("Send this run to Make again? If it actually went through the first time, people may get a duplicate message. Check Make's history if unsure.")) return;

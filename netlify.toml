@@ -61,6 +61,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/crew-text-status"
+  to = "/.netlify/functions/crew-text-status"
+  status = 200
+
+[[redirects]]
   from = "/api/oauth/callback"
   to = "/.netlify/functions/ghl-oauth"
   status = 200

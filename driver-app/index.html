@@ -175,6 +175,18 @@
   .clock-note { font-size: 12.5px; color: var(--grey-dark); }
   .day-head { font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 0.06em; color: var(--grey-dark); margin-bottom: 2px; text-transform: uppercase; }
   .job-card.tomorrow { border-color: var(--gold); }
+  .week-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; }
+  .week-chip { border: 1px solid var(--border); background: var(--card); border-radius: 8px; padding: 6px 0 7px; text-align: center; font-size: 11px; color: var(--grey-dark); cursor: pointer; font-family: inherit; }
+  .week-chip b { display: block; font-family: 'Oswald', sans-serif; font-size: 17px; color: var(--ink); line-height: 1.2; }
+  .week-chip i { display: block; width: 6px; height: 6px; border-radius: 50%; margin: 3px auto 0; background: transparent; }
+  .week-chip.has i { background: var(--orange); }
+  .week-chip.today { border-color: var(--ink); }
+  .week-chip.has { color: var(--ink-soft); }
+  .week-day { scroll-margin-top: 70px; }
+  .week-day .day-head { margin: 16px 2px 8px; font-size: 14px; }
+  .week-day .no-job { font-size: 13px; color: var(--grey-dark); padding: 2px 2px 6px; border-bottom: 1px dashed var(--border); margin-bottom: 4px; }
+  .job-card.compact .job-scope { display: none; }
+  .job-tag { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey-dark); background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2px 8px; margin-top: 8px; margin-right: 6px; }
   .job-map { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--orange-dark); text-decoration: none; }
   .sheet-scrim { position: fixed; inset: 0; background: rgba(10,11,12,0.45); z-index: 30; display: flex; align-items: flex-end; justify-content: center; }
   .sheet { background: var(--card); width: 100%; max-width: 640px; border-radius: 18px 18px 0 0; padding: 18px 16px calc(22px + env(safe-area-inset-bottom)); display: grid; gap: 12px; max-height: 92vh; overflow-y: auto; }
@@ -315,6 +327,7 @@
       installIOS: 'Install this app: tap the Share icon below, then "Add to Home Screen".',
       install: 'Install',
       today: 'Today', tomorrow: 'Tomorrow', later: 'Coming Up',
+      myWeek: 'My Week', noJobDay: 'No job scheduled', dayOf: 'Day {n} of {t}', nightShift: 'Night shift', jobsCount: '{n} jobs',
       locOn: 'Location on', locNeed: 'Location needed', locOff: 'Location blocked', fixIt: 'Fix it',
       setupT: 'Location is required to clock in', setupB: 'A2Z records where you are when you tap Clock In or Clock Out, and while you are on the clock with the app open. Never off the clock.', setupBtn: 'Turn on location',
       clockIn: 'Clock In', clockOut: 'Clock Out', locRequired: 'Location required', getting: 'Getting your location...', saving2: 'Saving...',
@@ -374,6 +387,7 @@
       installIOS: 'Instala esta app: toca el ícono de Compartir abajo, luego "Agregar a Inicio".',
       install: 'Instalar',
       today: 'Hoy', tomorrow: 'Mañana', later: 'Próximos',
+      myWeek: 'Mi Semana', noJobDay: 'Sin trabajo programado', dayOf: 'Día {n} de {t}', nightShift: 'Turno de noche', jobsCount: '{n} trabajos',
       locOn: 'Ubicación activada', locNeed: 'Se necesita ubicación', locOff: 'Ubicación bloqueada', fixIt: 'Arreglar',
       setupT: 'Se requiere ubicación para marcar entrada', setupB: 'A2Z registra dónde estás cuando tocas Marcar Entrada o Marcar Salida, y mientras trabajas con la app abierta. Nunca fuera del horario.', setupBtn: 'Activar ubicación',
       clockIn: 'Marcar Entrada', clockOut: 'Marcar Salida', locRequired: 'Se requiere ubicación', getting: 'Buscando tu ubicación...', saving2: 'Guardando...',
@@ -548,31 +562,66 @@
 
   function jobCard(job, opts) {
     opts = opts || {};
-    const schedule = formatTimeRange(job.reportDate, job.reportTime, job.reportEndDate, job.reportEndTime);
+    const schedule = opts.schedule || formatTimeRange(job.reportDate, job.reportTime, job.reportEndDate, job.reportEndTime);
     const crew = job.crew || [];
-    return '<div class="job-card' + (opts.tomorrow ? ' tomorrow' : '') + '" data-job-id="' + escapeHtml(job.jobId) + '">'
-      + (opts.tomorrow ? '<div class="day-head">' + escapeHtml(dayHead(job.reportDate)) + '</div>' : '')
+    return '<div class="job-card' + (opts.tomorrow ? ' tomorrow' : '') + (opts.compact ? ' compact' : '') + '" data-job-id="' + escapeHtml(job.jobId) + '">'
+      + (opts.tomorrow && !opts.inWeek ? '<div class="day-head">' + escapeHtml(dayHead(job.reportDate)) + '</div>' : '')
       + '<h2>' + escapeHtml(job.jobAddress || job.clientName || t('job')) + '</h2>'
       + '<div class="job-meta">'
       + '<span class="schedule">' + escapeHtml(schedule) + '</span>'
       + (job.clientName ? '<span>' + escapeHtml(job.clientName) + '</span>' : '')
       + '</div>'
+      + (opts.dayN && opts.dayT > 1 ? '<span class="job-tag">' + escapeHtml(t('dayOf', { n: opts.dayN, t: opts.dayT })) + '</span>' : '')
+      + (job.nightWork ? '<span class="job-tag">' + escapeHtml(t('nightShift')) + '</span>' : '')
       + (job.scopeOfWork ? '<div class="job-scope">' + escapeHtml(job.scopeOfWork) + '</div>' : '')
       + (crew.length ? '<div class="crew-label">' + escapeHtml(t('crewOnJob')) + '</div><ul class="crew-list">'
           + crew.map(w => '<li class="' + (w.isYou ? 'you' : '') + '">' + escapeHtml(w.name) + (w.isYou ? escapeHtml(t('you')) : '') + '</li>').join('')
           + '</ul>' : '')
-      + (opts.tomorrow && job.jobAddress ? '<a class="job-map" href="' + mapsLink(job.jobAddress) + '" target="_blank" rel="noopener">' + escapeHtml(t('map')) + ' ↗</a>' : '')
+      + ((opts.tomorrow || opts.inWeek) && job.jobAddress ? '<a class="job-map" href="' + mapsLink(job.jobAddress) + '" target="_blank" rel="noopener">' + escapeHtml(t('map')) + ' ↗</a>' : '')
       + (opts.today ? clockBlock(job) : '')
       + '</div>';
+  }
+
+  // The days a job runs (report date through end date). A night shift that ends the next
+  // morning belongs to the day it starts. No date: no days.
+  function jobDays(job) {
+    const start = job.reportDate || ''; if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return [];
+    let end = job.reportEndDate && job.reportEndDate >= start ? job.reportEndDate : start;
+    if (job.nightWork && end > start && job.reportTime && job.reportEndTime && job.reportEndTime <= job.reportTime) end = shiftDay(end, -1);
+    const days = [];
+    for (let d = start; d <= end && days.length < 62; d = shiftDay(d, 1)) days.push(d);
+    return days;
+  }
+  function shiftDay(ymd, n) { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); }
+  // One day of a job: that day's hours ("7:00 AM – 3:30 PM").
+  function dayHours(job) {
+    const a = to12(job.reportTime), b = to12(job.reportEndTime);
+    return a && b ? a + ' – ' + b : a || t('notScheduled');
+  }
+  function weekStrip(week, byDay, today) {
+    const loc = currentLang === 'es' ? 'es-US' : 'en-US';
+    return '<div class="week-strip" role="navigation" aria-label="' + escapeHtml(t('myWeek')) + '">' + week.map(d => {
+      const dt = new Date(d + 'T12:00:00Z'), n = byDay.get(d).length;
+      return '<button type="button" class="week-chip' + (n ? ' has' : '') + (d === today ? ' today' : '') + '" data-week-day="' + d + '" aria-label="' + escapeHtml(dayHead(d) + (n ? ' · ' + (n === 1 ? '1' : t('jobsCount', { n: n })) : ' · ' + t('noJobDay'))) + '">'
+        + escapeHtml(dt.toLocaleDateString(loc, { weekday: 'short', timeZone: 'UTC' }).replace('.', '')) + '<b>' + dt.getUTCDate() + '</b><i></i></button>';
+    }).join('') + '</div>';
   }
 
   function renderData(data) {
     lastData = data;
     const routes = data.routes || [], jobs = data.jobs || [];
-    const today = pacificDay(0), tmr = pacificDay(1);
+    const today = pacificDay(0);
+    // The worker's week: today and the next 6 days. A job that runs several days shows on each day.
+    const week = [0, 1, 2, 3, 4, 5, 6].map(pacificDay);
+    const byDay = new Map(week.map(d => [d, []]));
+    const inWeek = new Set();
+    for (const j of jobs) {
+      const days = jobDays(j);
+      days.forEach((d, i) => { if (byDay.has(d)) { byDay.get(d).push({ job: j, n: i + 1, t: days.length }); inWeek.add(j.jobId); } });
+    }
+    byDay.forEach(list => list.sort((a, b) => (a.job.reportTime || '99:99').localeCompare(b.job.reportTime || '99:99')));
     const todayJobs = sortByDate(jobs.filter(j => jobIsToday(j, today)));
-    const tmrJobs = sortByDate(jobs.filter(j => !jobIsToday(j, today) && j.reportDate === tmr));
-    const laterJobs = sortByDate(jobs.filter(j => !jobIsToday(j, today) && j.reportDate !== tmr));
+    const laterJobs = sortByDate(jobs.filter(j => !jobIsToday(j, today) && !inWeek.has(j.jobId)));
     const open = clock.open;
     const orphan = open && !todayJobs.some(j => j.jobId === open.jobId);
     if (!routes.length && !jobs.length && !open) {
@@ -581,18 +630,34 @@
     }
     let html = '';
     if (todayJobs.length || open) html += locationTop(!open);
+    if (jobs.length) html += weekStrip(week, byDay, today);
     if (orphan) html += '<div class="section-label">' + escapeHtml(t('today')) + '</div>' + jobCard({ jobId: open.jobId, jobAddress: open.jobAddress, clientName: open.clientName }, { today: true });
-    const tomorrowHtml = tmrJobs.length ? '<div class="section-label">' + escapeHtml(t('tomorrow')) + '</div>' + tmrJobs.map(j => jobCard(j, { tomorrow: true })).join('') : '';
-    // Right after clocking out, tomorrow goes first: it's the next thing they need.
+    let weekHtml = '';
+    if (jobs.length) {
+      weekHtml += '<div class="section-label">' + escapeHtml(t('myWeek')) + '</div>';
+      week.slice(1).forEach((d, i) => {
+        const list = byDay.get(d), tomorrow = i === 0;
+        weekHtml += '<div class="week-day" id="wd-' + d + '"><div class="day-head">' + escapeHtml((tomorrow ? t('tomorrow') + ' · ' : '') + dayHead(d)) + '</div>'
+          + (list.length ? list.map(x => jobCard(x.job, { tomorrow: tomorrow, inWeek: true, compact: !tomorrow, dayN: x.n, dayT: x.t, schedule: dayHours(x.job) })).join('') : '<div class="no-job">' + escapeHtml(t('noJobDay')) + '</div>')
+          + '</div>';
+      });
+    }
+    // Right after clocking out, the rest of the week goes first: tomorrow is the next thing they need.
     const last = (clock.recent || [])[0];
     const justOut = !open && last && last.clockOut && Date.now() - Date.parse(last.clockOut.at) < 12 * 3600000;
-    if (justOut) html += tomorrowHtml;
-    if (todayJobs.length) html += (orphan ? '' : '<div class="section-label">' + escapeHtml(t('today')) + '</div>') + todayJobs.map(j => jobCard(j, { today: true })).join('');
-    if (!justOut) html += tomorrowHtml;
+    if (justOut) html += weekHtml;
+    if (todayJobs.length) html += '<div class="week-day" id="wd-' + today + '">' + (orphan ? '' : '<div class="section-label">' + escapeHtml(t('today')) + '</div>')
+      + todayJobs.map(j => { const days = jobDays(j), n = days.indexOf(today) + 1; return jobCard(j, { today: true, dayN: n, dayT: days.length, schedule: days.length > 1 ? dayHours(j) : '' }); }).join('') + '</div>';
+    if (!justOut) html += weekHtml;
     if (routes.length) html += '<div class="section-label">' + escapeHtml(t('myRoutes')) + '</div>' + sortByDate(routes).map(routeCard).join('');
     if (laterJobs.length) html += '<div class="section-label">' + escapeHtml(t('later')) + '</div>' + laterJobs.map(j => jobCard(j)).join('');
     routesList.innerHTML = html;
   }
+  routesList.addEventListener('click', e => {
+    const chip = e.target.closest && e.target.closest('[data-week-day]'); if (!chip) return;
+    const el = document.getElementById('wd-' + chip.dataset.weekDay);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); else window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
   async function loadMoves(showSpinner) {
     try {
@@ -742,7 +807,7 @@
 
   function tomorrowLine() {
     const tmr = pacificDay(1);
-    const j = sortByDate(((lastData && lastData.jobs) || []).filter(x => x.reportDate === tmr))[0];
+    const j = sortByDate(((lastData && lastData.jobs) || []).filter(x => jobDays(x).includes(tmr)))[0];
     return j ? ' ' + t('seeYou', { t: to12(j.reportTime), a: String(j.jobAddress || '').split(',')[0] }) : '';
   }
   function redraw() { if (lastData) renderData(lastData); }
