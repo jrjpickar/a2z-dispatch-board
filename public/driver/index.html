@@ -319,7 +319,7 @@
       stopMarkedDone: 'Stop marked done.',
       stopMarkedNotDone: 'Stop marked not done.',
       conflict: 'Someone else updated this route. Refreshed, so try again.',
-      crewOnJob: 'Crew On This Job',
+      crewOnJob: 'Crew On This Job', yourAssets: 'Your Equipment',
       you: ' (You)',
       route: 'Route',
       job: 'Job',
@@ -379,7 +379,7 @@
       stopMarkedDone: 'Parada marcada como hecha.',
       stopMarkedNotDone: 'Parada marcada como no hecha.',
       conflict: 'Otra persona actualizó esta ruta. Ya se actualizó, intenta de nuevo.',
-      crewOnJob: 'Equipo En Este Trabajo',
+      crewOnJob: 'Equipo En Este Trabajo', yourAssets: 'Tu Vehículo / Equipo',
       you: ' (Tú)',
       route: 'Ruta',
       job: 'Trabajo',
@@ -574,6 +574,8 @@
       + (opts.dayN && opts.dayT > 1 ? '<span class="job-tag">' + escapeHtml(t('dayOf', { n: opts.dayN, t: opts.dayT })) + '</span>' : '')
       + (job.nightWork ? '<span class="job-tag">' + escapeHtml(t('nightShift')) + '</span>' : '')
       + (job.scopeOfWork ? '<div class="job-scope">' + escapeHtml(job.scopeOfWork) + '</div>' : '')
+      + ((job.myAssets || []).length ? '<div class="crew-label">' + escapeHtml(t('yourAssets')) + '</div><ul class="crew-list asset-list">'
+          + job.myAssets.map(a => '<li class="you">' + escapeHtml(a) + '</li>').join('') + '</ul>' : '')
       + (crew.length ? '<div class="crew-label">' + escapeHtml(t('crewOnJob')) + '</div><ul class="crew-list">'
           + crew.map(w => '<li class="' + (w.isYou ? 'you' : '') + '">' + escapeHtml(w.name) + (w.isYou ? escapeHtml(t('you')) : '') + '</li>').join('')
           + '</ul>' : '')

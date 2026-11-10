@@ -335,6 +335,23 @@
     font-weight: 600;
   }
   .crew-chip.empty-slot { border: 1px dashed var(--grey-dark); color: var(--ink-soft); background: none; }
+  .crew-asset-btn { border: 1px solid #c9d3df; background: #eef3f8; color: #34506f; border-radius: 999px; font: 600 10px 'Inter', sans-serif; padding: 1px 7px; cursor: pointer; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
+  .crew-asset-btn.empty { background: none; border-style: dashed; color: var(--ink-soft); }
+  .crew-asset-btn:hover, .crew-asset-btn:focus-visible { border-color: #34506f; outline: none; }
+  body.dark-mode .crew-asset-btn { background: #22303f; border-color: #3d5068; color: #b9cde4; }
+  body.dark-mode .crew-asset-btn.empty { background: none; color: #bdc2c7; }
+  body.is-viewer .crew-asset-btn { pointer-events: none; }
+  body.is-viewer .crew-asset-btn.empty { display: none; }
+  .sent-home-card.worker-asset-card { border-top-color: #34506f; }
+  .worker-asset-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .worker-asset-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-weight: 600; }
+  .worker-asset-list li.none { border-style: dashed; color: var(--ink-soft); font-weight: 400; }
+  .worker-asset-add { display: flex; gap: 6px; }
+  .worker-asset-add select { flex: 1; min-width: 0; }
+  .worker-asset-warn { margin-top: 8px; border: 1px solid #d9a441; background: #fff6e0; color: #5c4210; border-radius: 6px; padding: 8px 10px; font-size: 12.5px; }
+  .worker-asset-warn ul { margin: 4px 0 8px; padding-left: 18px; }
+  .worker-asset-warn .warn-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  body.dark-mode .worker-asset-warn { background: #3a2f14; color: #f0d57a; border-color: #8a6a1f; }
   .status-tag {
     font-size: 10px;
     font-weight: 700;
@@ -1739,6 +1756,16 @@
   .tt-pill.bad { background: #fbeae7; color: var(--danger); border-color: var(--danger); }
   .tt-pill.muted { background: var(--stripe); color: var(--grey-dark); }
   .tt-side .job-stage-btn { padding: 4px 10px; font-size: 11px; }
+  .tt-head-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tt-head-actions .job-stage-btn { padding: 4px 10px; font-size: 11px; }
+  .job-stage-btn.tt-ack-btn { background: var(--card); color: var(--ink); border: 1px solid var(--border); }
+  .job-stage-btn.tt-ack-btn:hover { border-color: var(--ink); }
+  .job-stage-btn.tt-unack-btn { background: none; border: 0; color: var(--grey-dark); text-decoration: underline; padding: 4px 4px; }
+  .tt-pill.ack { background: #e7ecf5; color: #3c5a8a; }
+  .tt-rows li.tt-acked .tt-who { opacity: .75; }
+  .tt-ack-note { color: #3c5a8a !important; }
+  body.dark-mode .tt-pill.ack { background: #22304a; color: #9fb8e6; }
+  body.dark-mode .tt-ack-note { color: #9fb8e6 !important; }
   body.dark-mode .tt-pill.ok { background: #1f3a2a; color: #7fd19b; }
   body.dark-mode .tt-pill.wait { color: #f0d57a; }
   body.dark-mode .tt-pill.bad { background: #3d1f1b; color: #f08a7c; }
@@ -2237,7 +2264,7 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
       <div class="logistics-note">Every worker on an open job from yesterday through the next 7 days, and what happened to their schedule text. <b>Sent</b> means Twilio took it; <b>Delivered</b> means the carrier confirmed it. Anything red needs you: it should have gone out and didn't.</div>
       <div class="tt-summary" id="ttSummary"></div>
       <div class="tt-filters" role="group" aria-label="Show">
-        <button type="button" data-tt-filter="problems" aria-pressed="false">Needs attention</button><button type="button" data-tt-filter="pending" aria-pressed="false">Waiting</button><button type="button" data-tt-filter="sent" aria-pressed="false">Sent</button><button type="button" data-tt-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-tt-filter="problems" aria-pressed="false">Needs attention</button><button type="button" data-tt-filter="pending" aria-pressed="false">Waiting</button><button type="button" data-tt-filter="sent" aria-pressed="false">Sent</button><button type="button" data-tt-filter="acked" aria-pressed="false">Acknowledged</button><button type="button" data-tt-filter="all" aria-pressed="true">All</button>
       </div>
       <div class="admin-list-scroll tt-list" id="ttList"><p class="load-state">Loading...</p></div>
     </div>
@@ -2654,6 +2681,25 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
       <button type="button" class="btn-ghost" id="jldClose">Close</button>
       <button type="button" class="btn-ghost" id="jldSave">Save</button>
       <button type="button" class="btn-primary" id="jldGenerate">Generate PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="sent-home-backdrop" id="workerAssetBackdrop" hidden>
+  <div class="sent-home-card worker-asset-card" role="dialog" aria-modal="true" aria-labelledby="workerAssetTitle">
+    <h2 id="workerAssetTitle">Worker assets</h2>
+    <div class="sent-home-job" id="workerAssetJob"></div>
+    <div class="field">
+      <label>With this worker</label>
+      <ul class="worker-asset-list" id="workerAssetList"></ul>
+    </div>
+    <div class="field">
+      <label for="workerAssetSelect">Add a truck, trailer or equipment</label>
+      <div class="worker-asset-add"><select id="workerAssetSelect"><option value="">Loading assets...</option></select><button type="button" class="btn-primary" id="workerAssetAdd" disabled>Add</button></div>
+      <div class="worker-asset-warn" id="workerAssetWarn" hidden></div>
+    </div>
+    <div class="sent-home-foot">
+      <button type="button" class="btn-ghost" id="workerAssetClose">Done</button>
     </div>
   </div>
 </div>
@@ -4087,12 +4133,16 @@ function renderJobsTable(allJobs) {
       </span>
     `).join('');
 
-    const backendCrewChips = crew.map(c => `
-      <span class="crew-chip removable" data-job-id="${jobId}" data-phone="${c.phone || ''}" data-name="${c.name}">
+    const backendCrewChips = crew.map(c => {
+      const held = workerAssetsFor(j, c);
+      const label = held.map(a => a.assetName || a.assetId).join(', ');
+      return `
+      <span class="crew-chip removable${held.length ? ' has-asset' : ''}" data-job-id="${jobId}" data-phone="${c.phone || ''}" data-name="${c.name}">
         ${c.name}
+        <button type="button" class="crew-asset-btn${held.length ? '' : ' empty'}" data-job-id="${jobId}" data-name="${escapeLogisticsHtml(c.name)}" data-phone="${escapeLogisticsHtml(c.phone || '')}" data-contact-id="${escapeLogisticsHtml(c.id || '')}" title="${held.length ? 'Assets: ' + escapeLogisticsHtml(label) + '. Tap to change.' : 'Add a truck, trailer or equipment for ' + escapeLogisticsHtml(c.name)}">${held.length ? escapeLogisticsHtml(label) : '+ asset'}</button>
         <button type="button" class="crew-chip-remove" title="Remove ${c.name}">&times;</button>
-      </span>
-    `).join('');
+      </span>`;
+    }).join('');
 
     // Every roster worker not already assigned to THIS job is a candidate.
     // Workers booked on the same day stay hidden until Split day is on (see buildCrewPanel).
@@ -5660,6 +5710,12 @@ async function offerNewTimesText(jobId, previous, next) {
 }
 
 document.getElementById('jobsBody').addEventListener('click', (e) => {
+  const assetBtn = e.target.closest('.crew-asset-btn');
+  if (assetBtn) {
+    if (document.body.classList.contains('is-viewer')) return;
+    openWorkerAssets(assetBtn.dataset.jobId, { id: assetBtn.dataset.contactId || '', name: assetBtn.dataset.name, phone: assetBtn.dataset.phone || '' });
+    return;
+  }
   const removeBtn = e.target.closest('.crew-chip-remove');
   if (removeBtn) {
     const chip = removeBtn.closest('.crew-chip');
@@ -7104,6 +7160,164 @@ document.getElementById('sentHomeConfirm').addEventListener('click', async () =>
   render();
 });
 
+/* ---------- Worker assets (Labor board crew chip) ----------
+   Dispatch gives a crew member a logistics asset (truck, trailer, equipment) for a job.
+   Saved on the job's shared state (action set_worker_asset, data.workerAssets). Board and
+   Field App only: no text or webhook. An asset already with another worker or on a
+   logistics move that day is allowed after a warning. Logistics labels it as with a crew. */
+function sameCrewWorker(a, b) {
+  const d = v => String(v || '').replace(/\D/g, '').slice(-10);
+  if (a.id && b.id) return String(a.id) === String(b.id);
+  if (d(a.phone) && d(b.phone)) return d(a.phone) === d(b.phone);
+  return String(a.name || '').trim().toLowerCase() === String(b.name || '').trim().toLowerCase();
+}
+const workerOfAsset = a => ({ id: a.workerId || '', name: a.workerName || '', phone: a.workerPhone || '' });
+function workerAssetsFor(job, worker) {
+  const rec = getSharedState(job);
+  return (Array.isArray(rec?.workerAssets) ? rec.workerAssets : []).filter(a => sameCrewWorker(workerOfAsset(a), worker));
+}
+function laborJobDays(job) {
+  const start = getReportDate(job); if (!start) return [];
+  const endRaw = getReportEndDate(job), end = endRaw && endRaw >= start ? endRaw : start, out = [];
+  for (let d = start; d <= end && out.length < 31; d = addDaysYMD(d, 1)) out.push(d);
+  return out;
+}
+// Workers on open labor jobs holding this asset on any of these days (no days: any day).
+function laborAssetHolders(assetId, days, except) {
+  const out = [];
+  for (const job of dashboardData.jobs || []) {
+    if (isClosedOnBoard(job)) continue;
+    const rec = getSharedState(job);
+    const hits = (Array.isArray(rec?.workerAssets) ? rec.workerAssets : []).filter(a => String(a.assetId) === String(assetId));
+    if (!hits.length) continue;
+    const jd = laborJobDays(job);
+    if (days && days.length && jd.length && !jd.some(d => days.includes(d))) continue;
+    for (const a of hits) {
+      if (except && job.id === except.jobId && sameCrewWorker(workerOfAsset(a), except.worker)) continue;
+      out.push({ worker: a.workerName || 'a worker', job: job.name || '', jobId: job.id, date: getReportDate(job) });
+    }
+  }
+  return out;
+}
+function moveDayOf(m) { try { return logisticsDay(m); } catch { return m.scheduledDate || m.requestedDate || ''; } }
+// Open logistics moves with this asset on any of these days. A move with no date counts.
+function assetMovesOn(assetId, days, moves) {
+  return (moves || []).filter(m => logisticsOpenMove(m) && (String(m.assetId || '') === String(assetId) || (Array.isArray(m.assets) ? m.assets : []).some(a => String(a.assetId || a.id || '') === String(assetId))))
+    .filter(m => { const d = moveDayOf(m); return !days || !days.length || !d || days.includes(d); });
+}
+let workerAssetCache = { at: 0, assets: [], moves: [] };
+async function loadWorkerAssetData(force) {
+  if (logisticsLoaded) return { assets: logisticsData.assets || [], moves: logisticsData.moves || [] };
+  if (!force && Date.now() - workerAssetCache.at < 120000) return workerAssetCache;
+  const [assetData, moveStateData] = await Promise.all([
+    fetchJsonStrict(CONFIG.ASSET_ROSTER_URL, 'Asset roster'),
+    fetchJsonStrict(CONFIG.LOGISTICS_STATE_URL, 'Logistics state')
+  ]);
+  workerAssetCache = { at: Date.now(), assets: normalizeAssetRoster(assetData), moves: (moveStateData && moveStateData.states) || [] };
+  return workerAssetCache;
+}
+let workerAssetCtx = null; // { jobId, worker, data, pendingAsset }
+function workerAssetJob() { return workerAssetCtx && (dashboardData.jobs || []).find(j => j.id === workerAssetCtx.jobId); }
+function openWorkerAssets(jobId, worker) {
+  const rosterMatch = (dashboardData.labor || []).find(w => sameCrewWorker(w, worker) || String(w.name || '').trim().toLowerCase() === String(worker.name || '').trim().toLowerCase()) || {};
+  workerAssetCtx = { jobId, worker: { id: worker.id || rosterMatch.id || '', name: worker.name, phone: worker.phone || rosterMatch.phone || '' }, data: null, pendingAsset: null };
+  document.getElementById('workerAssetBackdrop').hidden = false;
+  renderWorkerAssets();
+  loadWorkerAssetData().then(data => { if (workerAssetCtx && workerAssetCtx.jobId === jobId) { workerAssetCtx.data = data; renderWorkerAssets(); } })
+    .catch(err => { const sel = document.getElementById('workerAssetSelect'); sel.innerHTML = '<option value="">Could not load assets</option>'; showToast(`Assets could not be loaded: ${err.message}`, true); });
+}
+function closeWorkerAssets() { workerAssetCtx = null; document.getElementById('workerAssetBackdrop').hidden = true; }
+function workerAssetConflicts(assetId) {
+  const job = workerAssetJob(), days = job ? laborJobDays(job) : [];
+  const holders = laborAssetHolders(assetId, days, { jobId: workerAssetCtx.jobId, worker: workerAssetCtx.worker });
+  const moves = assetMovesOn(assetId, days, workerAssetCtx.data?.moves);
+  return [
+    ...holders.map(h => `With ${h.worker} on ${h.job || 'another job'}${h.date ? ' (' + h.date + ')' : ''}`),
+    ...moves.map(m => `On logistics move ${logisticsMoveLabel(m)}`)
+  ];
+}
+function renderWorkerAssets() {
+  if (!workerAssetCtx) return;
+  const job = workerAssetJob() || {}, worker = workerAssetCtx.worker;
+  const held = workerAssetsFor(job, worker);
+  const days = laborJobDays(job);
+  document.getElementById('workerAssetTitle').textContent = `${worker.name}: assets`;
+  document.getElementById('workerAssetJob').textContent = [job.name, days.length ? (days.length > 1 ? `${days[0]} to ${days.at(-1)}` : days[0]) : 'no date yet'].filter(Boolean).join(' · ');
+  document.getElementById('workerAssetList').innerHTML = held.length
+    ? held.map(a => `<li><span>${escapeLogisticsHtml(a.assetName || a.assetId)}</span><button type="button" class="job-stage-btn edit worker-asset-remove" data-asset-id="${escapeLogisticsHtml(a.assetId)}">Remove</button></li>`).join('')
+    : '<li class="none">No assets with this worker yet.</li>';
+  const sel = document.getElementById('workerAssetSelect'), add = document.getElementById('workerAssetAdd');
+  const data = workerAssetCtx.data;
+  if (!data) { sel.innerHTML = '<option value="">Loading assets...</option>'; add.disabled = true; }
+  else {
+    const heldIds = new Set(held.map(a => String(a.assetId)));
+    const options = (data.assets || []).filter(a => !/maint|service/.test(String(a.status || '').toLowerCase()) && !heldIds.has(String(a.id || a.assetId || '')))
+      .map(a => {
+        const id = String(a.id || a.assetId || ''), holders = laborAssetHolders(id, days, { jobId: workerAssetCtx.jobId, worker }), moves = assetMovesOn(id, days, data.moves);
+        const busy = holders.length ? ` (with ${holders[0].worker}${holders.length > 1 ? ' +' + (holders.length - 1) : ''})` : moves.length ? ` (on ${moves.length} ${moves.length === 1 ? 'move' : 'moves'} that day)` : '';
+        return { id, name: a.name || a.assetName || id, busy };
+      }).sort((a, b) => (a.busy ? 1 : 0) - (b.busy ? 1 : 0) || a.name.localeCompare(b.name));
+    sel.innerHTML = `<option value="">${options.length ? 'Pick an asset...' : 'No other assets'}</option>` + options.map(o => `<option value="${escapeLogisticsHtml(o.id)}">${escapeLogisticsHtml(o.name + o.busy)}</option>`).join('');
+    add.disabled = true;
+  }
+  document.getElementById('workerAssetWarn').hidden = true;
+  workerAssetCtx.pendingAsset = null;
+}
+async function saveWorkerAssets(list, message) {
+  const job = workerAssetJob() || {}, worker = workerAssetCtx.worker;
+  await commitState(CONFIG.SHARED_STATE_SYNC_URL, {
+    action: 'set_worker_asset', jobId: workerAssetCtx.jobId, jobAddress: job.name || '',
+    contactId: worker.id, workerName: worker.name, workerPhone: worker.phone,
+    assets: list.map(a => ({ assetId: a.assetId, assetName: a.assetName }))
+  });
+  showToast(message);
+  render();
+  renderWorkerAssets();
+}
+async function addWorkerAsset(force) {
+  if (!workerAssetCtx) return;
+  const sel = document.getElementById('workerAssetSelect'), id = sel.value;
+  const asset = (workerAssetCtx.data?.assets || []).find(a => String(a.id || a.assetId || '') === id);
+  if (!asset) return showToast('Pick an asset first.', true);
+  const name = asset.name || asset.assetName || id;
+  const warn = document.getElementById('workerAssetWarn');
+  if (!force) {
+    const conflicts = workerAssetConflicts(id);
+    if (conflicts.length) {
+      workerAssetCtx.pendingAsset = id;
+      warn.innerHTML = `<b>${escapeLogisticsHtml(name)} is already out that day:</b><ul>${conflicts.slice(0, 6).map(c => `<li>${escapeLogisticsHtml(c)}</li>`).join('')}${conflicts.length > 6 ? `<li>and ${conflicts.length - 6} more</li>` : ''}</ul><div class="warn-actions"><button type="button" class="btn-ghost" id="workerAssetCancelWarn">Cancel</button><button type="button" class="btn-primary" id="workerAssetForce">Add anyway</button></div>`;
+      warn.hidden = false;
+      return;
+    }
+  }
+  const job = workerAssetJob() || {};
+  const held = workerAssetsFor(job, workerAssetCtx.worker);
+  const add = document.getElementById('workerAssetAdd'); add.disabled = true; add.textContent = 'Saving...';
+  try { await saveWorkerAssets([...held, { assetId: id, assetName: name }], `${name} is with ${workerAssetCtx.worker.name}.`); }
+  catch (err) { showToast(err.message, true); }
+  finally { add.textContent = 'Add'; }
+}
+document.getElementById('workerAssetSelect').addEventListener('change', e => {
+  document.getElementById('workerAssetAdd').disabled = !e.target.value;
+  document.getElementById('workerAssetWarn').hidden = true;
+});
+document.getElementById('workerAssetAdd').addEventListener('click', () => addWorkerAsset(false));
+document.getElementById('workerAssetClose').addEventListener('click', closeWorkerAssets);
+document.getElementById('workerAssetBackdrop').addEventListener('click', async e => {
+  if (e.target.id === 'workerAssetBackdrop') return closeWorkerAssets();
+  if (e.target.id === 'workerAssetForce') return addWorkerAsset(true);
+  if (e.target.id === 'workerAssetCancelWarn') { document.getElementById('workerAssetWarn').hidden = true; return; }
+  const rm = e.target.closest('.worker-asset-remove');
+  if (rm && workerAssetCtx) {
+    const job = workerAssetJob() || {};
+    const held = workerAssetsFor(job, workerAssetCtx.worker), gone = held.find(a => String(a.assetId) === rm.dataset.assetId);
+    rm.disabled = true; rm.textContent = 'Removing...';
+    try { await saveWorkerAssets(held.filter(a => a !== gone), `${gone?.assetName || 'Asset'} removed from ${workerAssetCtx.worker.name}.`); }
+    catch (err) { showToast(err.message, true); rm.disabled = false; rm.textContent = 'Remove'; }
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.getElementById('workerAssetBackdrop').hidden) closeWorkerAssets(); });
+
 /* ---------- Edit Job Details sheet ---------- */
 // Separate overlay/sheet from Book Job, its own state, never touches the
 // booking form's fields, and posts to a dedicated webhook so it can't
@@ -7614,7 +7828,8 @@ function renderLogistics() {
     const cls = status === 'available' ? 'available' : (status.includes('maint') || status.includes('service') ? 'maintenance' : 'assigned');
     const title = a.name || a.assetName || a.assetId || a.id || 'Unnamed Asset';
     const assignment = a.moveId || a.jobId || a.sourceOpportunityId || '';
-    const meta = [a.configuration || a.type || a.assetType || a.capacity || '', assignment ? `Job: ${assignment}` : ''].filter(Boolean).join(' · ');
+    const crewWith = laborAssetHolders(a.id || a.assetId, [toLocalYMD(new Date())]);
+    const meta = [a.configuration || a.type || a.assetType || a.capacity || '', assignment ? `Job: ${assignment}` : '', crewWith.length ? `With crew today: ${crewWith.map(h => `${h.worker} (${h.job})`).join(', ')}` : ''].filter(Boolean).join(' · ');
     return `<li class="logistics-resource"><div class="logistics-resource-top"><strong>${escapeLogisticsHtml(title)}</strong><span class="logistics-pill ${cls}">${escapeLogisticsHtml(status)}</span></div><div class="logistics-resource-meta">${escapeLogisticsHtml(meta)}</div></li>`;
   }).join('') : '<li class="load-state">No assets returned by the Asset roster webhook.</li>';
 
@@ -7694,7 +7909,8 @@ function renderLogistics() {
     // Every vehicle not in maintenance and not already on this move. One on another open move is labeled; adding it asks first.
     const availableAssets = assets.filter(a => !/maint|service/.test(String(a.status || '').toLowerCase()) && !assignedAssetIds.has(String(a.id || a.assetId || '')))
       .sort((a, b) => logisticsUsage('vehicle', a.id || a.assetId, moveKey).length - logisticsUsage('vehicle', b.id || b.assetId, moveKey).length);
-    const assetBusyLabel = a => { const n = logisticsUsage('vehicle', a.id || a.assetId, moveKey).length; return n ? ` (on ${n} other ${n === 1 ? 'move' : 'moves'})` : ''; };
+    const moveDays = [moveDayOf(m)].filter(Boolean);
+    const assetBusyLabel = a => { const n = logisticsUsage('vehicle', a.id || a.assetId, moveKey).length; const crew = laborAssetHolders(a.id || a.assetId, moveDays); return (n ? ` (on ${n} other ${n === 1 ? 'move' : 'moves'})` : '') + (crew.length ? ` (with crew: ${crew[0].worker}${crew.length > 1 ? ' +' + (crew.length - 1) : ''})` : ''); };
     const isDumpTruck = a => /dump\s*truck|\bsemi\b|peterb(?:ilt|uilt)/i.test([a.name, a.assetName, a.type, a.assetType, a.configuration].filter(Boolean).join(' '));
     const availableAssetOptions = availableAssets.map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}${assetBusyLabel(a)}</option>`).join('');
     const availableDumpTruckOptions = availableAssets.filter(isDumpTruck).map(a => `<option value="${escapeLogisticsHtml(a.id || a.assetId || '')}">${escapeLogisticsHtml(a.name || a.assetName || a.id || a.assetId)}${assetBusyLabel(a)}</option>`).join('');
@@ -8574,6 +8790,8 @@ document.getElementById('logisticsMoves').addEventListener('click', event => {
     if (existingAssets.some(item => String(item.assetId || item.id || '') === String(asset.id || asset.assetId || ''))) return showToast('That vehicle is already assigned to this move.', true);
     const vehicleOthers = logisticsUsage('vehicle', asset.id || asset.assetId, moveKey);
     if (!confirmSharedAssignment('vehicle', asset.name || asset.assetName || asset.id, vehicleOthers, [move])) return;
+    const crewWith = laborAssetHolders(asset.id || asset.assetId, [moveDayOf(move)].filter(Boolean));
+    if (crewWith.length && !confirm(`${asset.name || asset.assetName || asset.id} is with a labor crew that day:\n${crewWith.slice(0, 8).map(h => `  • ${h.worker} on ${h.job}`).join('\n')}\n\nPut it on this move too?`)) return;
     assignAssetButton.disabled = true; assignAssetButton.textContent = 'Assigning...';
     persistLogisticsAsset('booked', move, asset, { allowShared: vehicleOthers.length > 0 })
       .then(payload => {
@@ -10303,6 +10521,7 @@ function ttMatches(w) {
   if (ttFilter === 'problems') return w.problem;
   if (ttFilter === 'pending') return ['pending', 'sending'].includes(w.status);
   if (ttFilter === 'sent') return ['sent', 'delivered', 'sent_before'].includes(w.status);
+  if (ttFilter === 'acked') return !!w.acked;
   return true;
 }
 async function loadTextTracker() {
@@ -10324,20 +10543,39 @@ function renderTextTracker() {
     if (!rows.length) continue;
     if (j.date !== lastDay) { lastDay = j.date; html += `<div class="tt-day">${sessionEsc(j.date === ttData.today ? 'Today · ' + ttDay(j.date) : ttDay(j.date))}</div>`; }
     const missing = j.workers.filter(w => w.canTextNow).map(w => w.key);
+    const open = j.workers.filter(w => w.problem);
     html += `<div class="tt-job${j.problems ? ' has-problem' : ''}"><div class="tt-job-head"><div><b>${sessionEsc(j.name)}</b> <small>${sessionEsc([j.client, j.start ? 'starts ' + seniorWhen(j.start) : '', j.dueAt ? 'text time ' + seniorWhen(j.dueAt) : ''].filter(Boolean).join(' · '))}</small></div>`
-      + (canAct && missing.length > 1 ? `<button type="button" class="job-stage-btn edit" data-tt-send="${sessionEsc(j.jobId)}" data-tt-keys="${sessionEsc(missing.join('|'))}" data-tt-name="${sessionEsc(j.name)}">Text all ${missing.length} now</button>` : '') + '</div><ul class="tt-rows">'
-      + rows.map(w => `<li><div class="tt-who">${sessionEsc(w.name)}<small>${sessionEsc([w.phone, w.at ? (w.status === 'pending' ? 'sends ' : '') + seniorWhen(w.at) : '', w.detail].filter(Boolean).join(' · '))}</small></div><div class="tt-side"><span class="tt-pill ${TT_TONE[w.status] || 'muted'}">${sessionEsc(w.label)}</span>`
+      + '<div class="tt-head-actions">'
+      + (canAct && open.length > 1 ? `<button type="button" class="job-stage-btn tt-ack-btn" data-tt-ack="${sessionEsc(j.jobId)}" data-tt-items="${sessionEsc(JSON.stringify(open.map(w => ({ key: w.key, status: w.status }))))}" data-tt-name="${sessionEsc(j.name)}" data-tt-count="${open.length}">Acknowledge all ${open.length}</button>` : '')
+      + (canAct && missing.length > 1 ? `<button type="button" class="job-stage-btn edit" data-tt-send="${sessionEsc(j.jobId)}" data-tt-keys="${sessionEsc(missing.join('|'))}" data-tt-name="${sessionEsc(j.name)}">Text all ${missing.length} now</button>` : '') + '</div></div><ul class="tt-rows">'
+      + rows.map(w => `<li${w.acked ? ' class="tt-acked"' : ''}><div class="tt-who">${sessionEsc(w.name)}<small>${sessionEsc([w.phone, w.at ? (w.status === 'pending' ? 'sends ' : '') + seniorWhen(w.at) : '', w.detail].filter(Boolean).join(' · '))}</small>${w.acked ? `<small class="tt-ack-note">Acknowledged${w.acked.by ? ' by ' + sessionEsc(w.acked.by) : ''} ${sessionEsc(seniorWhen(w.acked.at))}</small>` : ''}</div><div class="tt-side"><span class="tt-pill ${w.acked ? 'muted' : (TT_TONE[w.status] || 'muted')}">${sessionEsc(w.label)}</span>${w.acked ? '<span class="tt-pill ack">Acknowledged</span>' : ''}`
         + (canAct && w.canTextNow ? `<button type="button" class="job-stage-btn edit" data-tt-send="${sessionEsc(j.jobId)}" data-tt-keys="${sessionEsc(w.key)}" data-tt-name="${sessionEsc(w.name)}">Text now</button>` : '')
         + (canAct && w.canRetry && w.effectId ? `<button type="button" class="job-stage-btn edit" data-tt-retry="${sessionEsc(w.effectId)}" data-tt-name="${sessionEsc(w.name)}">Retry</button>` : '')
+        + (canAct && w.problem ? `<button type="button" class="job-stage-btn tt-ack-btn" data-tt-ack="${sessionEsc(j.jobId)}" data-tt-items="${sessionEsc(JSON.stringify([{ key: w.key, status: w.status }]))}" data-tt-name="${sessionEsc(w.name)}">Acknowledge</button>` : '')
+        + (canAct && w.acked ? `<button type="button" class="job-stage-btn tt-unack-btn" data-tt-unack="${sessionEsc(j.jobId)}" data-tt-items="${sessionEsc(JSON.stringify([{ key: w.key, status: w.status }]))}" data-tt-name="${sessionEsc(w.name)}">Undo</button>` : '')
         + '</div></li>').join('') + '</ul></div>';
   }
-  const empty = { problems: 'Nothing needs attention. Every text that was due went out.', pending: 'No texts waiting.', sent: 'No texts sent yet in this range.', all: 'No crew on open jobs from yesterday through the next 7 days.' }[ttFilter];
+  const empty = { problems: 'Nothing needs attention. Every text that was due went out.', pending: 'No texts waiting.', sent: 'No texts sent yet in this range.', acked: 'Nothing acknowledged in this range.', all: 'No crew on open jobs from yesterday through the next 7 days.' }[ttFilter];
   document.getElementById('ttList').innerHTML = html || `<p class="load-state">${empty}</p>`;
 }
 document.querySelector('[data-panel="textTracker"]').addEventListener('click', async e => {
   const f = e.target.closest('[data-tt-filter]');
   if (f) { ttFilter = f.dataset.ttFilter; renderTextTracker(); return; }
   if (e.target.closest('#ttRefresh')) { document.getElementById('ttList').innerHTML = '<p class="load-state">Loading...</p>'; loadTextTracker(); return; }
+  const ack = e.target.closest('[data-tt-ack], [data-tt-unack]');
+  if (ack) {
+    if (ttBusy || !currentSession.isSenior) return;
+    const undo = ack.hasAttribute('data-tt-unack'), jobId = ack.dataset.ttAck || ack.dataset.ttUnack;
+    const job = (ttData.jobs || []).find(j => j.jobId === jobId) || {};
+    ttBusy = true; ack.disabled = true; ack.textContent = undo ? 'Undoing...' : 'Saving...';
+    try {
+      const data = await seniorApi('', { action: undo ? 'unack_text' : 'ack_text', jobId, items: JSON.parse(ack.dataset.ttItems || '[]'), jobName: job.name || '' });
+      if (data.tracker) { ttData = data.tracker; if (!ttData.summary.problems && ttFilter === 'problems') ttFilter = 'all'; renderTextTracker(); }
+      showToast(undo ? `${ack.dataset.ttName} is back in Needs attention.` : `Acknowledged ${ack.dataset.ttCount ? ack.dataset.ttCount + ' workers on ' : ''}${ack.dataset.ttName}.`);
+    } catch (err) { showToast(err.message, true); ack.disabled = false; ack.textContent = undo ? 'Undo' : 'Acknowledge'; }
+    finally { ttBusy = false; seniorApi('problems').then(renderProblems).catch(() => {}); seniorApi('activity').then(d => renderActivity(d.activity || [])).catch(() => {}); }
+    return;
+  }
   const send = e.target.closest('[data-tt-send]'), retry = e.target.closest('[data-tt-retry]');
   if ((!send && !retry) || ttBusy || !currentSession.isSenior) return;
   const name = (send || retry).dataset.ttName || '';

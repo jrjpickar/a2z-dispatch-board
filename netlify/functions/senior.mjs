@@ -22,7 +22,7 @@ import { sendWorkflow, workflows, webhookUrl } from '../../lib/effects.mjs';
 import { syncJobSchedule } from '../../lib/ghl.mjs';
 import { QUIET_STATUSES } from '../../lib/effect-queue.mjs';
 import { holdSchedule, rowWorkers, holdHours, sendWorkersNow } from '../../lib/daily-dispatch.mjs';
-import { textTracker } from '../../lib/text-tracker.mjs';
+import { textTracker, ackTexts } from '../../lib/text-tracker.mjs';
 import { refreshTimer } from '../../lib/hold-timer.mjs';
 
 const KIND_LABELS = { project_schedule: 'Project Schedule PDF', workers: 'Worker notification', drivers: 'Driver notification', job_details: 'Job details update', job_stage: 'Job stage (complete/cancel)', container: 'Container update', driver_log: 'Driver log', eod_sheet: 'EOD sheet', job_log: 'Job log', worker_sent_home: 'Worker sent home', split_day: 'Split day booking', job_hours: 'Job hours', labor_added: 'Laborer added', logistics_reminder: 'Logistics reminder', labor_reminder: 'Labor reminder', crew_text: 'Crew schedule text', clock: 'Clock in / out' };
@@ -185,6 +185,14 @@ export default async function handler(request) {
       await logActivity(sql, session, 'Sent schedule text from the text tracker', String(body.jobName || jobId).slice(0, 200), { jobId, keys, makeSent: result.makeSent, texted: result.texted, ok: result.ok });
       const error = result.skipped === 'closed' ? 'This job is closed.' : result.skipped === 'no_date' ? 'This job has no date yet.' : 'Some of it did not finish. Check Make / GHL problems.';
       return json({ ...(result.ok ? { ok: true } : { error }), ...result, tracker: await textTracker(sql) }, result.ok ? 200 : 502);
+    }
+    if (body.action === 'ack_text' || body.action === 'unack_text') {
+      const jobId = String(body.jobId || '').slice(0, 160);
+      if (!jobId) throw new StateError('Pick the job');
+      const undo = body.action === 'unack_text';
+      const count = await ackTexts(sql, { jobId, items: body.items, by: session.name, undo });
+      if (count) await logActivity(sql, session, undo ? 'Undid schedule text acknowledge' : 'Acknowledged schedule text problem', `${String(body.jobName || jobId).slice(0, 160)} (${count} ${count === 1 ? 'worker' : 'workers'})`, { jobId, items: body.items });
+      return json({ ok: true, count, tracker: await textTracker(sql) });
     }
     if (body.action === 'preview_crew_text') return json(previewCrewText(body.crewText));
     if (body.action === 'save_settings') {

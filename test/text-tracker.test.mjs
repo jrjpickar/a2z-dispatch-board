@@ -159,3 +159,23 @@ test('timer: a runner that never started or died is restarted; a failed start is
   r = await timer.cronTick({ now, getSql });
   assert.deepEqual(r, { checked: 'blob' });
 });
+
+test('Acknowledge takes a red row out of Needs attention for everyone; Undo puts it back', async () => {
+  const { ackTexts } = await import('../lib/text-tracker.mjs');
+  const DAN = { id: 'cd', name: 'Dan Moss', phone: '+15550000004' };
+  await setState('ackjob', { jobAddress: '14 Ack Ln', reportDate: NEAR.date, reportTime: NEAR.time, crew: [DAN] });
+  let t = await textTracker(sql);
+  let dan = t.jobs.find(j => j.jobId === 'ackjob').workers[0];
+  assert.equal(dan.status, 'missed'); assert.equal(dan.problem, true);
+  const before = t.summary.problems;
+  assert.equal(await ackTexts(sql, { jobId: 'ackjob', items: [{ key: dan.key, status: dan.status }, { key: dan.key, status: 'sent' }], by: 'Jesse Pickar' }), 1, 'only red statuses are acknowledged');
+  t = await textTracker(sql);
+  const job = t.jobs.find(j => j.jobId === 'ackjob'); dan = job.workers[0];
+  assert.equal(dan.status, 'missed', 'status stays honest');
+  assert.equal(dan.problem, false); assert.equal(dan.acked.by, 'Jesse Pickar'); assert.equal(job.problems, 0);
+  assert.equal(t.summary.problems, before - 1); assert.ok(t.summary.acknowledged >= 1);
+  await ackTexts(sql, { jobId: 'ackjob', items: [{ key: dan.key, status: dan.status }], undo: true });
+  t = await textTracker(sql);
+  assert.equal(t.jobs.find(j => j.jobId === 'ackjob').workers[0].problem, true);
+  await assert.rejects(ackTexts(sql, { jobId: 'nojob', items: [{ key: 'x', status: 'missed' }] }), /no date/);
+});

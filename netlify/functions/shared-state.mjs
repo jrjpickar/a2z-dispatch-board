@@ -49,6 +49,7 @@ export default async function handler(request) {
     if (payload.action === 'reopen' && session && !payload.reopenedBy) payload.reopenedBy = session.name;
     if (payload.action === 'send_home' && session && !payload.sentHomeBy) payload.sentHomeBy = session.name;
     if (payload.action === 'record_eod' && session) payload.eodSubmittedBy = session.name;
+    if (payload.action === 'set_worker_asset' && session) payload.assignedBy = session.name;
     // Resolve type from GHL rather than trusting a browser's jobType flag.
     let context = {};
     if (['save_times', 'update_details'].includes(payload.action)) {
@@ -61,6 +62,7 @@ export default async function handler(request) {
       const label = { complete: 'Marked job completed', cancel: 'Marked job cancelled', reopen: 'Reopened job' }[payload.action];
       await logActivity(sql, session, label, payload.jobAddress || payload.jobId, { jobId: payload.jobId });
     }
+    if (payload.action === 'set_worker_asset' && !result.replayed) await logActivity(sql, session, 'Set worker assets', `${payload.workerName || ''}: ${(payload.assets || []).map(x => x.assetName || x.assetId).join(', ') || 'none'} on ${payload.jobAddress || payload.jobId}`, { jobId: payload.jobId });
     if (payload.action === 'send_home' && !result.replayed) await logActivity(sql, session, 'Sent worker home', `${payload.workerName || ''} (${payload.hoursWorked} h) from ${payload.jobAddress || payload.jobId}`, { jobId: payload.jobId, hoursWorked: payload.hoursWorked });
     if (['save_times', 'reset_dispatch'].includes(payload.action)) {
       try { result.crmSync = await syncJobSchedule(sql, result.record.jobId); }

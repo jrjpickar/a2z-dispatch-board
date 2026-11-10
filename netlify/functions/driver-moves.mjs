@@ -49,7 +49,11 @@ function workerJob(j, identity) {
     reportEndDate: j.reportEndDate || '',
     reportEndTime: j.reportEndTime || '',
     nightWork: j.nightWork === true || j.nightWork === 'true',
-    crew: crew.filter(w => w.name).map(w => ({ name: w.name, isYou: isSameIdentity(w, identity) }))
+    crew: crew.filter(w => w.name).map(w => ({ name: w.name, isYou: isSameIdentity(w, identity) })),
+    // Logistics assets dispatch gave this worker for the job (Labor board crew chip).
+    myAssets: (Array.isArray(j.workerAssets) ? j.workerAssets : [])
+      .filter(a => isSameIdentity({ name: a.workerName, phone: a.workerPhone }, identity))
+      .map(a => a.assetName || a.assetId).filter(Boolean)
   };
 }
 
