@@ -2324,6 +2324,12 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
 <div class="sheet" id="containerSheet">
   <div class="sheet-head"><h2>Book Standalone Container</h2><button id="closeContainerSheet">&times;</button></div>
   <div class="sheet-body">
+    <div class="field client-search">
+      <label for="containerClientSearch">Find client <span class="label-optional">(search GHL by name, or type a new client below)</span></label>
+      <input type="search" id="containerClientSearch" placeholder="Search clients by name" autocomplete="off" maxlength="80">
+      <ul class="ghl-results" id="containerClientSearchResults" hidden></ul>
+      <div class="client-picked" id="containerClientPicked" hidden><span id="containerClientPickedText"></span><button type="button" class="client-picked-clear" id="containerClientPickedClear">Clear</button></div>
+    </div>
     <div class="field-row"><div class="field"><label for="containerFirstName">First Name</label><input type="text" id="containerFirstName" placeholder="e.g. Maria"></div><div class="field"><label for="containerLastName">Last Name</label><input type="text" id="containerLastName" placeholder="e.g. Gomez"></div></div>
     <div class="field"><label for="containerPhone">Client Phone</label><input type="tel" id="containerPhone" placeholder="+15555555555" inputmode="tel" maxlength="12" value="+1"></div>
     <div class="field"><label for="containerAddress">Delivery Address</label><input type="text" id="containerAddress" placeholder="Street, City"></div>
@@ -5516,6 +5522,11 @@ function openEodSheet(jobId, btn, completing = false) {
   document.getElementById('submitEodSheet').textContent = completing ? 'Submit EOD & Complete Job' : 'Submit EOD Sheet';
   eodSheetEl.querySelector('.eod-reset-note').textContent = completing ? 'Submit today’s EOD sheet to mark this job completed.' : 'Submitting also resets the day: the schedule and crew are cleared. Job details stay as they are.';
   renderEodCrew(draft && draft.crew);
+  // EOD sheets only go out with workers on them (assignedWorkers not empty).
+  const eodSubmit = document.getElementById('submitEodSheet');
+  eodSubmit.disabled = !eodCrewList.length;
+  eodSubmit.title = eodCrewList.length ? '' : 'Assign crew to this job before sending the EOD sheet.';
+  if (!eodCrewList.length) eodSheetEl.querySelector('.eod-reset-note').textContent = 'No workers on this job. Assign crew before sending the EOD sheet.';
   eodTruckLoads = { total: 0, moves: [] };
   document.getElementById('eodLoadsNote').hidden = true;
   if (!isHourlyJob(job) || job.sourceType === 'demo') fillEodTruckLoads(job);
@@ -5622,6 +5633,7 @@ document.getElementById('submitEodSheet').addEventListener('click', async () => 
   const submitBtn = document.getElementById('submitEodSheet');
   const sheet = recalcEodSheet();
   if (!sheet.date) { showToast('Add the date for this EOD sheet.', true); return; }
+  if (!(sheet.crewHours || []).length) { showToast('No workers on this job. Assign crew before sending the EOD sheet.', true); return; }
   if (!sheet.lines.some(l => l.description || l.qty || l.rate)) { showToast('Fill in at least one line before submitting.', true); return; }
   const badHours = sheet.crewHours.filter(w => w.hoursWorked === '' || !(w.hoursWorked >= 0 && w.hoursWorked <= 24) || Math.round(w.hoursWorked * 4) !== w.hoursWorked * 4);
   if (badHours.length) { showToast(`Hours worked for ${badHours.map(w => w.workerName).join(', ')}: enter 0 to 24, in quarter hours (like 7.5 or 7.25).`, true); return; }
@@ -5949,63 +5961,73 @@ document.querySelectorAll('.status-card.available, .status-card.booked').forEach
 /* Client search: type a name, pick a GHL contact, and First/Last name, phone and
    (if empty) Job Address fill in. Editing the name or phone afterwards drops the
    link, so a changed client is never sent with the old contact id. */
-let clientPick = null, clientSearchTimer = null, clientSearchSeq = 0, clientResults = [];
-const clientBox = id => document.getElementById(id);
-function clearClientPick({ keepFields = false } = {}) {
-  clientPick = null; clientResults = [];
-  clientBox('clientSearch').value = '';
-  clientBox('clientSearchResults').hidden = true; clientBox('clientSearchResults').innerHTML = '';
-  clientBox('clientPicked').hidden = true;
-  if (!keepFields) ['clientFirstName', 'clientLastName'].forEach(id => { clientBox(id).value = ''; });
+// Shared by Book Job and Book Standalone Container (same GHL lookup, same rules).
+function attachClientSearch(ids) {
+  const box = key => document.getElementById(ids[key]);
+  let pick = null, timer = null, seq = 0, results = [];
+  function clear({ keepFields = false } = {}) {
+    pick = null; results = [];
+    box('search').value = '';
+    box('results').hidden = true; box('results').innerHTML = '';
+    box('picked').hidden = true;
+    if (!keepFields) [box('first'), box('last')].forEach(el => { el.value = ''; });
+  }
+  function current() {
+    if (!pick) return null;
+    const same = box('first').value.trim() === pick.filled.firstName && box('last').value.trim() === pick.filled.lastName
+      && box('phone').value.trim() === pick.filled.phone;
+    return same ? pick : null;
+  }
+  box('search').addEventListener('input', e => {
+    clearTimeout(timer);
+    const q = e.target.value.trim(), list = box('results');
+    if (q.length < 2) { list.hidden = true; list.innerHTML = ''; return; }
+    timer = setTimeout(async () => {
+      const mySeq = ++seq;
+      list.hidden = false; list.innerHTML = '<li class="ghl-hint">Searching GHL...</li>';
+      try {
+        const res = await fetchWithTimeout('/api/ghl-contacts?for=client&q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } }, 20000);
+        const data = await res.json().catch(() => ({}));
+        if (mySeq !== seq) return;
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        results = data.contacts || [];
+        list.innerHTML = results.length ? results.map((c, i) => `<li><button type="button" data-index="${i}">${escapeAttr(c.name)}${c.companyName ? ' · ' + escapeAttr(c.companyName) : ''}<small>${escapeAttr([c.phone, c.address].filter(Boolean).join(' · ') || 'no phone or address')}</small></button></li>`).join('')
+          : '<li class="ghl-hint">No clients found. Type the new client in below.</li>';
+      } catch (err) { if (mySeq === seq) list.innerHTML = `<li class="ghl-hint">${escapeAttr(err.message)}</li>`; }
+    }, 300);
+  });
+  box('search').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); box('search').value = ''; box('results').hidden = true; }
+    if (e.key === 'Enter' && results.length === 1) { e.preventDefault(); box('results').querySelector('button[data-index]')?.click(); }
+  });
+  box('results').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-index]'); if (!btn) return;
+    const c = results[Number(btn.dataset.index)]; if (!c) return;
+    const [first, ...rest] = String(c.name || '').split(' ');
+    const firstName = (c.firstName || first || '').trim(), lastName = (c.lastName || rest.join(' ') || '').trim();
+    box('first').value = firstName;
+    box('last').value = lastName;
+    if (/^\+1\d{10}$/.test(c.phone || '')) box('phone').value = c.phone;
+    if (c.address && !box('address').value.trim()) box('address').value = c.address;
+    pick = { ...c, filled: { firstName, lastName, phone: box('phone').value.trim() } };
+    box('search').value = '';
+    box('results').hidden = true;
+    box('picked').hidden = false;
+    box('pickedText').textContent = `Existing GHL client: ${c.name}${/^\+1\d{10}$/.test(c.phone || '') ? '' : ' (no usable phone in GHL, type it below)'}`;
+  });
+  box('pickedClear').addEventListener('click', () => clear());
+  // Changing the name or phone after picking: no longer the same GHL contact.
+  ['first', 'last', 'phone'].forEach(key => box(key).addEventListener('input', () => {
+    if (pick && !current()) { pick = null; box('picked').hidden = true; }
+  }));
+  return { clear, current };
 }
-function currentClientPick() {
-  if (!clientPick) return null;
-  const same = clientBox('clientFirstName').value.trim() === clientPick.filled.firstName && clientBox('clientLastName').value.trim() === clientPick.filled.lastName
-    && clientBox('clientPhone').value.trim() === clientPick.filled.phone;
-  return same ? clientPick : null;
-}
-clientBox('clientSearch').addEventListener('input', e => {
-  clearTimeout(clientSearchTimer);
-  const q = e.target.value.trim(), list = clientBox('clientSearchResults');
-  if (q.length < 2) { list.hidden = true; list.innerHTML = ''; return; }
-  clientSearchTimer = setTimeout(async () => {
-    const seq = ++clientSearchSeq;
-    list.hidden = false; list.innerHTML = '<li class="ghl-hint">Searching GHL...</li>';
-    try {
-      const res = await fetchWithTimeout('/api/ghl-contacts?for=client&q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } }, 20000);
-      const data = await res.json().catch(() => ({}));
-      if (seq !== clientSearchSeq) return;
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      clientResults = data.contacts || [];
-      list.innerHTML = clientResults.length ? clientResults.map((c, i) => `<li><button type="button" data-index="${i}">${escapeAttr(c.name)}${c.companyName ? ' · ' + escapeAttr(c.companyName) : ''}<small>${escapeAttr([c.phone, c.address].filter(Boolean).join(' · ') || 'no phone or address')}</small></button></li>`).join('')
-        : '<li class="ghl-hint">No clients found. Type the new client in below.</li>';
-    } catch (err) { if (seq === clientSearchSeq) list.innerHTML = `<li class="ghl-hint">${escapeAttr(err.message)}</li>`; }
-  }, 300);
-});
-clientBox('clientSearch').addEventListener('keydown', e => {
-  if (e.key === 'Escape') { e.stopPropagation(); clientBox('clientSearch').value = ''; clientBox('clientSearchResults').hidden = true; }
-  if (e.key === 'Enter' && clientResults.length === 1) { e.preventDefault(); clientBox('clientSearchResults').querySelector('button[data-index]')?.click(); }
-});
-clientBox('clientSearchResults').addEventListener('click', e => {
-  const btn = e.target.closest('button[data-index]'); if (!btn) return;
-  const c = clientResults[Number(btn.dataset.index)]; if (!c) return;
-  const [first, ...rest] = String(c.name || '').split(' ');
-  const firstName = (c.firstName || first || '').trim(), lastName = (c.lastName || rest.join(' ') || '').trim();
-  clientBox('clientFirstName').value = firstName;
-  clientBox('clientLastName').value = lastName;
-  if (/^\+1\d{10}$/.test(c.phone || '')) clientBox('clientPhone').value = c.phone;
-  if (c.address && !clientBox('jobAddress').value.trim()) clientBox('jobAddress').value = c.address;
-  clientPick = { ...c, filled: { firstName, lastName, phone: clientBox('clientPhone').value.trim() } };
-  clientBox('clientSearch').value = '';
-  clientBox('clientSearchResults').hidden = true;
-  clientBox('clientPicked').hidden = false;
-  clientBox('clientPickedText').textContent = `Existing GHL client: ${c.name}${/^\+1\d{10}$/.test(c.phone || '') ? '' : ' (no usable phone in GHL, type it below)'}`;
-});
-clientBox('clientPickedClear').addEventListener('click', () => clearClientPick());
-// Changing the name or phone after picking: no longer the same GHL contact.
-['clientFirstName', 'clientLastName', 'clientPhone'].forEach(id => clientBox(id).addEventListener('input', () => {
-  if (clientPick && !currentClientPick()) { clientPick = null; clientBox('clientPicked').hidden = true; }
-}));
+const bookClientSearch = attachClientSearch({ search: 'clientSearch', results: 'clientSearchResults', picked: 'clientPicked', pickedText: 'clientPickedText', pickedClear: 'clientPickedClear',
+  first: 'clientFirstName', last: 'clientLastName', phone: 'clientPhone', address: 'jobAddress' });
+const clearClientPick = opts => bookClientSearch.clear(opts);
+const currentClientPick = () => bookClientSearch.current();
+const containerClientSearch = attachClientSearch({ search: 'containerClientSearch', results: 'containerClientSearchResults', picked: 'containerClientPicked', pickedText: 'containerClientPickedText', pickedClear: 'containerClientPickedClear',
+  first: 'containerFirstName', last: 'containerLastName', phone: 'containerPhone', address: 'containerAddress' });
 const overlay = document.getElementById('overlay');
 const sheet = document.getElementById('bookSheet');
 let crewSize = 4;
@@ -8893,6 +8915,7 @@ function openContainerSheetFn() {
   fillLogisticsBookingFields('container');
   if (!document.getElementById('containerDate').value) document.getElementById('containerDate').value = toLocalYMD(new Date());
   containerStopsEditor.render([]);
+  containerClientSearch.clear({ keepFields: true });
   containerOverlay.classList.add('open'); containerSheet.classList.add('open');
 }
 document.getElementById('newContainerBtn').addEventListener('click', openContainerSheetFn);
@@ -8952,6 +8975,9 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
     notes,
     stops: buildStopsPayload(containerStopsEditor, { address: jobAddress, type: 'delivery' })
   };
+  // Existing client picked from the search: same fields Book Job sends.
+  const pickedContainerClient = containerClientSearch.current();
+  if (pickedContainerClient) Object.assign(payload, { clientContactId: pickedContainerClient.id, existingClient: true, clientEmail: pickedContainerClient.email || '' });
   submitBtn.disabled = true; submitBtn.textContent = 'Creating...';
   try {
     payload.requestId = containerRequestId ||= crypto.randomUUID();
@@ -8997,6 +9023,7 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
     closeContainerSheetFn();
     ['containerFirstName','containerLastName','containerAddress','containerValue','containerNotes','containerPaymentTerms'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('containerPhone').value = '+1';
+    containerClientSearch.clear({ keepFields: true });
     await loadLogistics();
   } catch (err) {
     console.error('Container create failed:', err);
@@ -9015,6 +9042,8 @@ document.querySelectorAll('.dispatch-view-tab').forEach(tab => tab.addEventListe
   document.getElementById('completedDispatchView').hidden = view !== 'completed';
   if (view === 'completed') { renderCompletedView(); if (!closedJobsLoaded) loadClosedJobs(); }
   document.getElementById('adminDispatchView').hidden = view !== 'admin';
+  // Logistics books containers only (its own + Book Container button).
+  document.getElementById('newJobBtn').style.display = logistics ? 'none' : '';
   if (logistics && !logisticsLoaded) loadLogistics();
   else if (logistics) schedulePoll(200); // catch up on moves changed while another tab was open
   if (view === 'admin') renderAdminView();

@@ -189,6 +189,8 @@ Each Logistics move has a **Loads** box next to Driver and Vehicle. Saving it st
 
 Book Job has a **Find client** search (GHL contacts by name). Picking one fills First/Last name, phone and (if empty) Job Address, and the create run also carries `clientContactId` (the GHL contact id), `existingClient: true` and `clientEmail`. If the name or phone is edited after picking, those are not sent. Map `clientContactId` in the create scenario to reuse that contact instead of searching/creating one.
 
+**Book Standalone Container** (Logistics tab) has the same Find client search. When a client is picked, the `LOGISTICS_CREATE_URL` run carries the same `clientContactId`, `existingClient: true` and `clientEmail`. Map `clientContactId` in the Logistics create scenario the same way. The Logistics tab no longer shows **+ Book Job**; it only books containers.
+
 ## Job create: who booked it (1.8)
 
 The create-job payload now also has `bookedBy` and `bookedByUserId` (the signed-in dispatcher). `assignedUserId` / `assignedUserName` are always filled. Map them if you want them in GHL or Slack; nothing breaks if you don't.
