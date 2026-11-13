@@ -62,7 +62,7 @@ const ymd = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angel
   await page.click('#logisticsViewTab');
 
   await page.waitForSelector('tr[data-move-key="m1"]');
-  assert.equal(await page.locator('tr[data-move-key="m1"] [data-action="reset"]').innerText(), 'EOD Sheet');
+  assert.equal((await page.locator('tr[data-move-key="m1"] [data-action="reset"]').textContent()).trim(), 'EOD Sheet'); // in the row's More menu
   await page.click('#newContainerBtn');
   await page.fill('#containerFirstName', 'Maria'); await page.fill('#containerLastName', 'Gomez');
   // Quarter-hour pickers (same as Labor) hide the source input: set it like the Labor tests do.
@@ -90,10 +90,12 @@ const ymd = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angel
   // Values already on a move are kept on edit and EOD.
   Object.assign(states.newcontainer123, { scopeOfWork: 'Kept scope', overweightTons: 2.25, clientContact: 'Maria 555-1234', reportEndTime: '16:00', reportEndDate: today, version: (states.newcontainer123.version || 1) + 1 });
   await page.click('#refreshBtn'); await page.waitForTimeout(400);
+  await page.locator('tr[data-move-key="newcontainer123"] .logi-more > summary').click();
   await page.locator('tr[data-move-key="newcontainer123"] [data-action="edit"]').click();
   assert.equal(await page.inputValue('#editContainerEndTime'), '16:00');
   assert.equal(await page.inputValue('#editContainerEndDate'), today);
   await page.click('#cancelEditContainer');
+  await page.locator('tr[data-move-key="newcontainer123"] .logi-more > summary').click();
   await page.locator('tr[data-move-key="newcontainer123"] [data-action="reset"]').click();
   assert.equal(await page.locator('#logisticsEodOverweightTons').count(), 0);
   await page.fill('#logisticsEodNotes', 'Finished hauling');

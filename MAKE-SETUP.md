@@ -86,6 +86,7 @@ Fields (both actions):
 - `action`: `clockIn` or `clockOut`
 - `jobId`, `jobAddress`, `clientName`, `jobScopeOfWork` (the job's scope from the board). `jobAddress` comes from the same source as every other board webhook: the job's name on the board (the GHL opportunity name). If the GHL feed has not loaded, it uses the saved job address, then the name kept at close or on a change order. Clock out sends the current name, so a name fixed in GHL during the shift goes out corrected.
 - `date` (`MM/DD/YY`) and `time` (`07:05AM`): the punch's own date and time, Pacific
+- `dayOfWeek`: clockOut only, the day of the clock out in Pacific, lowercase (e.g. `tuesday`, same style as the EOD and job log webhooks); empty on clockIn
 - `hoursWorked`: `0` on clockIn; on clockOut the hours between clock in and clock out, two decimals (e.g. `8.52`)
 - `scopeOfWork`: the worker's "Work done today" summary (clockOut; empty on clockIn)
 - `notes`: the worker's note for dispatch (clockOut, optional; empty on clockIn)

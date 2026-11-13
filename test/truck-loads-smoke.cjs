@@ -62,6 +62,7 @@ const ymd = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angel
   assert.equal(lc.payload.vehicles, 'Truck 7'); assert.equal(lc.payload.driverName, 'Ana Driver'); assert.equal(lc.payload.containerSize, '30 Yard');
   assert.equal(await page.inputValue('tr[data-move-key="box1"] .logistics-loads-input'), '4');
   // Reset Day on the container: jobLog to the same webhook, with the day's loads; next day starts blank.
+  await page.click('tr[data-move-key="box1"] .logi-more > summary');
   await page.click('tr[data-move-key="box1"] .logistics-action[data-action="reset"]');
   await page.waitForFunction(() => /day reset/.test(document.getElementById('toast').innerText));
   const jl = effects.find(e => e.payload.action === 'jobLog');

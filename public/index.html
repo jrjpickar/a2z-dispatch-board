@@ -1085,6 +1085,14 @@
   #logisticsDispatchView .job-group-header{border-top:1px solid #3a3c40;border-bottom:1px solid #3a3c40;padding:9px 12px}
   #logisticsDispatchView .logistics-primary-actions{padding-top:7px;border-top:1px solid var(--stripe);margin-top:7px}
   #logisticsDispatchView .logistics-primary-actions .job-stage-btn{border-radius:5px}
+  .logi-more{position:relative}
+  .logi-more>summary{list-style:none;cursor:pointer;text-align:center;user-select:none}
+  .logi-more>summary::-webkit-details-marker{display:none}
+  .logi-more>summary::after{content:' \25BE'}
+  .logi-more[open]{flex-basis:100%;grid-column:1/-1}
+  .logi-more[open]>summary{display:inline-block}
+  .logi-more-menu{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;padding:7px;border:1px solid var(--border);border-radius:7px;background:#fff}
+  body.dark-mode .logi-more-menu{background:#26292c;border-color:#484d52}
   #logisticsDispatchView .logistics-status{padding:4px 8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
   #logisticsDispatchView table.logistics-table td{vertical-align:top;border-bottom:1px solid #eceef0}
   #logisticsDispatchView table.logistics-table tr:not(.job-group-header-row):not(.job-group-empty-row) td{background:#fff}
@@ -7939,14 +7947,15 @@ function renderLogistics() {
     const driverEditing = Boolean(window.logisticsDriverEdit[moveKey]);
     const assetEditing = Boolean(window.logisticsAssetEdit[moveKey]);
     const removeDriver = (assignedDriverId || assignedDriverName) ? `<button class="job-stage-btn cancel logistics-remove-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-driver-id="${escapeLogisticsHtml(assignedDriverId)}" data-driver-name="${escapeLogisticsHtml(assignedDriverName)}">Remove Driver</button>` : '';
-    const driverEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit driver</span><button type="button" class="job-stage-btn logistics-done-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div><div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}</div></div>`;
+    const driverEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit driver</span><button type="button" class="job-stage-btn logistics-done-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div><div class="job-stage-actions"><select class="logistics-driver-select" aria-label="Select driver" ${scheduleLocked ? '' : 'disabled'}><option value="">${scheduleLocked ? 'Select driver…' : 'Lock schedule first'}</option>${availableDriverOptions}</select><button class="job-stage-btn edit logistics-assign-driver one-tap-btn" hidden data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${scheduleLocked ? '' : 'disabled'}>Assign</button>${removeDriver}</div></div>`;
     const driverAssignment = assignable ? ((assignedDriverId || assignedDriverName) && !driverEditing ? `<div class="assignment-lock"><span class="assignment-lock-copy"><span class="assignment-lock-label">Driver locked</span><span class="assignment-lock-value">${escapeLogisticsHtml(assignedDriverName || assignedDriverId)}</span></span><button type="button" class="job-stage-btn edit logistics-edit-driver" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit Driver</button></div>` : driverEditor) : '';
     const assignedAssetEditors = assignedAssets.map(asset => `<span class="assignment-edit-item"><span>${escapeLogisticsHtml(asset.name || asset.assetName || asset.id || asset.assetId)}</span><button type="button" class="job-stage-btn cancel logistics-remove-asset" data-move-id="${escapeLogisticsHtml(moveKey)}" data-asset-id="${escapeLogisticsHtml(asset.id || asset.assetId || '')}">Remove</button></span>`).join('');
-    const assetEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit vehicle</span><button type="button" class="job-stage-btn logistics-done-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div>${assignedAssetEditors ? `<div class="assignment-edit-items">${assignedAssetEditors}</div>` : ''}<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Add Vehicle</button></div><div class="job-stage-actions"><select class="logistics-dump-truck-select" aria-label="Select dump truck"><option value="">${availableDumpTruckOptions ? 'Select dump truck…' : 'No dump trucks available'}</option>${availableDumpTruckOptions}</select><button class="job-stage-btn edit logistics-assign-asset" data-asset-kind="dump-truck" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${availableDumpTruckOptions ? '' : 'disabled'}>Add Dump Truck</button></div></div>`;
+    const assetEditor = `<div class="assignment-edit-panel"><div class="assignment-edit-head"><span>Edit vehicle</span><button type="button" class="job-stage-btn logistics-done-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Done</button></div>${assignedAssetEditors ? `<div class="assignment-edit-items">${assignedAssetEditors}</div>` : ''}<div class="job-stage-actions"><select class="logistics-asset-select" aria-label="Select asset"><option value="">${assignedAssets.length ? 'Add another vehicle…' : 'Select vehicle…'}</option>${availableAssetOptions}</select><button class="job-stage-btn edit logistics-assign-asset one-tap-btn" hidden data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}">Add Vehicle</button></div><div class="job-stage-actions"><select class="logistics-dump-truck-select" aria-label="Select dump truck"><option value="">${availableDumpTruckOptions ? 'Select dump truck…' : 'No dump trucks available'}</option>${availableDumpTruckOptions}</select><button class="job-stage-btn edit logistics-assign-asset one-tap-btn" hidden data-asset-kind="dump-truck" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" ${availableDumpTruckOptions ? '' : 'disabled'}>Add Dump Truck</button></div></div>`;
     const assetAssignment = assignable ? (assignedAssets.length && !assetEditing ? `<div class="assignment-lock"><span class="assignment-lock-copy"><span class="assignment-lock-label">Vehicle locked</span><span class="assignment-lock-value">${escapeLogisticsHtml(assignedAssetDisplay)}</span></span><button type="button" class="job-stage-btn edit logistics-edit-asset" data-move-id="${escapeLogisticsHtml(moveKey)}">Edit Vehicle</button></div>` : assetEditor) : '';
     const targetType = logisticsTargetType(m);
+    const canUnschedule = !terminal && Boolean(scheduleLocked || date || assignedDriverName || assignedAssets.length);
     const actionData = `data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" data-target-type="${targetType}"`;
-    const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><button class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel</button><button class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit</button><button class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>EOD Sheet</button></div>`;
+    const actions = terminal ? '' : `${driverAssignment}${assetAssignment}<div class="job-stage-actions logistics-primary-actions"><button class="job-stage-btn complete logistics-action" data-action="complete" ${actionData}>Complete</button><details class="logi-more" data-more-key="${escapeLogisticsHtml(moveKey)}"${logisticsMoreOpen === moveKey ? ' open' : ''}><summary class="job-stage-btn edit">More</summary><div class="logi-more-menu"><button type="button" class="job-stage-btn edit logistics-action" data-action="edit" ${actionData}>Edit details</button><button type="button" class="job-stage-btn reset logistics-action" data-action="reset" ${actionData}>EOD Sheet</button>${canUnschedule ? `<button type="button" class="job-stage-btn edit logistics-unschedule" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" title="Clear this move's time, driver and vehicles. It moves to Unscheduled.">Unschedule</button>` : ''}<button type="button" class="job-stage-btn cancel logistics-action" data-action="cancel" ${actionData}>Cancel move</button></div></details></div>`;
     const none = '<span class="logi-none">None yet</span>';
     // Needs attention (today and tomorrow only): no saved time, no driver, no vehicle.
     const watch = assignable && (groupKey === 'today' || groupKey === 'tomorrow');
@@ -7981,7 +7990,7 @@ function renderLogistics() {
       + `<td data-label="Route" class="logistics-route">${routeDisplay}${stops.length > 1 ? `<br><span class="mono">${stops.length} stops</span>` : ''}</td>`
       + `<td data-label="Schedule" class="mono"><div class="schedule-time-color ${scheduleDateTone(date)}">${scheduleCell}</div></td>`
       + `<td data-label="Driver & vehicle"><div class="logi-who"><span>Driver</span>${assignedDriverName ? escapeLogisticsHtml(assignedDriverName) : none}</div><div class="logi-who"><span>Vehicle</span>${assignedAssetDisplay ? escapeLogisticsHtml(assignedAssetDisplay) : none}</div>${loadsControl}${suggestBtn}</td>`
-      + `<td data-label="Status"><div class="status-line"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(String(status).replace(/_/g, ' '))}</span>${!terminal && (scheduleLocked || date || assignedDriverName || assignedAssets.length) ? `<button type="button" class="unschedule-btn logistics-unschedule" data-id="${escapeLogisticsHtml(oppId)}" data-move-id="${escapeLogisticsHtml(moveKey)}" title="Clear this move's time, driver and vehicles. It moves to Unscheduled.">Unschedule</button>` : ''}</div>${actions}</td></tr>`;
+      + `<td data-label="Status"><div class="status-line"><span class="logistics-status ${statusCls}">${escapeLogisticsHtml(String(status).replace(/_/g, ' '))}</span></div>${actions}</td></tr>`;
   };
   const sectionDefs = [
     { key: 'today', label: 'Today' },
@@ -8013,6 +8022,8 @@ function renderLogistics() {
 /* ---------- Logistics helpers: attention bar, suggestions, bulk assign ---------- */
 let logisticsAttnFilter = '';
 const logisticsSelected = new Set();
+// Row "More" menu (Edit details, EOD Sheet, Unschedule, Cancel move). Stays open across board refreshes.
+let logisticsMoreOpen = '';
 function renderLogisticsAttention(attn, watchedCount) {
   const bar = document.getElementById('logisticsAttention');
   if (!watchedCount) { bar.hidden = true; return; }
@@ -8130,6 +8141,31 @@ function renderLogisticsBulk() {
   bar.querySelector('.logi-bulk-driver').value = keep.driver;
   bar.querySelector('.logi-bulk-asset').value = keep.asset;
 }
+// One tap assign: picking a driver, vehicle or dump truck assigns it right away (same checks
+// and prompts as the old Assign / Add buttons, which stay hidden in the row).
+document.getElementById('logisticsMoves').addEventListener('change', e => {
+  const select = e.target.closest('.logistics-driver-select, .logistics-asset-select, .logistics-dump-truck-select');
+  if (!select || !select.value) return;
+  const group = select.closest('.job-stage-actions');
+  const btn = group && group.querySelector('.one-tap-btn');
+  if (!btn || btn.disabled) { select.value = ''; return; }
+  btn.click();
+  if (!btn.disabled) select.value = ''; // prompt declined or not valid: nothing was sent
+});
+document.getElementById('logisticsMoves').addEventListener('toggle', e => {
+  const menu = e.target; if (!menu.matches || !menu.matches('.logi-more')) return;
+  if (menu.open) {
+    logisticsMoreOpen = menu.dataset.moreKey || '';
+    document.querySelectorAll('#logisticsMoves .logi-more[open]').forEach(other => { if (other !== menu) other.open = false; });
+  } else if (logisticsMoreOpen === menu.dataset.moreKey) logisticsMoreOpen = '';
+}, true);
+document.addEventListener('click', e => {
+  if (!logisticsMoreOpen) return;
+  const inMenu = e.target.closest && e.target.closest('.logi-more');
+  if (inMenu && !e.target.closest('.logi-more-menu button')) return;
+  logisticsMoreOpen = '';
+  document.querySelectorAll('#logisticsMoves .logi-more[open]').forEach(m => { m.open = false; });
+});
 document.getElementById('logisticsMoves').addEventListener('change', e => {
   const box = e.target.closest('.logistics-select'); if (!box) return;
   if (box.checked) logisticsSelected.add(box.dataset.moveId); else logisticsSelected.delete(box.dataset.moveId);

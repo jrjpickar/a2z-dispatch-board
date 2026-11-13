@@ -48,6 +48,8 @@ test('Make formats: MM/DD/YY and 07:05AM Pacific, hours to two decimals', () => 
   assert.equal(fc.hoursBetween('2026-11-03T15:00:00Z', '2026-11-03T23:31:00Z'), 8.52);
   assert.equal(fc.jobIsToday({ reportDate: '2026-11-02', reportEndDate: '2026-11-03' }, '2026-11-03'), true);
   assert.equal(fc.jobIsToday({ reportDate: '2026-11-04' }, '2026-11-03'), false);
+  assert.equal(fc.weekday('2026-11-03T15:05:00Z'), 'tuesday');
+  assert.equal(fc.weekday('2026-11-04T06:30:00Z'), 'tuesday', '10:30 PM Tuesday Pacific is still tuesday');
 });
 
 test('clock in needs location, the crew and today; saves distance and posts clockIn with jobId', async () => {
@@ -73,6 +75,7 @@ test('clock in needs location, the crew and today; saves distance and posts cloc
   assert.equal(makeRuns.length, 1);
   const run = makeRuns[0];
   assert.equal(run.action, 'clockIn'); assert.equal(run.jobId, 'j1'); assert.equal(run.hoursWorked, 0);
+  assert.equal(run.dayOfWeek, '', 'dayOfWeek only on clock out');
   assert.equal(run.scopeOfWork, ''); assert.equal(run.notes, '');
   assert.match(run.date, /^\d{2}\/\d{2}\/\d{2}$/); assert.match(run.time, /^\d{2}:\d{2}(AM|PM)$/);
   assert.ok(Math.abs(run.distanceFt - 120) < 3, 'the lookup ran right after and the Make run has the distance');
@@ -124,6 +127,7 @@ test('clock out needs a work summary and location; posts clockOut with hours, sc
   assert.equal(makeRuns.length, 1);
   const run = makeRuns[0];
   assert.equal(run.action, 'clockOut'); assert.equal(run.jobId, 'j1'); assert.equal(run.hoursWorked, 8.5);
+  assert.equal(run.dayOfWeek, fc.weekday(run.clockOutAt), 'dayOfWeek is the clock out day'); assert.match(run.dayOfWeek, /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/);
   assert.equal(run.scopeOfWork, 'Demo; Cleanup'); assert.equal(run.notes, 'Need a dumpster swap'); assert.equal(run.language, 'es');
   assert.equal(run.breaksCertified, true); assert.equal(run.locationConsent, true); assert.match(run.certification, /^By signing I hereby certify/);
   assert.equal(run.signedBy, 'Ana Lopez'); assert.ok(run.signedAt); assert.equal(run.signature, SIG.split(',')[1], 'signature as base64 PNG');
