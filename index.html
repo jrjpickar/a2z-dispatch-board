@@ -8475,57 +8475,55 @@ async function unscheduleLogisticsMove(jobId, button) {
 
 
 // Shared booking, editing and daily EOD fields for Logistics.
-const logisticsDocumentSelections = new Map();
-const logisticsUploadedFiles = new WeakMap();
-function logisticsBookingFields(prefix) {
-  return `<div class="field"><label for="${prefix}ClientContact">Client contact</label><input id="${prefix}ClientContact" type="text" placeholder="Contact name, phone and/or email"></div>
-    <div class="field"><label for="${prefix}PredictedEndDate">Predicted end date</label><input id="${prefix}PredictedEndDate" type="date"></div>
-    <div class="field"><label for="${prefix}Scope">Full scope of work per proposal</label><textarea id="${prefix}Scope" maxlength="10000"></textarea></div>
-    <div class="field-row"><div class="field"><label for="${prefix}ScheduledDays">Scheduled days</label><input id="${prefix}ScheduledDays" type="text" placeholder="e.g. Monday–Friday"></div><div class="field"><label for="${prefix}ScheduledHours">Scheduled hours</label><input id="${prefix}ScheduledHours" type="text" placeholder="e.g. 7 AM–3 PM, 8 hours/day"></div></div>
-    <div class="field"><label for="${prefix}OverweightTons">Overweight (tons)</label><input id="${prefix}OverweightTons" type="number" min="0" step="0.01" value="0" inputmode="decimal"></div>
-    <div class="field"><label for="${prefix}Documents">Attach all job related documents here</label><input id="${prefix}Documents" type="file" multiple><small>Up to 20 documents, 3 MB each.</small><div id="${prefix}DocumentList"></div></div>`;
+// Booking sheets show report times like Labor (Report Date/Time, Report End Date/Time).
+// Client contact, scope, scheduled days/hours, overweight and documents are no longer
+// on the sheets, but the same keys still go to Make: kept from the move (or blank/0 on a new one).
+const logisticsBookingMoves = new Map();
+function logisticsEndFields(prefix, withTime = true) {
+  return `<div class="field-row"><div class="field"><label for="${prefix}EndDate">Report End Date <span class="label-optional">(optional, defaults to Report Date)</span></label><input type="date" id="${prefix}EndDate"></div>`
+    + (withTime ? `<div class="field"><label for="${prefix}EndTime">Report End Time</label><input type="time" id="${prefix}EndTime" step="900"></div>` : '') + '</div>';
 }
 for (const prefix of ['container', 'editContainer']) {
-  document.getElementById(prefix + 'Notes').closest('.field').insertAdjacentHTML('beforebegin', logisticsBookingFields(prefix));
+  document.getElementById(prefix + 'Date').closest('.field-row').insertAdjacentHTML('afterend', logisticsEndFields(prefix));
+  document.getElementById(prefix + 'Time').step = 900;
   document.querySelector(`label[for="${prefix}Notes"]`).textContent = 'Notes';
-  document.querySelector(`label[for="${prefix}Date"]`).textContent = 'Start date';
-  document.querySelector(`label[for="${prefix}Time"]`).textContent = 'Start time';
+  document.querySelector(`label[for="${prefix}Date"]`).textContent = 'Report Date';
+  document.querySelector(`label[for="${prefix}Time"]`).textContent = 'Report Time';
 }
 document.body.insertAdjacentHTML('beforeend', `<div class="overlay" id="logisticsEodOverlay"></div>
   <div class="sheet" id="logisticsEodSheet"><div class="sheet-head"><h2>Logistics EOD Sheet</h2><button id="closeLogisticsEod">&times;</button></div>
   <div class="sheet-body"><p id="logisticsEodName"></p><div class="field"><label for="logisticsEodDate">EOD date</label><input type="date" id="logisticsEodDate"></div>
-  <div class="field-row"><div class="field"><label for="logisticsEodStartDate">Start date</label><input type="date" id="logisticsEodStartDate"></div><div class="field"><label for="logisticsEodStartTime">Start time</label><input type="time" id="logisticsEodStartTime"></div></div>
-  ${logisticsBookingFields('logisticsEod')}<div class="field"><label for="logisticsEodNotes">Notes</label><textarea id="logisticsEodNotes"></textarea></div>
+  <div class="field-row"><div class="field"><label for="logisticsEodStartDate">Report Date</label><input type="date" id="logisticsEodStartDate"></div><div class="field"><label for="logisticsEodStartTime">Report Time</label><input type="time" id="logisticsEodStartTime" step="900"></div></div>
+  ${logisticsEndFields('logisticsEod', false)}<div class="field"><label for="logisticsEodNotes">Notes</label><textarea id="logisticsEodNotes"></textarea></div>
   <p>Submitting sends the day's logistics log and clears the schedule, driver and vehicles. Booking details and documents are kept.</p></div>
   <div class="sheet-foot"><button class="btn-ghost" id="cancelLogisticsEod">Cancel</button><button class="btn-primary" id="submitLogisticsEod">Submit EOD Sheet</button></div></div>`);
 function fillLogisticsBookingFields(prefix, move = {}) {
-  const fields = { ClientContact: move.clientContact || [move.clientName || move.contact?.name, move.clientPhone || move.contact?.phone].filter(Boolean).join(' · '), PredictedEndDate: move.predictedEndDate || move.reportEndDate || '', Scope: move.scopeOfWork || '', ScheduledDays: move.scheduledDays || '', ScheduledHours: move.scheduledHours || '', OverweightTons: move.overweightTons ?? 0 };
-  for (const [key, value] of Object.entries(fields)) document.getElementById(prefix + key).value = value;
-  document.getElementById(prefix + 'Documents').value = '';
-  const docs = (move.documents || []).map(doc => ({ ...doc }));
-  logisticsDocumentSelections.set(prefix, docs);
-  document.getElementById(prefix + 'DocumentList').innerHTML = docs.map(doc => `<div><a href="/.netlify/functions/logistics-documents?id=${encodeURIComponent(doc.id)}" target="_blank" rel="noopener">${escapeLogisticsHtml(doc.name)}</a></div>`).join('');
+  logisticsBookingMoves.set(prefix, move);
+  const endDate = document.getElementById(prefix + 'EndDate'), endTime = document.getElementById(prefix + 'EndTime');
+  if (endDate) endDate.value = move.reportEndDate || move.predictedEndDate || '';
+  if (endTime) endTime.value = move.reportEndTime || '';
 }
-async function readLogisticsBookingFields(prefix) {
-  const value = key => document.getElementById(prefix + key).value.trim();
-  const overweightTons = Number(value('OverweightTons'));
-  if (!Number.isFinite(overweightTons) || overweightTons < 0) throw new Error('Overweight tons must be zero or greater.');
-  const documents = [...(logisticsDocumentSelections.get(prefix) || [])];
-  const files = [...document.getElementById(prefix + 'Documents').files];
-  if (documents.length + files.length > 20) throw new Error('Attach up to 20 documents.');
-  if (files.some(file => !file.size || file.size > 3 * 1024 * 1024)) throw new Error('Each document must be nonempty and 3 MB or smaller.');
-  for (const file of files) {
-    let doc = logisticsUploadedFiles.get(file);
-    if (!doc) {
-      const form = new FormData(); form.append('file', file);
-      const response = await fetch('/.netlify/functions/logistics-documents', { method: 'POST', body: form });
-      const result = await response.json();
-      if (!response.ok || !result.document) throw new Error(result.error || 'Document upload failed.');
-      doc = result.document; logisticsUploadedFiles.set(file, doc);
-    }
-    documents.push(doc);
-  }
-  return { clientContact: value('ClientContact'), predictedEndDate: value('PredictedEndDate'), scopeOfWork: value('Scope'), scheduledDays: value('ScheduledDays'), scheduledHours: value('ScheduledHours'), overweightTons, documents: documents.map(doc => ({ ...doc, url: new URL(`/.netlify/functions/logistics-documents?id=${encodeURIComponent(doc.id)}`, window.location.origin).href })) };
+// Report End Time for sheets that have one ('' if none).
+function logisticsEndTime(prefix) { return document.getElementById(prefix + 'EndTime')?.value || ''; }
+// Same keys as before. predictedEndDate = Report End Date, defaulting to Report Date (like Labor).
+async function readLogisticsBookingFields(prefix, reportDate = '') {
+  const move = logisticsBookingMoves.get(prefix) || {};
+  const overweightTons = Number(move.overweightTons ?? 0);
+  return {
+    clientContact: move.clientContact || '',
+    predictedEndDate: document.getElementById(prefix + 'EndDate')?.value || reportDate || '',
+    scopeOfWork: move.scopeOfWork || '',
+    scheduledDays: move.scheduledDays || '',
+    scheduledHours: move.scheduledHours || '',
+    overweightTons: Number.isFinite(overweightTons) && overweightTons >= 0 ? overweightTons : 0,
+    documents: (move.documents || []).map(doc => ({ ...doc, url: new URL(`/.netlify/functions/logistics-documents?id=${encodeURIComponent(doc.id)}`, window.location.origin).href }))
+  };
+}
+// End must be after the start when both are set (same rule as Labor, no night toggle here).
+function logisticsTimesError(reportDate, reportTime, endDate, endTime) {
+  if (!endTime) return '';
+  const start = new Date(`${reportDate}T${reportTime || '00:00'}`), end = new Date(`${endDate || reportDate}T${endTime}`);
+  return end > start ? '' : 'Report End must be after the Report Date and Time.';
 }
 let logisticsEodMoveId = '', logisticsEodTrigger = null, logisticsEodSubmitting = false;
 function closeLogisticsEod() {
@@ -8554,7 +8552,7 @@ document.getElementById('submitLogisticsEod').addEventListener('click', async ()
   if (!date) return showToast('Add the EOD date.', true);
   logisticsEodSubmitting = true; button.disabled = true; button.textContent = 'Submitting...';
   try {
-    const fields = await readLogisticsBookingFields('logisticsEod');
+    const fields = await readLogisticsBookingFields('logisticsEod', document.getElementById('logisticsEodStartDate').value);
     const sheet = { ...fields, date, reportDate: document.getElementById('logisticsEodStartDate').value, reportTime: document.getElementById('logisticsEodStartTime').value, reportEndDate: fields.predictedEndDate, notes: document.getElementById('logisticsEodNotes').value.trim(), eodSheet: true };
     const result = await resetLogisticsDay(logisticsEodMoveId, logisticsEodTrigger || button, sheet);
     if (result) { logisticsEodSubmitting = false; closeLogisticsEod(); }
@@ -8676,9 +8674,12 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
   const containerSize = document.getElementById('editContainerSize').value;
   const movementType = document.getElementById('editContainerMovementType').value;
   if (!firstName || !lastName || !jobAddress || !reportDate || !reportTime) return showToast('Client, destination, date, and time are required.', true);
+  const editEndTime = logisticsEndTime('editContainer');
+  const editTimesError = logisticsTimesError(reportDate, reportTime, document.getElementById('editContainerEndDate').value, editEndTime);
+  if (editTimesError) return showToast(editTimesError, true);
   let bookingFields;
   button.disabled = true;
-  try { bookingFields = await readLogisticsBookingFields('editContainer'); }
+  try { bookingFields = await readLogisticsBookingFields('editContainer', reportDate); }
   catch (error) { button.disabled = false; showToast(error.message, true); return; }
   const payload = {
     ...(!isAddon ? { paymentTerms: document.getElementById('editContainerPaymentTerms').value } : {}),
@@ -8688,7 +8689,7 @@ document.getElementById('submitEditContainer').addEventListener('click', async (
     clientPhone: document.getElementById('editContainerPhone').value.trim(),
     jobAddress, deliveryAddress: jobAddress, destinationAddress: jobAddress, pickupAddress: move.pickupAddress || move.pickup || 'A2Z Yard',
     reportDate, reportTime, requestedDate: reportDate, requestedTime: reportTime,
-    reportEndDate: bookingFields.predictedEndDate, reportEndTime: move.reportEndTime || '',
+    reportEndDate: bookingFields.predictedEndDate, reportEndTime: editEndTime,
     monetaryValue: document.getElementById('editContainerValue').value === '' ? null : parseFloat(document.getElementById('editContainerValue').value),
     ...bookingFields, notes: document.getElementById('editContainerNotes').value.trim(),
     toolsRequired: [`${containerSize} Container`], containerSize, movementType, equipment: `${containerSize} Container`,
@@ -8943,9 +8944,12 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
     showToast('Client, delivery address, date, and time are required.', true);
     return;
   }
+  const reportEndTime = logisticsEndTime('container');
+  const timesError = logisticsTimesError(reportDate, reportTime, document.getElementById('containerEndDate').value, reportEndTime);
+  if (timesError) { showToast(timesError, true); return; }
   let bookingFields;
   submitBtn.disabled = true;
-  try { bookingFields = await readLogisticsBookingFields('container'); }
+  try { bookingFields = await readLogisticsBookingFields('container', reportDate); }
   catch (error) { submitBtn.disabled = false; showToast(error.message, true); return; }
   const payload = {
     action: 'create',
@@ -8965,7 +8969,7 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
     reportDate,
     reportTime,
     reportEndDate: bookingFields.predictedEndDate,
-    reportEndTime: '',
+    reportEndTime,
     movementType,
     containerSize,
     equipment: `${containerSize} Container`,
@@ -9021,7 +9025,7 @@ document.getElementById('submitContainerBook').addEventListener('click', async (
       showToast('Container created, but Make must return opportunityId to sync shared state.', true);
     }
     closeContainerSheetFn();
-    ['containerFirstName','containerLastName','containerAddress','containerValue','containerNotes','containerPaymentTerms'].forEach(id => document.getElementById(id).value = '');
+    ['containerFirstName','containerLastName','containerAddress','containerValue','containerNotes','containerPaymentTerms','containerEndDate','containerEndTime'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('containerPhone').value = '+1';
     containerClientSearch.clear({ keepFields: true });
     await loadLogistics();

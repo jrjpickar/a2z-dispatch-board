@@ -42,7 +42,7 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
   assert.equal(await page.inputValue('#containerAddress'), '12 Main St, Irvine, CA 92618');
   assert.match(await page.locator('#containerClientPicked').innerText(), /Existing GHL client: Maria Gomez/);
   await page.selectOption('#containerPaymentTerms', 'net-7');
-  await page.fill('#containerDate', '2026-11-20'); await page.fill('#containerTime', '07:00');
+  await page.fill('#containerDate', '2026-11-20'); await page.evaluate(() => { const el = document.getElementById('containerTime'); el.value = '07:00'; el.dispatchEvent(new Event('change', { bubbles: true })); });
   await page.click('#submitContainerBook'); await page.waitForTimeout(600);
   assert.equal(creates.at(-1).clientContactId, 'k1'); assert.equal(creates.at(-1).existingClient, true); assert.equal(creates.at(-1).clientEmail, 'm@x.com');
   // Editing the name drops the link.
