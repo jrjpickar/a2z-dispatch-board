@@ -43,8 +43,9 @@ export default async function handler(request) {
       if (!jobId) throw new StateError('Pick the job to send');
       const result = await syncJob(sql, jobId, { mode: 'due', why: 'send_now' });
       await refreshTimer(sql);
-      const ok = !result.makeFailed && result.textOk;
-      return json({ ok, ...result, ...(ok ? {} : { error: result.skipped ? 'This job is closed.' : 'Some of it did not finish. Check Admin > Make / GHL problems.' }) });
+      const ok = !result.makeFailed && result.textOk && !result.skipped;
+      const error = result.skipped === 'closed' ? 'This job is closed.' : result.skipped === 'no_date' ? 'This job has no date, so nothing can go out. Save its times, then Send now.' : 'Some of it did not finish. Check Admin > Make / GHL problems.';
+      return json({ ok, ...result, ...(ok ? {} : { error }) });
     }
     // New times saved after the crew was sent the job: dispatch picked Text the new times
     // (resend true) or Don't text (logged only).
@@ -55,6 +56,12 @@ export default async function handler(request) {
       const prev = body.previous && typeof body.previous === 'object' ? body.previous : {};
       const was = [prev.reportDate, prev.reportTime].filter(Boolean).join(' ');
       if (body.resend !== true) {
+        // Moved to another day and dispatch said Don't text: recorded, so the timer does not
+        // send the new day to them on its own (it does for crew carried to a new day otherwise).
+        const workers = await notifiedOnJob(sql, jobId);
+        const [row] = await sql`select data from job_shared_state where job_id = ${jobId}`;
+        const date = String((typeof row?.data === 'string' ? JSON.parse(row.data) : (row?.data || {})).reportDate || '');
+        if (workers.length && date && date !== String(prev.reportDate || '')) await recordDontText(sql, { jobId, reportDate: date, workers, by: session?.name || '' });
         await logActivity(sql, session, 'Changed job times, crew not texted', String(body.jobAddress || jobId).slice(0, 200), { jobId, previous: prev });
         return json({ ok: true, texted: 0 });
       }

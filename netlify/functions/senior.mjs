@@ -1,7 +1,8 @@
 // Senior admin tools (Admin page). Senior admins only, except that problems,
 // activity and history can be shared read-only with all admins (lib/layout.mjs).
 //   GET  /api/senior?view=activity   -> { activity: [...] }       who did what, newest first
-//   GET  /api/senior?view=problems   -> { effects: [...], crm: [...] } Make runs and GHL syncs that didn't go through
+//   GET  /api/senior?view=problems   -> { effects, crm, crew, texts } Make runs and GHL syncs that didn't go through,
+//                                       crew sends stuck on the server, and each schedule text problem
 //   GET  /api/senior?view=history    -> { sends: [...] }          EOD sheets + Project Schedule PDFs sent
 //   GET  /api/senior?view=pending    -> { jobs: [...], held: [...] } crew sends waiting for their 12 hour mark, and undo-window holds
 //   GET  /api/senior?view=texts      -> schedule text tracker (per job and worker: waiting, sent, delivered, failed, overdue)
@@ -22,11 +23,16 @@ import { sendWorkflow, workflows, webhookUrl } from '../../lib/effects.mjs';
 import { syncJobSchedule } from '../../lib/ghl.mjs';
 import { QUIET_STATUSES } from '../../lib/effect-queue.mjs';
 import { holdSchedule, rowWorkers, holdHours, sendWorkersNow } from '../../lib/daily-dispatch.mjs';
-import { textTracker, ackTexts } from '../../lib/text-tracker.mjs';
+import { textTracker, ackTexts, crewProblems } from '../../lib/text-tracker.mjs';
 import { refreshTimer } from '../../lib/hold-timer.mjs';
 
 const KIND_LABELS = { project_schedule: 'Project Schedule PDF', workers: 'Worker notification', drivers: 'Driver notification', job_details: 'Job details update', job_stage: 'Job stage (complete/cancel)', container: 'Container update', driver_log: 'Driver log', eod_sheet: 'EOD sheet', job_log: 'Job log', worker_sent_home: 'Worker sent home', split_day: 'Split day booking', job_hours: 'Job hours', labor_added: 'Laborer added', logistics_reminder: 'Logistics reminder', labor_reminder: 'Labor reminder', crew_text: 'Crew schedule text', clock: 'Clock in / out' };
 const recordName = p => p ? String(p.jobName || p.jobAddress || p.clientName || p.workerName || p.driverName || '') : '';
+const effectWorkers = p => {
+  if (!p) return [];
+  const list = Array.isArray(p.removedWorkers) && p.removedWorkers.length ? p.removedWorkers : Array.isArray(p.textWorkers) && p.textWorkers.length ? p.textWorkers : p.workerName ? [p] : [];
+  return [...new Set(list.map(w => String(w?.workerName || w?.name || '').trim()).filter(Boolean))].slice(0, 12);
+};
 
 async function problems(sql) {
   // Nothing counts as a problem until Make has had 45 s to answer. A run still
@@ -39,16 +45,26 @@ async function problems(sql) {
       id: r.effect_id, kind: r.kind, webhook: workflows[r.kind] ? webhookUrl(r.kind) : '', label: KIND_LABELS[r.kind] || r.kind, status: r.status,
       error: r.status === 'sending' ? 'No answer from Make (timed out). Check Make history.' : (r.last_error || ''),
       jobId: String(r.payload?.jobId || r.payload?.moveId || r.payload?.opportunityId || ''), name: recordName(r.payload),
-      action: String(r.payload?.action || ''), canRetry: !!r.payload && !!workflows[r.kind], at: r.updated_at || r.created_at
+      action: String(r.payload?.action || ''), canRetry: !!r.payload && !!workflows[r.kind], at: r.updated_at || r.created_at,
+      // More to go on: who it was for, which day, and when it was first tried.
+      workers: effectWorkers(r.payload), date: String(r.payload?.reportDate || r.payload?.date || ''), createdAt: r.created_at
     }));
   const crm = (await sql`select c.job_id, c.last_error, c.updated_at, s.data from dispatch_crm_sync c
     left join job_shared_state s on s.job_id = c.job_id where c.pending = true and c.updated_at < now() - interval '45 seconds' order by c.updated_at desc limit 100`).map(r => ({
       jobId: r.job_id, error: r.last_error || '', at: r.updated_at, name: String(r.data?.jobAddress || r.data?.clientName || '')
     }));
   // Schedule texts that should have gone out and didn't (Admin > Schedule text tracker).
-  let texts = { problems: 0, jobs: 0 };
-  try { const t = await textTracker(sql); texts = { problems: t.summary.problems, jobs: t.jobs.filter(j => j.problems).length }; } catch (error) { console.error('Text tracker check failed', error); }
-  return { effects, crm, texts };
+  // Each worker, not just a count, so the board shows who and why without opening the tracker.
+  let texts = { problems: 0, jobs: 0, rows: [] };
+  try {
+    const t = await textTracker(sql);
+    const rows = t.jobs.flatMap(j => j.workers.filter(w => w.problem).map(w => ({ jobId: j.jobId, job: j.name, date: j.date, name: w.name, phone: w.phone, status: w.status, label: w.label, detail: w.detail, at: w.at })));
+    texts = { problems: t.summary.problems, jobs: t.jobs.filter(j => j.problems).length, rows: rows.slice(0, 40) };
+  } catch (error) { console.error('Text tracker check failed', error); texts.error = 'Schedule text tracker check failed: ' + error.message; }
+  // Crew runs held on the server that can't or didn't go out (no job date, overdue, dropped).
+  let crew = [];
+  try { crew = await crewProblems(sql); } catch (error) { console.error('Crew send check failed', error); crew = [{ type: 'check_failed', label: 'Crew send check failed', detail: error.message, workers: [] }]; }
+  return { effects, crm, crew, texts };
 }
 // Pending sends: crew runs held until 12 hours before the job (grouped per job, with
 // when they go out), plus undo-window holds that have not gone yet.

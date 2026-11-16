@@ -5112,9 +5112,12 @@ async function sendJobNow(jobId, btn) {
   try {
     const res = await fetchWithTimeout('/api/workflow-effect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'job_send_now', jobId }) }, 60000);
     const data = await res.json().catch(() => ({}));
+    // Who was left out and why, so "nothing to send" is never a dead end.
+    const why = [data.notQueued?.length ? `No text planned for ${data.notQueued.join(', ')} (assigned with Don't text); use Text now in the Schedule text tracker if they need it.` : '',
+      data.noPhone?.length ? `No phone for ${data.noPhone.join(', ')}.` : ''].filter(Boolean).join(' ');
     if (!res.ok || data.ok !== true) showToast(data.error || `Send now not confirmed (HTTP ${res.status}). Check Admin > Make / GHL problems.`, true);
-    else if (!data.makeSent && !data.texted) showToast('Nothing new to send for this job. Make and the crew already have it.');
-    else showToast(`Sent now: ${data.makeSent} to Make, schedule text to ${data.texted} worker${data.texted === 1 ? '' : 's'}.`);
+    else if (!data.makeSent && !data.texted) showToast(why ? `Nothing sent. ${why}` : 'Nothing new to send for this job. Make and the crew already have it.', !!why);
+    else showToast(`Sent now: ${data.makeSent} to Make, schedule text to ${data.texted} worker${data.texted === 1 ? '' : 's'}.${why ? ' ' + why : ''}`);
   } catch (error) { showToast(`Send now not confirmed: ${error.message}. Check Admin > Make / GHL problems.`, true); }
   delete window.dispatchWaiting[String(jobId)];
   render();
@@ -10551,14 +10554,19 @@ async function seniorApi(view, body) {
 const seniorWhen = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleString([], { timeZone: BOARD_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
 function renderProblems(data) {
   const effects = data.effects || [], crm = data.crm || [];
-  const texts = data.texts || { problems: 0 };
-  document.getElementById('problemCount').textContent = String(effects.length + crm.length + (texts.problems || 0));
+  const texts = data.texts || { problems: 0 }, crew = data.crew || [];
+  document.getElementById('problemCount').textContent = String(effects.length + crm.length + crew.length + (texts.problems || 0));
   const canAct = !!currentSession.isSenior;
   document.getElementById('resolveAllProblems').hidden = !canAct || effects.length < 2;
   const list = document.getElementById('problemList');
   const rows = [
-    ...(texts.problems ? [`<li><div class="who"><b>Schedule texts not sent: ${texts.problems}</b><small>${texts.jobs} ${texts.jobs === 1 ? 'job' : 'jobs'}. Open Schedule text tracker (Needs attention) to see who and send them.</small></div><div class="problem-actions"><button type="button" class="job-stage-btn edit" data-tt-jump="1">Show</button></div></li>`] : []),
-    ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${p.webhook ? `<small>Webhook: ${sessionEsc(p.webhook)}</small>` : ''}${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
+    // Crew sends stuck on the server (no job date, overdue, dropped): these used to look like nothing was wrong.
+    ...crew.map(c => `<li><div class="who"><b>${sessionEsc(c.label)}</b>${c.name ? ' · ' + sessionEsc(c.name) : ''}${(c.workers || []).length ? `<small>Crew: ${sessionEsc(c.workers.join(', '))}</small>` : ''}<small>${sessionEsc([c.jobId, c.at ? seniorWhen(c.at) : ''].filter(Boolean).join(' · '))}</small>${c.detail ? `<small class="err">${sessionEsc(c.detail)}</small>` : ''}</div>`
+      + (canAct && c.jobId && c.type !== 'no_date' ? `<div class="problem-actions"><button type="button" class="job-stage-btn edit" data-crew-send="${sessionEsc(c.jobId)}">Send now</button></div>` : '') + '</li>'),
+    ...(texts.problems ? [`<li><div class="who"><b>Schedule texts not sent: ${texts.problems}</b><small>${texts.jobs} ${texts.jobs === 1 ? 'job' : 'jobs'}. Each one is listed below; the Schedule text tracker can text them.</small></div><div class="problem-actions"><button type="button" class="job-stage-btn edit" data-tt-jump="1">Show</button></div></li>`] : []),
+    ...(texts.rows || []).map(t => `<li><div class="who">Schedule text: ${sessionEsc(t.label)} · ${sessionEsc(t.name)}<small>${sessionEsc([t.job, t.date ? ttDay(t.date) : '', t.phone, t.at ? seniorWhen(t.at) : ''].filter(Boolean).join(' · '))}</small>${t.detail ? `<small class="err">${sessionEsc(t.detail)}</small>` : ''}</div></li>`),
+    ...(texts.error ? [`<li><div class="who"><b>${sessionEsc(texts.error)}</b></div></li>`] : []),
+    ...effects.map(p => `<li><div class="who">${sessionEsc(p.label)}${p.name ? ' · ' + sessionEsc(p.name) : ''}<small>${sessionEsc([p.action, p.jobId, p.date, seniorWhen(p.at)].filter(Boolean).join(' · '))}</small>${(p.workers || []).length ? `<small>For: ${sessionEsc(p.workers.join(', '))}</small>` : ''}<small>${sessionEsc([p.status === 'sending' ? 'No answer' : p.status === 'uncertain' ? 'Not confirmed' : p.status, p.createdAt && p.createdAt !== p.at ? 'first tried ' + seniorWhen(p.createdAt) : ''].filter(Boolean).join(' · '))}</small>${p.webhook ? `<small>Webhook: ${sessionEsc(p.webhook)}</small>` : ''}${p.error ? `<small class="err">${sessionEsc(p.error)}</small>` : ''}</div>`
       + (!canAct ? '' : `<div class="problem-actions">${p.canRetry ? `<button type="button" class="job-stage-btn edit problem-btn" data-action="retry_effect" data-id="${sessionEsc(p.id)}">Retry</button>` : ''}<button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_effect" data-id="${sessionEsc(p.id)}">Acknowledge</button></div>`) + '</li>'),
     ...crm.map(c => `<li><div class="who">GHL schedule sync${c.name ? ' · ' + sessionEsc(c.name) : ''}<small>${sessionEsc([c.jobId, seniorWhen(c.at)].filter(Boolean).join(' · '))}</small>${c.error ? `<small class="err">${sessionEsc(c.error)}</small>` : ''}</div>`
       + (!canAct ? '' : `<div class="problem-actions"><button type="button" class="job-stage-btn edit problem-btn" data-action="retry_crm" data-job-id="${sessionEsc(c.jobId)}">Retry</button><button type="button" class="job-stage-btn cancel problem-btn" data-action="resolve_crm" data-job-id="${sessionEsc(c.jobId)}">Acknowledge</button></div>`) + '</li>')
@@ -10806,6 +10814,8 @@ document.getElementById('webhookHistoryList').addEventListener('click', resubmit
 document.getElementById('historyList').addEventListener('click', resubmitFromHistory);
 
 document.getElementById('problemList').addEventListener('click', async e => {
+  const crewSend = e.target.closest('[data-crew-send]');
+  if (crewSend) { await sendJobNow(crewSend.dataset.crewSend, crewSend); seniorApi('problems').then(renderProblems).catch(() => {}); loadTextTracker(); return; }
   if (e.target.closest('[data-tt-jump]')) { ttFilter = 'problems'; renderTextTracker(); const el = dashEl('textTracker'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   const btn = e.target.closest('.problem-btn'); if (!btn) return;
   const { action } = btn.dataset;
