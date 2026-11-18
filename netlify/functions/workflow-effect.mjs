@@ -1,7 +1,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
-import { waitsForHold, isRapid, claimRapid, syncJob, waitingSummary, ensureHoldTables, holdSchedule, notifiedOnJob, resendTimes, owedTexts, recordDontText } from '../../lib/daily-dispatch.mjs';
+import { waitsForHold, isRapid, claimRapid, syncJob, waitingSummary, ensureHoldTables, holdSchedule, notifiedOnJob, resendTimes, owedTexts, recordDontText, jobState, textPlan, textJob, logScheduleWorkers, sendJobScheduleNow } from '../../lib/daily-dispatch.mjs';
 import { sessionFromRequest } from '../../lib/session.mjs';
 import { logActivity } from '../../lib/activity.mjs';
 import { refreshTimer, startRunner } from '../../lib/hold-timer.mjs';
@@ -41,7 +41,9 @@ export default async function handler(request) {
     if (body.op === 'job_send_now') {
       const jobId = String(body.jobId || '').slice(0, 160);
       if (!jobId) throw new StateError('Pick the job to send');
-      const result = await syncJob(sql, jobId, { mode: 'due', why: 'send_now' });
+      const result = await sendJobScheduleNow(sql, jobId);
+      const state = await jobState(sql, jobId);
+      if (state && !result.skipped) await logScheduleWorkers(sql, sessionFromRequest(request), 'Sent schedule now', { ...state, jobId }, state.crew || [], { force: true, workerSkips: result.workerSkips });
       await refreshTimer(sql);
       const ok = !result.makeFailed && result.textOk && !result.skipped;
       const error = result.skipped === 'closed' ? 'This job is closed.' : result.skipped === 'no_date' ? 'This job has no date, so nothing can go out. Save its times, then Send now.' : 'Some of it did not finish. Check Admin > Make / GHL problems.';
@@ -93,7 +95,13 @@ export default async function handler(request) {
     // Assign / remove / split day: held until 12 hours before the job (lib/daily-dispatch.mjs).
     // Inside the 12 hours it all goes now; a remove goes now only to a worker already notified.
     if (waitsForHold(kind, payload)) {
-      const { effectId, status } = await recordEffect(sql, { requestId, kind, payload, effectKey, nightly: true });
+      let sendAt = null;
+      if (payload.textAtMode) {
+        const state = await jobState(sql, payload.jobId);
+        const plan = textPlan(state, payload);
+        sendAt = plan.textAt || null;
+      }
+      const { effectId, status } = await recordEffect(sql, { requestId, kind, payload, effectKey, nightly: true, sendAt });
       if (status !== 'new') return json({ ok: true, replayed: true, effectId, status });
       const [job] = (await holdSchedule(sql)).filter(j => j.jobId === String(payload.jobId));
       const due = !!job && job.dueAt != null && job.dueAt <= Date.now();
@@ -101,8 +109,9 @@ export default async function handler(request) {
       await refreshTimer(sql);
       const [still] = await sql`select status from dispatch_effects where effect_id = ${effectId}`;
       const held = still?.status === 'nightly';
+      const planned = job?.rows.find(row => row.effect_id === effectId)?.dueAt;
       if (result.makeFailed) return json({ error: 'Dispatch saved; Make did not confirm. Check Admin > Make / GHL problems.', held, effectId }, 502);
-      return json({ ok: true, held, effectId, status: still?.status || '', dueAt: held && job?.dueAt ? new Date(job.dueAt).toISOString() : '', makeSent: result.makeSent, texted: result.texted });
+      return json({ ok: true, held, effectId, status: still?.status || '', dueAt: held && planned != null ? new Date(planned).toISOString() : '', makeSent: result.makeSent, texted: result.texted });
     }
     // Send schedule now (rapid): right away, but never twice to the same worker for the same job and day.
     if (isRapid(kind, payload)) {
@@ -111,6 +120,7 @@ export default async function handler(request) {
       if (status !== 'new') return json({ error: 'Workflow was already attempted. Check Make history before rerunning to avoid duplicate notifications.', status }, 409);
       if (await claimRapid(sql, { effectId, kind, payload }) === 'duplicate') return json({ ok: true, duplicate: true });
       const ok = await deliverEffect(sql, { effect_id: effectId, kind, payload });
+      if (kind === 'split_day' && payload.jobId2 && ok) await textJob(sql, payload.jobId2, 'rapid_assign');
       await refreshTimer(sql);
       return ok ? json({ ok: true }) : json({ error: 'Dispatch saved; workflow completion is unconfirmed. Check Make execution history.' }, 502);
     }

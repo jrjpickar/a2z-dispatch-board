@@ -1,3 +1,5 @@
+import { jobState, logScheduleWorkers, textPlan } from '../../lib/daily-dispatch.mjs';
+import { matchWorker } from '../../lib/crew-text.mjs';
 import { db, ensureSchema } from './db.mjs';
 import { authorizeWrite, readPayload, json, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { jobRecord, saveState } from '../../lib/store.mjs';
@@ -57,7 +59,22 @@ export default async function handler(request) {
       if (!opportunity?.id) throw new Error('Could not verify the project in GHL. Refresh and try again.');
       context.contract = [process.env.DEMO_PIPELINE_ID || 'd5Ix1SlN3YpZ5gQewZUo', changeOrderPipelineId()].includes(opportunity.pipelineId);
     }
+    if (payload.action === 'assign' && Array.isArray(payload.crewChanges)) {
+      const state = await jobState(sql, payload.jobId);
+      const schedule = Object.hasOwn(state || {}, 'reportDate') ? state : payload;
+      for (const worker of payload.crewChanges) if (worker?.textAtMode && !worker.dontText) {
+        textPlan(schedule, { ...worker, workerReportDate: worker.workerTimes?.reportDate, workerReportTime: worker.workerTimes?.reportTime });
+      }
+    }
     const result = await saveState(sql, 'job', payload, context);
+    if (!result.replayed && payload.action === 'assign') {
+      const label = payload.splitDayFrom ? 'Assigned split day' : 'Assigned';
+      const workers = (payload.crewChanges || []).map(w => matchWorker(result.record.crew || [], w)).filter(Boolean);
+      await logScheduleWorkers(sql, session, label, { ...result.record, jobAddress: payload.jobAddress || result.record.jobAddress }, workers);
+    }
+    if (!result.replayed && payload.action === 'save_times') {
+      await logScheduleWorkers(sql, session, 'Changed times', { ...result.record, jobAddress: payload.jobAddress || result.record.jobAddress }, result.record.crew || []);
+    }
     if (['complete', 'cancel', 'reopen'].includes(payload.action) && !result.replayed) {
       const label = { complete: 'Marked job completed', cancel: 'Marked job cancelled', reopen: 'Reopened job' }[payload.action];
       await logActivity(sql, session, label, payload.jobAddress || payload.jobId, { jobId: payload.jobId });

@@ -149,3 +149,72 @@ test('problems board lists stuck crew sends and each text problem', async () => 
   assert.ok(list.some(p => p.jobId === 'st' && p.type === 'no_date'), JSON.stringify(list));
   assert.ok(list.some(p => p.jobId === 'dr' && p.type === 'dropped' && p.workers[0] === 'Bo Diaz'), JSON.stringify(list));
 });
+
+test('Send now recovers a dropped legacy assign without removing or reassigning the worker', async () => {
+  stubFetch();
+  const jobId = 'recover-cancelled';
+  await setState(jobId, { jobAddress: '10 Recovery Rd', reportDate: FAR.date, reportTime: '07:00', crew: [ANA] });
+  await sql`insert into dispatch_effects (effect_id, request_id, kind, fingerprint, status, payload, last_error)
+    values ('dropped-legacy', 'dropped-legacy', 'workers', 'f', 'cancelled', ${JSON.stringify(assign(jobId, ANA, FAR))}, 'Nothing to send: canceled out or replaced before it went out')`;
+  const result = await (await post({ op: 'job_send_now', jobId })).json();
+  assert.deepEqual([result.makeSent, result.texted], [1, 1]);
+  assert.deepEqual(calls.texts.map(t => t.to), [ANA.phone]);
+  const second = await (await post({ op: 'job_send_now', jobId })).json();
+  assert.deepEqual(second.workerSkips.map(w => w.name), [ANA.name]);
+  assert.equal(second.texted, 0);
+});
+
+test('a ledger-only claim with an old number sends the current number without a duplicate assignment', async () => {
+  stubFetch();
+  const jobId = 'ledger-old-phone';
+  await setState(jobId, { jobAddress: '15 Recovery Rd', reportDate: FAR.date, reportTime: '07:00', crew: [ANA] });
+  await sql`insert into crew_notify (job_id, report_date, worker_key, worker_name, worker_phone, contact_id, effect_id)
+    values (${jobId}, ${FAR.date}, 'p:5550000099', ${ANA.name}, '+15550000099', ${ANA.id}, 'rapid-made')`;
+  const result = await (await post({ op: 'job_send_now', jobId })).json();
+  assert.deepEqual([result.makeSent, result.texted], [0, 1]);
+  assert.deepEqual(calls.texts.map(t => t.to), [ANA.phone]);
+});
+
+test('custom held rows for the same job go out independently and record each worker in activity', async () => {
+  stubFetch();
+  const jobId = 'custom-queue';
+  const schedule = { date: FAR.date, time: '17:00' };
+  const chosen = [dd.jobStartUtc(FAR.date, '09:00'), dd.jobStartUtc(FAR.date, '10:15')];
+  const [first, second] = [ANA, BO].map((worker, i) => ({
+    ...worker, textAtMode: 'custom', textAt: dd.pacificIso(chosen[i]), dontText: false
+  }));
+  await setState(jobId, { jobAddress: '15 Quarter Hour Rd', reportDate: FAR.date, reportTime: '17:00', reportEndDate: FAR.date, reportEndTime: '23:00', nightWork: true, crew: [first, second] });
+  for (const w of [first, second]) {
+    const result = await queue('workers', { ...assign(jobId, w, schedule), textAtMode: w.textAtMode, textAt: w.textAt });
+    assert.equal(result.held, true);
+    assert.equal(Date.parse(result.dueAt), Date.parse(w.textAt));
+  }
+  const [held] = await sql`select send_at from dispatch_effects where payload->>'jobId' = ${jobId} order by send_at`;
+  assert.equal(new Date(held.send_at).getTime(), chosen[0]);
+  const waiting = (await textTracker(sql)).jobs.find(j => j.jobId === jobId).workers;
+  assert.deepEqual(waiting.map(w => Date.parse(w.at)), chosen);
+  const result = await dd.syncJob(sql, jobId, { now: chosen[0] });
+  assert.deepEqual([result.makeSent, result.texted], [1, 1]);
+  assert.deepEqual(calls.texts.map(t => t.to), [first.phone]);
+  const sent = await (await post({ op: 'job_send_now', jobId })).json();
+  assert.deepEqual([sent.makeSent, sent.texted], [1, 1]);
+  assert.deepEqual(calls.texts.map(t => t.to), [first.phone, second.phone]);
+  const activity = await sql`select target, detail from dispatch_activity where action = 'Sent schedule now' and detail->>'jobId' = ${jobId} order by id`;
+  assert.deepEqual(activity.map(a => a.detail.worker), [first.name, second.name]);
+  assert.match(activity[1].target, /15 Quarter Hour Rd.*5:00 PM to 11:00 PM \(night\).*text at/);
+});
+
+test('Twilio receives each worker’s persisted times while Make uses those same times', async () => {
+  stubFetch();
+  const jobId = 'custom-delivery';
+  const times = { reportDate: FAR.date, reportTime: '09:00', reportEndDate: FAR.date, reportEndTime: '17:00' };
+  const workerTimes = { ...times, reportTime: '07:15', reportEndTime: '14:45', customTime: true };
+  const { data } = mutateJob(null, { action: 'assign', ...times, crewChanges: [{ ...ANA, workerTimes }, BO] });
+  await setState(jobId, { ...data, jobAddress: '15 Custom Rd' });
+  for (const w of [ANA, BO]) await queue('workers', assign(jobId, w, { date: FAR.date, time: '09:00' }));
+  const r = await (await post({ op: 'job_send_now', jobId })).json();
+  assert.equal(r.texted, 2);
+  assert.match(calls.texts.find(t => t.to === ANA.phone).body, /7:15 AM - 2:45 PM/);
+  assert.match(calls.texts.find(t => t.to === BO.phone).body, /9:00 AM - 5:00 PM/);
+  assert.deepEqual(calls.make.map(w => [w.workerReportTime, w.workerReportEndTime]), [['07:15', '14:45'], ['09:00', '17:00']]);
+});
