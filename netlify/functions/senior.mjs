@@ -26,7 +26,7 @@ import { holdSchedule, rowWorkers, holdHours, sendWorkersNow } from '../../lib/d
 import { textTracker, ackTexts, crewProblems } from '../../lib/text-tracker.mjs';
 import { refreshTimer } from '../../lib/hold-timer.mjs';
 
-const KIND_LABELS = { project_schedule: 'Project Schedule PDF', workers: 'Worker notification', drivers: 'Driver notification', job_details: 'Job details update', job_stage: 'Job stage (complete/cancel)', container: 'Container update', driver_log: 'Driver log', eod_sheet: 'EOD sheet', job_log: 'Job log', worker_sent_home: 'Worker sent home', split_day: 'Split day booking', job_hours: 'Job hours', labor_added: 'Laborer added', logistics_reminder: 'Logistics reminder', labor_reminder: 'Labor reminder', crew_text: 'Crew schedule text', clock: 'Clock in / out' };
+const KIND_LABELS = { project_schedule: 'Project Schedule PDF', workers: 'Worker notification', drivers: 'Driver notification', job_details: 'Job details update', job_stage: 'Job stage (complete/cancel)', container: 'Container update', driver_log: 'Driver log', eod_sheet: 'EOD sheet', job_log: 'Job log', worker_sent_home: 'Worker sent home', split_day: 'Split day booking', job_hours: 'Job hours', labor_added: 'Laborer added', logistics_reminder: 'Logistics reminder', labor_reminder: 'Labor reminder', crew_text: 'Crew schedule text', clock: 'Clock in / out', worker_request: 'Field app request' };
 const recordName = p => p ? String(p.jobName || p.jobAddress || p.clientName || p.workerName || p.driverName || '') : '';
 const effectWorkers = p => {
   if (!p) return [];

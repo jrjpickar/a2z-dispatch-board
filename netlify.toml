@@ -179,3 +179,13 @@
   from = "/api/job-log"
   to = "/.netlify/functions/job-log"
   status = 200
+
+[[redirects]]
+  from = "/api/worker-tags"
+  to = "/.netlify/functions/worker-tags"
+  status = 200
+
+[[redirects]]
+  from = "/api/field-request"
+  to = "/.netlify/functions/field-request"
+  status = 200

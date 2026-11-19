@@ -199,6 +199,12 @@
   .quick button { border: 1px solid var(--border); background: var(--bg); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
   .quick button[aria-pressed="true"] { background: var(--orange-tint); border-color: var(--orange); color: var(--orange-dark); }
   .sheet .err { color: var(--danger); font-size: 13px; font-weight: 600; min-height: 1em; }
+  .request-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 14px; padding: 13px; border-radius: 10px; border: 1px dashed var(--orange); background: var(--orange-tint); color: var(--orange-dark); font-size: 15px; font-weight: 700; cursor: pointer; }
+  .request-btn svg { width: 18px; height: 18px; }
+  .sheet select { width: 100%; padding: 10px; border-radius: 9px; border: 1px solid var(--border); font-family: inherit; font-size: 16px; color: var(--ink); background: #fff; }
+  .tool-group { display: grid; gap: 6px; }
+  .tool-group h4 { margin: 4px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-dark); }
+  .tool-count { font-size: 12px; font-weight: 600; color: var(--orange-dark); }
   .sheet .btn-ghost { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
   .signoff { border-top: 1px solid var(--border); padding-top: 12px; display: grid; gap: 10px; }
   .signoff h4 { margin: 0; font-family: 'Oswald', sans-serif; text-transform: uppercase; font-size: 14px; letter-spacing: 0.04em; }
@@ -270,6 +276,7 @@
       <span class="updated" id="updatedLabel">&nbsp;</span>
       <button type="button" id="refreshBtn">Refresh</button>
     </div>
+    <button type="button" class="request-btn" id="requestBtn"></button>
     <div id="routesList"></div>
   </div>
 
@@ -304,6 +311,10 @@
       signInFailed: 'Sign in failed.',
       sessionEnded: 'Your session ended. Sign in again.',
       refresh: 'Refresh',
+      reqBtn: 'Request tools or supplies', reqT: 'Request', reqB: 'Tell dispatch what you need. Write it, pick tools, or both.',
+      reqJob: 'For which job?', reqNoJob: 'No specific job', reqMsgL: 'What do you need?', reqMsgPh: 'Ex: 2 more boxes of contractor bags and a second wheelbarrow by noon',
+      reqToolsL: 'Special tools', reqPicked: '{n} picked', reqSend: 'Send request', reqSending: 'Sending...', reqSent: 'Request sent to dispatch',
+      reqEmpty: 'Write what you need or pick a tool.', reqToolsErr: 'Could not load the tool list. You can still write your request.', reqLoading: 'Loading tools...',
       updated: 'Updated {time}',
       emptyState: 'Nothing assigned to you right now. Pull to refresh or check with dispatch.',
       myRoutes: 'My Routes',
@@ -364,6 +375,10 @@
       signInFailed: 'No se pudo iniciar sesión.',
       sessionEnded: 'Tu sesión terminó. Inicia sesión de nuevo.',
       refresh: 'Actualizar',
+      reqBtn: 'Pedir herramientas o materiales', reqT: 'Pedido', reqB: 'Dile a despacho lo que necesitas. Escríbelo, elige herramientas, o las dos cosas.',
+      reqJob: '¿Para qué trabajo?', reqNoJob: 'Ningún trabajo en específico', reqMsgL: '¿Qué necesitas?', reqMsgPh: 'Ej: 2 cajas más de bolsas y otra carretilla antes del mediodía',
+      reqToolsL: 'Herramientas especiales', reqPicked: '{n} elegidas', reqSend: 'Enviar pedido', reqSending: 'Enviando...', reqSent: 'Pedido enviado a despacho',
+      reqEmpty: 'Escribe lo que necesitas o elige una herramienta.', reqToolsErr: 'No se pudo cargar la lista de herramientas. Aún puedes escribir tu pedido.', reqLoading: 'Cargando herramientas...',
       updated: 'Actualizado {time}',
       emptyState: 'No tienes nada asignado por ahora. Actualiza o consulta con despacho.',
       myRoutes: 'Mis Rutas',
@@ -980,6 +995,84 @@
   setInterval(() => { if (clock.open && document.visibilityState === 'visible' && !homeView.hidden && !$('clockSheet')) redraw(); }, 60000);
   watchPermission();
 
+  // ----- Request button (POST /api/field-request) -----
+  // Free form text plus any special tools from the Daily Job Log list (served by
+  // /api/field-request so the list stays the same as the job log). One Make run per request.
+  const ICON_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  let toolGroups = null, reqDraft = { message: '', tools: [], jobId: null };
+  function requestJobs() {
+    // Jobs the worker is on from today through the next 6 days, today's first.
+    const today = pacificDay(0), last = pacificDay(6), seen = new Set(), list = [];
+    sortByDate((lastData && lastData.jobs) || []).forEach(j => {
+      const days = jobDays(j);
+      if (!seen.has(j.jobId) && days.some(d => d >= today && d <= last)) { seen.add(j.jobId); list.push({ job: j, today: days.includes(today) }); }
+    });
+    return list.sort((a, b) => (b.today ? 1 : 0) - (a.today ? 1 : 0));
+  }
+  function toolsHtml() {
+    if (!toolGroups) return '<div class="sub" id="reqToolsMsg">' + escapeHtml(t('reqLoading')) + '</div>';
+    return toolGroups.map(g => '<div class="tool-group"><h4>' + escapeHtml(g.group) + '</h4><div class="quick">'
+      + g.tools.map(tool => '<button type="button" data-tool="' + escapeHtml(tool) + '"></button>').join('') + '</div></div>').join('');
+  }
+  async function openRequest() {
+    const jobs = requestJobs();
+    if (reqDraft.jobId === null) reqDraft.jobId = jobs.length && jobs[0].today ? jobs[0].job.jobId : '';
+    if (reqDraft.jobId && !jobs.some(x => x.job.jobId === reqDraft.jobId)) reqDraft.jobId = '';
+    const el = sheet('<form class="sheet" id="reqForm" novalidate role="dialog" aria-labelledby="reqT">'
+      + '<div><h3 id="reqT">' + escapeHtml(t('reqT')) + '</h3><div class="sub">' + escapeHtml(t('reqB')) + '</div></div>'
+      + (jobs.length ? '<label for="reqJob">' + escapeHtml(t('reqJob')) + '</label><select id="reqJob"><option value="">' + escapeHtml(t('reqNoJob')) + '</option>'
+          + jobs.map(x => '<option value="' + escapeHtml(x.job.jobId) + '">' + escapeHtml((x.today ? t('today') + ' · ' : dayHead(x.job.reportDate) + ' · ') + (x.job.jobAddress || x.job.clientName || t('job'))) + '</option>').join('') + '</select>' : '')
+      + '<label for="reqMsg">' + escapeHtml(t('reqMsgL')) + '</label>'
+      + '<textarea id="reqMsg" maxlength="1000" placeholder="' + escapeHtml(t('reqMsgPh')) + '"></textarea>'
+      + '<label>' + escapeHtml(t('reqToolsL')) + ' <span class="tool-count" id="reqCount"></span></label>'
+      + '<div id="reqTools">' + toolsHtml() + '</div>'
+      + '<div class="err" id="reqErr" role="alert"></div>'
+      + '<button type="submit" class="btn-primary" id="reqSend">' + escapeHtml(t('reqSend')) + '</button>'
+      + '<button type="button" class="btn-ghost" id="reqCancel">' + escapeHtml(t('cancel')) + '</button></form>');
+    const msg = $('reqMsg');
+    msg.value = reqDraft.message;
+    if ($('reqJob')) { $('reqJob').value = reqDraft.jobId; $('reqJob').addEventListener('change', e => { reqDraft.jobId = e.target.value; }); }
+    msg.addEventListener('input', () => { reqDraft.message = msg.value; $('reqErr').textContent = ''; });
+    const sync = () => {
+      el.querySelectorAll('[data-tool]').forEach(b => { const on = reqDraft.tools.includes(b.dataset.tool); b.setAttribute('aria-pressed', on); b.textContent = (on ? '✓ ' : '+ ') + b.dataset.tool; });
+      $('reqCount').textContent = reqDraft.tools.length ? t('reqPicked', { n: reqDraft.tools.length }) : '';
+    };
+    $('reqTools').addEventListener('click', e => {
+      const b = e.target.closest('[data-tool]'); if (!b) return;
+      const tool = b.dataset.tool;
+      reqDraft.tools = reqDraft.tools.includes(tool) ? reqDraft.tools.filter(x => x !== tool) : reqDraft.tools.concat(tool);
+      $('reqErr').textContent = ''; sync();
+    });
+    sync();
+    $('reqCancel').addEventListener('click', closeSheet);
+    $('reqForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!reqDraft.message.trim() && !reqDraft.tools.length) { $('reqErr').textContent = t('reqEmpty'); msg.focus(); return; }
+      const btn = $('reqSend'); btn.disabled = true; btn.textContent = t('reqSending');
+      if (!reqDraft.requestId) reqDraft.requestId = createRequestId();
+      try {
+        await api('/api/field-request', { method: 'POST', body: JSON.stringify({ requestId: reqDraft.requestId, message: reqDraft.message, tools: reqDraft.tools, jobId: reqDraft.jobId || '', lang: currentLang }) });
+        reqDraft = { message: '', tools: [], jobId: null };
+        closeSheet(); showToast(t('reqSent'));
+      } catch (error) {
+        if (error.status === 401) { closeSheet(); return goToLogin(t('sessionEnded')); }
+        // Same requestId on the next try, so a send that did go through is never doubled.
+        $('reqErr').textContent = error.message; btn.disabled = false; btn.textContent = t('reqSend');
+      }
+    });
+    if (!toolGroups) {
+      try {
+        const data = await api('/api/field-request', { method: 'GET' });
+        toolGroups = Array.isArray(data.toolGroups) ? data.toolGroups : [];
+        if ($('reqTools')) { $('reqTools').innerHTML = toolsHtml(); sync(); }
+      } catch (error) {
+        if (error.status === 401) { closeSheet(); return goToLogin(t('sessionEnded')); }
+        if ($('reqToolsMsg')) $('reqToolsMsg').textContent = t('reqToolsErr');
+      }
+    }
+  }
+  $('requestBtn').addEventListener('click', openRequest);
+
   function goToHome() {
     const name = localStorage.getItem(NAME_KEY) || '';
     driverNameLabel.textContent = name;
@@ -992,6 +1085,7 @@
   function goToLogin(message) {
     stopPolling();
     clearSession();
+    reqDraft = { message: '', tools: [], jobId: null };
     clock = { open: null, recent: [] }; sumDraft = { work: '', notes: '', breaks: '', consent: false, signature: '' }; sumReady = false; clockMsg = null; closeSheet(); syncLiveLocation();
     topbarWho.hidden = true;
     homeView.hidden = true; loginView.hidden = false;
@@ -1072,6 +1166,7 @@
     loginSubmit.textContent = t('signInBtn');
     toggleLoginMode.textContent = usingNameMode ? t('toggleToPhone') : t('toggleToName');
     refreshBtn.textContent = t('refresh');
+    $('requestBtn').innerHTML = ICON_PLUS + escapeHtml(t('reqBtn'));
     setInstallBannerText();
     if (lastData) renderData(lastData);
   }

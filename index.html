@@ -1875,6 +1875,30 @@
   body.is-viewer .dispatch-view :is(input:not([type="search"]), select, textarea) { pointer-events: none; opacity: .75; }
   .viewer-banner { display: none; margin: 8px 14px 0; padding: 8px 12px; border-radius: var(--radius); background: var(--gold-tint); color: #7a5d10; font-size: 13px; }
   body.is-viewer .viewer-banner { display: block; }
+  /* GHL tags on laborers (Labor Roster > Tag) */
+  body.is-viewer #rosterTagToggle, body.is-viewer #rosterTagBar { display: none !important; }
+  .roster-tag-toggle { font: 600 12px 'Inter', sans-serif; padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--ink); cursor: pointer; }
+  .roster-tag-toggle[aria-pressed="true"] { background: var(--orange); border-color: var(--orange); color: #fff; }
+  .roster-tag-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--orange-tint-soft); font-size: 12px; }
+  .roster-tag-bar[hidden] { display: none; }
+  .roster-tag-bar b { margin-right: auto; }
+  .roster-tag-bar .link-btn { background: none; border: 0; padding: 2px 4px; color: var(--orange-dark); font: 600 12px 'Inter', sans-serif; cursor: pointer; text-decoration: underline; }
+  .roster-tag-bar .btn-primary { padding: 6px 12px; font-size: 12px; }
+  .roster-list.tag-mode li { cursor: pointer; }
+  .roster-list.tag-mode li.tag-picked { background: var(--orange-tint-soft); box-shadow: inset 3px 0 0 var(--orange); }
+  .roster-tag-check { width: 16px; height: 16px; margin: 0 10px 0 0; accent-color: var(--orange); flex: none; pointer-events: none; }
+  .worker-tag-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; min-height: 40px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+  .worker-tag-chips input { flex: 1; min-width: 140px; border: 0; outline: 0; font: 13px 'Inter', sans-serif; background: transparent; color: var(--ink); padding: 4px; }
+  .worker-tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 9px; border-radius: 999px; background: #efecfa; border: 1px solid #5a4aa3; color: #3b2f7a; font: 600 12px 'Inter', sans-serif; }
+  .worker-tag-chip button { border: 0; background: none; color: inherit; font-size: 15px; line-height: 1; padding: 0 4px; cursor: pointer; }
+  .worker-tag-suggest { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; max-height: 110px; overflow: auto; }
+  .worker-tag-suggest button { font: 12px 'Inter', sans-serif; padding: 3px 9px; border-radius: 999px; border: 1px dashed var(--border); background: none; color: var(--ink-soft); cursor: pointer; }
+  .worker-tag-suggest button:hover { border-style: solid; color: var(--ink); }
+  .worker-tag-who { font-size: 12px; color: var(--ink-soft); line-height: 1.5; max-height: 90px; overflow: auto; }
+  .worker-tag-result { margin-top: 10px; font-size: 12px; line-height: 1.5; }
+  .worker-tag-result .ok { color: #1f6b3a; font-weight: 600; }
+  .worker-tag-result .bad { color: var(--danger); }
+  body.dark-mode .worker-tag-chip { background: #2f2a4a; color: #d8d1ff; }
   body.dark-mode .viewer-banner { color: #f0cf7a; }
   .admin-pill.blocked { background: var(--danger); color: #fff; }
   .people-type { font: inherit; font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface, #fff); color: var(--ink); }
@@ -2050,13 +2074,19 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
 <div class="layout">
   <!-- Labor roster -->
   <div class="panel">
-    <div class="panel-head"><h2>Labor Roster</h2></div>
+    <div class="panel-head"><h2>Labor Roster</h2><button type="button" class="roster-tag-toggle" id="rosterTagToggle" aria-pressed="false" title="Pick laborers and add a GHL tag to them">Tag</button></div>
     <div class="roster-tabs">
       <button class="roster-tab active" data-tab="available">Available</button>
       <button class="roster-tab" data-tab="booked">Booked</button>
     </div>
     <div class="roster-search">
       <input type="text" id="rosterSearch" placeholder="Search by name...">
+    </div>
+    <div class="roster-tag-bar" id="rosterTagBar" hidden>
+      <b id="rosterTagCount">0 selected</b>
+      <button type="button" class="link-btn" id="rosterTagAll">Select all shown</button>
+      <button type="button" class="link-btn" id="rosterTagClear">Clear</button>
+      <button type="button" class="btn-primary" id="rosterTagOpen" disabled>Add GHL tag</button>
     </div>
     <ul class="roster-list" id="rosterList"></ul>
   </div>
@@ -2698,6 +2728,28 @@ body #jobsTable.split-board tr[data-job-row]:hover,body #logisticsDispatchView .
       <button type="button" class="btn-ghost" id="jldClose">Close</button>
       <button type="button" class="btn-ghost" id="jldSave">Save</button>
       <button type="button" class="btn-primary" id="jldGenerate">Generate PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="sent-home-backdrop" id="workerTagBackdrop" hidden>
+  <div class="sent-home-card" role="dialog" aria-modal="true" aria-labelledby="workerTagTitle">
+    <h2 id="workerTagTitle">Add GHL tag</h2>
+    <div class="sent-home-job" id="workerTagWhoCount"></div>
+    <div class="field">
+      <label for="workerTagInput">Tags</label>
+      <div class="worker-tag-chips" id="workerTagChips"><input type="text" id="workerTagInput" placeholder="Type a tag, press Enter" autocomplete="off" maxlength="60"></div>
+      <div class="sent-home-hint">Adds only. The laborers keep their other GHL tags. GHL saves tags in lowercase.</div>
+      <div class="worker-tag-suggest" id="workerTagSuggest"></div>
+    </div>
+    <div class="field">
+      <label>Laborers</label>
+      <div class="worker-tag-who" id="workerTagWho"></div>
+    </div>
+    <div class="worker-tag-result" id="workerTagResult" hidden></div>
+    <div class="sent-home-foot">
+      <button type="button" class="btn-ghost" id="workerTagCancel">Cancel</button>
+      <button type="button" class="btn-primary" id="workerTagSave" disabled>Add tag</button>
     </div>
   </div>
 </div>
@@ -3652,6 +3704,7 @@ function formatPhoneDisplay(raw) {
 
 function renderRoster() {
   if (typeof renderAdminLabor === 'function') renderAdminLabor();
+  updateRosterTagBar();
   const search = document.getElementById('rosterSearch').value.toLowerCase();
   const laborList = (dashboardData.labor || []);
   const liveBookedRoster = getLiveBookedIdentifiers();
@@ -3672,12 +3725,14 @@ function renderRoster() {
     return;
   }
 
+  el.classList.toggle('tag-mode', rosterTagMode);
   el.innerHTML = list.map(w => {
     const effectiveStatus = getEffectiveLaborStatus(w, liveBookedRoster);
+    const tagKey = rosterTagKey(w), picked = rosterTagMode && rosterTagPicks.has(tagKey);
     return `
-    <li>
+    <li${rosterTagMode ? ` data-tag-key="${escapeAttr(tagKey)}" class="${picked ? 'tag-picked' : ''}" role="checkbox" aria-checked="${picked}" tabindex="0"` : ''}>
       <div class="worker-main">
-        <span class="worker-avatar${effectiveStatus === 'available' ? '' : ' is-booked'}" aria-hidden="true">${escapeAttr(workerInitials(w.name))}</span>
+        ${rosterTagMode ? `<input type="checkbox" class="roster-tag-check" tabindex="-1" aria-hidden="true"${picked ? ' checked' : ''}>` : ''}<span class="worker-avatar${effectiveStatus === 'available' ? '' : ' is-booked'}" aria-hidden="true">${escapeAttr(workerInitials(w.name))}</span>
         <div>
           <div class="worker-name">${w.name}${tempTag(w)}${w.manual ? '<span class="manual-tag">GHL</span>' : ''}</div>
           <div class="worker-meta">${formatPhoneDisplay(w.phone)}${w.jobId ? ' · ' + w.jobId : ''}${(() => { const later = effectiveStatus === 'available' ? workerOtherBookedDays(w, liveBookedRoster).filter(d => d > toLocalYMD(new Date())) : []; return later.length ? ' · next job ' + escapeAttr(shortDayLabel(later[0])) : ''; })()}</div>
@@ -6052,6 +6107,173 @@ document.querySelectorAll('.roster-tab').forEach(tab => {
   });
 });
 document.getElementById('rosterSearch').addEventListener('input', renderRoster);
+
+/* ---------- GHL tags on laborers (Labor Roster > Tag) ----------
+   Tag turns on pick mode: tap laborers (any tab, any search), then Add GHL tag.
+   POST /api/worker-tags adds the tags in GHL by contact id (or by phone when the
+   roster has no id). Adds only; nothing else on the contact changes. */
+let rosterTagMode = false;
+const rosterTagPicks = new Map(); // key -> { contactId, phone, name }
+let workerTagList = [], workerTagSuggestions = null;
+const rosterTagKey = w => {
+  const id = String(w.id || w.contactId || '').trim(); if (id) return 'id:' + id;
+  const p = normalizePhoneForMatch(w.phone); return p ? 'phone:' + p.slice(-10) : 'name:' + String(w.name || '').trim().toLowerCase();
+};
+function updateRosterTagBar() {
+  const n = rosterTagPicks.size;
+  document.getElementById('rosterTagBar').hidden = !rosterTagMode;
+  document.getElementById('rosterTagCount').textContent = `${n} selected`;
+  document.getElementById('rosterTagOpen').disabled = !n;
+}
+function rosterTagShown() {
+  const search = document.getElementById('rosterSearch').value.toLowerCase();
+  const live = getLiveBookedIdentifiers();
+  return (dashboardData.labor || []).filter(w => getEffectiveLaborStatus(w, live) === currentTab && (w.name || '').toLowerCase().includes(search));
+}
+function toggleRosterTagPick(key) {
+  if (rosterTagPicks.has(key)) rosterTagPicks.delete(key);
+  else {
+    const w = (dashboardData.labor || []).find(x => rosterTagKey(x) === key); if (!w) return;
+    rosterTagPicks.set(key, { contactId: String(w.id || w.contactId || '').trim(), phone: w.phone || '', name: w.name || '' });
+  }
+  renderRoster();
+}
+document.getElementById('rosterTagToggle').addEventListener('click', () => {
+  rosterTagMode = !rosterTagMode;
+  if (!rosterTagMode) rosterTagPicks.clear();
+  document.getElementById('rosterTagToggle').setAttribute('aria-pressed', rosterTagMode);
+  document.getElementById('rosterTagToggle').textContent = rosterTagMode ? 'Done' : 'Tag';
+  renderRoster();
+});
+document.getElementById('rosterList').addEventListener('click', e => {
+  const li = rosterTagMode && e.target.closest('li[data-tag-key]'); if (li) toggleRosterTagPick(li.dataset.tagKey);
+});
+document.getElementById('rosterList').addEventListener('keydown', e => {
+  const li = rosterTagMode && (e.key === ' ' || e.key === 'Enter') && e.target.closest('li[data-tag-key]');
+  if (li) { e.preventDefault(); toggleRosterTagPick(li.dataset.tagKey); const again = document.querySelector(`#rosterList li[data-tag-key="${CSS.escape(li.dataset.tagKey)}"]`); if (again) again.focus(); }
+});
+document.getElementById('rosterTagAll').addEventListener('click', () => {
+  for (const w of rosterTagShown()) { const k = rosterTagKey(w); if (!rosterTagPicks.has(k)) rosterTagPicks.set(k, { contactId: String(w.id || w.contactId || '').trim(), phone: w.phone || '', name: w.name || '' }); }
+  renderRoster();
+});
+document.getElementById('rosterTagClear').addEventListener('click', () => { rosterTagPicks.clear(); renderRoster(); });
+
+function renderWorkerTagChips() {
+  const box = document.getElementById('workerTagChips'), input = document.getElementById('workerTagInput');
+  box.querySelectorAll('.worker-tag-chip').forEach(c => c.remove());
+  for (const tag of workerTagList) {
+    const chip = document.createElement('span'); chip.className = 'worker-tag-chip';
+    chip.innerHTML = `${escapeAttr(tag)}<button type="button" aria-label="Remove ${escapeAttr(tag)}" data-tag="${escapeAttr(tag)}">&times;</button>`;
+    box.insertBefore(chip, input);
+  }
+  const typed = input.value.trim().toLowerCase();
+  const sugg = (workerTagSuggestions || []).filter(t => !workerTagList.includes(t.toLowerCase()) && (!typed || t.toLowerCase().includes(typed))).slice(0, 40);
+  document.getElementById('workerTagSuggest').innerHTML = sugg.map(t => `<button type="button" data-tag="${escapeAttr(t)}">+ ${escapeAttr(t)}</button>`).join('');
+  const n = rosterTagPicks.size;
+  const save = document.getElementById('workerTagSave');
+  save.disabled = !(workerTagList.length || typed) || !n;
+  save.textContent = `Add tag${(workerTagList.length + (typed && !workerTagList.includes(typed) ? 1 : 0)) > 1 ? 's' : ''} to ${n} laborer${n === 1 ? '' : 's'}`;
+}
+function addWorkerTag(raw) {
+  for (const part of String(raw || '').split(',')) {
+    const tag = part.replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 60);
+    if (tag && !workerTagList.includes(tag) && workerTagList.length < 10) workerTagList.push(tag);
+  }
+}
+async function loadWorkerTagSuggestions() {
+  if (workerTagSuggestions) return;
+  workerTagSuggestions = [];
+  try {
+    const res = await fetchWithTimeout('/api/worker-tags', {}, 10000);
+    const data = await res.json().catch(() => ({}));
+    workerTagSuggestions = Array.isArray(data.tags) ? data.tags : [];
+    if (!data.ok) workerTagSuggestions = null; // ask again next time
+  } catch { workerTagSuggestions = null; }
+  if (!document.getElementById('workerTagBackdrop').hidden) renderWorkerTagChips();
+}
+document.getElementById('rosterTagOpen').addEventListener('click', () => {
+  if (!rosterTagPicks.size) return;
+  workerTagList = [];
+  const input = document.getElementById('workerTagInput'); input.value = '';
+  const names = [...rosterTagPicks.values()].map(w => w.name).sort((a, b) => a.localeCompare(b));
+  document.getElementById('workerTagWhoCount').textContent = `${names.length} laborer${names.length === 1 ? '' : 's'} selected`;
+  document.getElementById('workerTagWho').textContent = names.join(', ');
+  const result = document.getElementById('workerTagResult'); result.hidden = true; result.innerHTML = '';
+  document.getElementById('workerTagBackdrop').hidden = false;
+  renderWorkerTagChips(); loadWorkerTagSuggestions();
+  input.focus();
+});
+document.getElementById('workerTagInput').addEventListener('keydown', e => {
+  const input = e.target;
+  if ((e.key === 'Enter' || e.key === ',') && input.value.trim()) { e.preventDefault(); addWorkerTag(input.value); input.value = ''; renderWorkerTagChips(); }
+  else if (e.key === 'Backspace' && !input.value && workerTagList.length) { workerTagList.pop(); renderWorkerTagChips(); }
+});
+document.getElementById('workerTagInput').addEventListener('input', e => { if (e.target.value.includes(',')) { addWorkerTag(e.target.value); e.target.value = ''; } renderWorkerTagChips(); });
+document.getElementById('workerTagChips').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tag]'); if (b) { workerTagList = workerTagList.filter(t => t !== b.dataset.tag); renderWorkerTagChips(); }
+  document.getElementById('workerTagInput').focus();
+});
+document.getElementById('workerTagSuggest').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tag]'); if (!b) return;
+  addWorkerTag(b.dataset.tag); document.getElementById('workerTagInput').value = ''; renderWorkerTagChips();
+});
+const closeWorkerTag = () => { document.getElementById('workerTagBackdrop').hidden = true; };
+document.getElementById('workerTagCancel').addEventListener('click', closeWorkerTag);
+document.getElementById('workerTagBackdrop').addEventListener('click', e => { if (e.target.id === 'workerTagBackdrop') closeWorkerTag(); });
+document.getElementById('workerTagSave').addEventListener('click', async () => {
+  const input = document.getElementById('workerTagInput');
+  if (input.value.trim()) { addWorkerTag(input.value); input.value = ''; }
+  if (!workerTagList.length || !rosterTagPicks.size) return;
+  const save = document.getElementById('workerTagSave'), cancel = document.getElementById('workerTagCancel'), result = document.getElementById('workerTagResult');
+  save.disabled = true; cancel.disabled = true; save.textContent = 'Adding...';
+  const tags = [...workerTagList];
+  let todo = [...rosterTagPicks.entries()].map(([key, w]) => ({ key, ...w }));
+  const added = [], failed = [];
+  // No contact id and no phone: GHL can't be searched for them.
+  todo = todo.filter(w => {
+    if (w.contactId || String(w.phone || '').replace(/\D/g, '').length >= 10) return true;
+    failed.push({ ...w, reason: 'No GHL contact id or phone on the roster.' }); return false;
+  });
+  try {
+    // The server answers in slices; anyone it didn't reach comes back as pending.
+    for (let round = 0; todo.length && round < 8; round++) {
+      const res = await fetchWithTimeout('/api/worker-tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tags, workers: todo }) }, 20000);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      // The server keys workers the same way, but by its own cleanup: map back by contact id / phone.
+      const serverKey = w => w.contactId ? 'id:' + w.contactId : 'phone:' + String(w.phone || '').replace(/\D/g, '').slice(-10);
+      const byServerKey = new Map(todo.map(w => [serverKey(w), w]));
+      for (const a of data.added || []) { const w = byServerKey.get(a.key); added.push(w || a); }
+      for (const f of data.failed || []) { const w = byServerKey.get(f.key); failed.push({ ...(w || {}), name: (w && w.name) || f.name, reason: f.reason }); }
+      if (data.error) { todo.filter(w => !(data.added || []).some(a => a.key === serverKey(w)) && !(data.failed || []).some(f => f.key === serverKey(w))).forEach(w => failed.push({ ...w, reason: data.error })); break; }
+      const pending = new Set(data.pending || []);
+      todo = todo.filter(w => pending.has(serverKey(w)));
+      if (todo.length && data.rateLimited) await new Promise(r => setTimeout(r, 2500));
+    }
+    todo.forEach(w => failed.push({ ...w, reason: 'GHL was busy. Try these again.' }));
+  } catch (err) {
+    result.hidden = false; result.innerHTML = `<div class="bad">Could not add the tag: ${escapeAttr(err.message)}</div>`;
+    save.disabled = false; cancel.disabled = false; renderWorkerTagChips();
+    return;
+  }
+  cancel.disabled = false;
+  for (const a of added) rosterTagPicks.delete(a.key || rosterTagKey(a));
+  if (!failed.length) {
+    closeWorkerTag();
+    showToast(`Tagged ${added.length} laborer${added.length === 1 ? '' : 's'}: ${tags.join(', ')}`);
+    rosterTagPicks.clear(); renderRoster();
+    return;
+  }
+  // Keep only the ones that failed picked, so Add tag again retries just them.
+  renderRoster();
+  workerTagList = tags;
+  result.hidden = false;
+  result.innerHTML = (added.length ? `<div class="ok">Tagged ${added.length} laborer${added.length === 1 ? '' : 's'}.</div>` : '')
+    + `<div class="bad">Not tagged (still selected, press Add again to retry):</div><ul>${failed.map(f => `<li class="bad">${escapeAttr(f.name || 'Unknown')}: ${escapeAttr(f.reason || 'Failed')}</li>`).join('')}</ul>`;
+  document.getElementById('workerTagWhoCount').textContent = `${rosterTagPicks.size} laborer${rosterTagPicks.size === 1 ? '' : 's'} selected`;
+  document.getElementById('workerTagWho').textContent = [...rosterTagPicks.values()].map(w => w.name).join(', ');
+  renderWorkerTagChips();
+});
 
 // The Available/Booked Today stat cards up top act as shortcuts into the
 // same roster tabs below, click one and it switches the roster tab,
