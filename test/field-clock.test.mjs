@@ -174,7 +174,11 @@ test('board Time Clock: signed-in board users read the day with locations, trail
   let res = await board(new Request('https://board.test/api/time-clock'));
   assert.equal(res.status, 401, 'board sign-in required');
   const session = signSession({ id: 'uJessePickar01', name: 'Jesse Pickar', email: 'jesse@a2zcs.net' }, 'ghl_sso');
-  res = await board(new Request('https://board.test/api/time-clock?day=' + fc.pacificDay(), { headers: { 'x-a2z-session': session } }));
+  // Ask for the Pacific day of the shift's own clock in. The earlier test backdates the clock in
+  // 8.5 hours, which is yesterday when this runs between midnight and 8:30 AM Pacific.
+  const [shiftRow] = await sql`select clock_in from field_shifts where job_id = 'j1' and clock_out is not null order by created_at desc limit 1`;
+  const shiftIn = typeof shiftRow.clock_in === 'string' ? JSON.parse(shiftRow.clock_in) : shiftRow.clock_in;
+  res = await board(new Request('https://board.test/api/time-clock?day=' + fc.pacificDay(shiftIn.at), { headers: { 'x-a2z-session': session } }));
   const data = await res.json();
   assert.equal(res.status, 200, JSON.stringify(data));
   assert.equal(data.shifts.length, 1);

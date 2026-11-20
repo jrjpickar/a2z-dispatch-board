@@ -219,6 +219,30 @@ function api(url, method, body) {
       return id ? { workers: notes.get(id) || [] } : { issues: [] };
     }
     if (body.op === 'job_send_now') return settle(body.jobId, true);
+    // Text crew dropdown: one worker, texted even with Don't text or a text already sent.
+    if (body.op === 'worker_text_now') {
+      const job = record(body.jobId);
+      if (!job?.reportDate) return { ok: false, error: 'This job has no date. Save its times first.' };
+      const w = sms.matchWorker(job.crew, body.worker || {});
+      if (!w) return { ok: false, error: 'That worker is not on this job anymore. Refresh the board.' };
+      const rendered = sms.buildCrewSchedule(jobs, allRecords(), job.reportDate).jobs.find(j => j.jobId === body.jobId);
+      const r = rendered?.crew.find(x => sms.matchWorker(job.crew, x) === w);
+      if (!r?.phone) return { ok: false, error: `${w.name} has no phone number.` };
+      // Like Send now did: the worker's waiting run (or a fresh rapid_assign) goes to the worker webhook too.
+      const waitingRow = dueRows(body.jobId).filter(x => x.payload.action !== 'remove' && sms.matchWorker(job.crew, x.payload) === w).at(-1);
+      if (waitingRow) {
+        held.splice(held.indexOf(waitingRow), 1);
+        let p = dispatch.refreshAssign(waitingRow.payload, job);
+        if (p.textAtMode) p = { ...p, textAtMode: 'now', textAt: dispatch.pacificIso(now) };
+        transmit(waitingRow.kind, { ...p, sentFrom: 'worker_text_now' });
+      }
+      else transmit('workers', { ...makeAssign(body.jobId, w), action: 'rapid_assign', rapidAssign: true, sentFrom: 'worker_text_now' });
+      messages.set(messageKey(body.jobId, job.reportDate, r.phone), { at: now, text: r.text });
+      transmit('crew_text', { action: 'crewText', jobId: body.jobId, jobAddress: job.jobAddress, reportDate: job.reportDate, triggeredBy: 'worker_text_now', manual: true,
+        textWorkers: [{ contactId: w.id || '', workerName: w.name, workerPhone: r.phone }], text: r.text });
+      logWorker('Sent schedule text', job, w, now);
+      return { ok: true, worker: w.name, date: job.reportDate };
+    }
     if (body.op === 'times_changed') {
       const job = record(body.jobId);
       if (!body.resend) return { ok: true, texted: 0 };

@@ -26,12 +26,20 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   const opened = await page.evaluate(() => { const b = [...document.querySelectorAll('#jobsBody button')].find(x => /assign crew/i.test(x.textContent)); if (b) b.click(); return !!b; });
   assert.ok(opened, 'assign crew button');
   await page.waitForSelector('.crew-worker-select', { state: 'attached' });
-  await page.evaluate(() => { const cb = [...document.querySelectorAll('.crew-worker-select')].find(c => c.dataset.name === 'Ana Lopez'); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); });
+  await page.evaluate(() => { for (const n of ['Ana Lopez', 'Bob Ray']) { const cb = [...document.querySelectorAll('.crew-worker-select')].find(c => c.dataset.name === n); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); } });
+  // Schedule text is off per worker by default: no Send schedule now, button reads Assign without texting.
+  await page.waitForSelector('.crew-worker-text', { state: 'visible' });
+  const before = await page.evaluate(() => ({ boxes: [...document.querySelectorAll('.crew-worker-text')].map(b => b.checked), rapid: getComputedStyle(document.querySelector('.crew-assign-rapid')).display, label: document.querySelector('.crew-assign-confirm').textContent }));
+  assert.deepEqual(before.boxes, [false, false]); assert.equal(before.rapid, 'none'); assert.equal(before.label, 'Assign without texting');
+  // Text Ana only.
+  await page.evaluate(() => { const b = [...document.querySelectorAll('.crew-worker-text')].find(x => x.closest('label').textContent.includes('Ana Lopez')); b.checked = true; b.dispatchEvent(new Event('change', { bubbles: true })); });
   await page.waitForSelector('.crew-assign-rapid', { state: 'visible' });
   await page.screenshot({ path: '/tmp/rapid.png' });
   await page.click('.crew-assign-rapid');
   await page.waitForFunction(() => true); await page.waitForTimeout(800);
-  effects.splice(0, effects.length, ...effects.filter(e => e.payload.action !== 'crewText')); assert.equal(effects.length, 1); assert.equal(effects[0].kind, 'workers'); assert.equal(effects[0].payload.action, 'rapid_assign'); assert.equal(effects[0].payload.workerName, 'Ana Lopez');
+  const quiet = effects.filter(e => e.op === 'dont_text');
+  assert.equal(quiet.length, 1); assert.deepEqual(quiet[0].workers.map(w => w.workerName), ['Bob Ray']);
+  effects.splice(0, effects.length, ...effects.filter(e => e.payload && e.payload.action !== 'crewText')); assert.equal(effects.length, 1); assert.equal(effects[0].kind, 'workers'); assert.equal(effects[0].payload.action, 'rapid_assign'); assert.equal(effects[0].payload.workerName, 'Ana Lopez');
   assert.deepEqual(errors, []);
   console.log('rapid OK', JSON.stringify({ action: effects[0].payload.action, effectKey: effects[0].effectKey }));
   await browser.close();

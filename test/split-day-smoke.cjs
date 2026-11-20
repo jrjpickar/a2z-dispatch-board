@@ -53,6 +53,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   // Search narrows the list but ticked workers stay.
   await page.evaluate(W => { const s = document.querySelector(W + ' .crew-assign-search'); s.value = 'zzz'; s.dispatchEvent(new Event('input', { bubbles: true })); }, W);
   assert.equal(await page.evaluate(W => document.querySelectorAll(W + ' .crew-assign-option:not(.search-hidden)').length, W), 2);
+  await page.evaluate(W => { const b = document.querySelector(W + ' .crew-text-all'); if (b && b.textContent === 'Text all') b.click(); }, W);
   await page.evaluate(W => document.querySelector(W + ' .crew-assign-confirm').click(), W);
   await page.waitForTimeout(900);
   assert.deepEqual(commits.map(c => c.jobId), ['job1', 'job2'], 'job1 then the other job');
@@ -74,6 +75,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   await page.click(W + ' .crew-custom-time-toggle');
   await setField('Cara Diaz', 'start', '09:00');
   await setField('Cara Diaz', 'end', '12:00');
+  await page.evaluate(W => { const b = document.querySelector(W + ' .crew-text-all'); if (b && b.textContent === 'Text all') b.click(); }, W);
   await page.evaluate(W => document.querySelector(W + ' .crew-assign-confirm').click(), W);
   await page.waitForTimeout(900);
   const cara = effects.find(e => e.payload.workerName === 'Cara Diaz');

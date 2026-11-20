@@ -1,43 +1,31 @@
-// Optional browser QA: Send now is always next to Unschedule, shows how many crew changes
-// are waiting for the job's 12 hour mark, needs a 5 second hold in its box, and posts job_send_now.
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); const fs = require('fs'), path = require('path'), assert = require('assert/strict');
+// Browser QA: Text crew (job row dropdown) replaced Send now. Run node scripts/build-sandbox.mjs first.
+// A quick click only hints, a 2 s hold does nothing, a 5 s hold opens the confirm prompt,
+// Cancel sends nothing, Send text sends that one worker's Make run and text.
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); const path = require('path'), assert = require('assert/strict');
 (async () => {
-  const browser = await chromium.launch({ headless: true }); const context = await browser.newContext();
-  const posts = []; const errors = []; let held = true;
-  const job = { jobId: 'job1', version: 2, active: true, crew: [{ id: 'w1', name: 'Ana Lopez', phone: '+15555550100' }], reportDate: '2026-12-01', reportTime: '07:00', reportEndDate: '2026-12-01', reportEndTime: '15:30' };
-  await context.route('**/*', async route => {
-    const req = route.request(), u = new URL(req.url()); const reply = j => route.fulfill({ json: j });
-    if (u.hostname !== 'a2z.test') return route.fulfill({ body: '' });
-    if (u.pathname === '/') return route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8') });
-    if (u.pathname === '/api/session') return reply(req.method() === 'GET' ? { signedIn: true, user: { id: 'u1', name: 'Sam', email: 's@x' }, via: 'picker' } : {});
-    if (u.pathname === '/api/dashboard-data') return reply({ jobs: [{ id: 'job1', name: '12 Main St', sourceType: 'labor', contact: { name: 'Client' }, customFields: [] }], sharedState: [job] });
-    if (u.pathname === '/api/roster') return reply([]);
-    if (u.pathname === '/api/shared-state') return reply({ sharedState: [job], pendingSync: [] });
-    if (u.pathname === '/api/workflow-effect') {
-      if (req.method() === 'GET' && u.searchParams.get('waiting') === 'jobs') return reply({ jobs: held ? { job1: { changes: 2, names: ['Ana Lopez'], dueAt: '2026-11-01T01:30:00.000Z' } } : {}, holdHours: 12 });
-      if (req.method() === 'POST') { posts.push(req.postDataJSON()); held = false; return reply({ ok: true, jobId: 'job1', makeSent: 1, makeFailed: 0, makeDropped: 1, texted: 1, textOk: true }); }
-      return reply({ issues: [] });
-    }
-    if (u.pathname === '/api/manual-workers') return reply({ workers: [], hidden: [] });
-    return reply({});
-  });
-  const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
-  await page.goto('https://a2z.test/');
-  await page.waitForFunction(() => /Send now · 2/.test(document.querySelector('.job-crewtext-now')?.textContent || ''), null, { timeout: 15000 });
-  const sameLine = await page.evaluate(() => { const b = document.querySelector('.job-crewtext-now'); return !!b.closest('.status-line')?.querySelector('.job-unschedule'); });
-  assert.ok(sameLine, 'Send now sits next to Unschedule');
-  await page.click('.job-crewtext-now');
-  await page.waitForSelector('#crewTextNowBackdrop:not([hidden])');
-  assert.match(await page.textContent('#crewTextNowBody'), /2 crew changes \(Ana Lopez\) are waiting for Sat 6:30 PM. .*Make gets only what changed/s);
-  await page.click('#crewTextNowConfirm'); await page.waitForTimeout(300);
-  assert.equal(posts.length, 0, 'a plain click does not send');
-  const box = await page.locator('#crewTextNowConfirm').boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(5300); await page.mouse.up();
-  await page.waitForTimeout(800);
-  assert.deepEqual(posts, [{ op: 'job_send_now', jobId: 'job1' }]);
-  await page.waitForFunction(() => (document.querySelector('.job-crewtext-now')?.textContent || '').trim() === 'Send now', null, { timeout: 15000 });
-  await page.screenshot({ path: process.env.SHOT || '/tmp/send-now.png' });
+  const browser = await chromium.launch(); const page = await browser.newPage({ viewport: { width: 1500, height: 950 } });
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('file://' + path.resolve(__dirname, '../sandbox/schedule-text-sandbox.html'));
+  await page.waitForSelector('#jobsBody .crewtext-menu', { timeout: 15000 });
+  assert.equal(await page.locator('#jobsBody .job-crewtext-now').count(), 0, 'no Send now on job rows');
+  const menu = page.locator('#jobsBody .crewtext-menu').first();
+  await menu.locator('summary').click();
+  const btn = menu.locator('.crewtext-worker-btn').first();
+  await btn.waitFor({ state: 'visible' });
+  const dialogOpen = () => page.locator('#crewTextNowBackdrop').evaluate(e => !e.hidden);
+  const sent = () => page.evaluate(() => document.body.innerText.match(/Schedule text and Make run sent for/g)?.length || 0);
+  await btn.click(); await page.waitForTimeout(300);
+  assert.equal(await dialogOpen(), false, 'quick click does not open the prompt');
+  const hold = async ms => { const b = await btn.boundingBox(); await page.mouse.move(b.x + 15, b.y + 10); await page.mouse.down(); await page.waitForTimeout(ms); await page.mouse.up(); await page.waitForTimeout(300); };
+  await hold(2000); assert.equal(await dialogOpen(), false, '2 second hold does nothing');
+  await hold(5300); assert.equal(await dialogOpen(), true, '5 second hold opens the prompt');
+  await page.click('.crewtext-now-cancel'); await page.waitForTimeout(300);
+  assert.equal(await dialogOpen(), false); assert.equal(await sent(), 0, 'Cancel sends nothing');
+  await hold(5300); await page.click('#crewTextNowConfirm'); await page.waitForTimeout(800);
+  const text = await page.evaluate(() => document.body.innerText);
+  assert.match(text, /Schedule text and Make run sent for /);
+  assert.match(text, /workers · (rapid_assign|assign)[^\n]*\n\{[\s\S]*?"sentFrom": "worker_text_now"/, 'the worker webhook run went out too');
   assert.deepEqual(errors, []);
-  console.log('send now OK');
+  console.log('Text crew OK');
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });

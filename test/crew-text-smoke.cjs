@@ -6,9 +6,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   const day = { reportDate: '2026-10-26', reportEndDate: '2026-10-26' };
   let states = {
     job1: { jobId: 'job1', version: 1, active: true, crew: [], ...day, reportTime: '07:00', reportEndTime: '15:30', jobType: 'contract', timesFirstLockedAt: 'x', projectConfiguredAt: 'x' },
-    job2: { jobId: 'job2', version: 1, active: true, crew: [{ id: 'w3', name: 'Jose Fabian', phone: '+15555550102' }, { id: 'w1', name: 'Niko Reyes', phone: '+15555550100' }], ...day, reportTime: '07:00', reportEndTime: '15:30' },
-    job3: { jobId: 'job3', version: 1, active: true, crew: [{ id: 'w4', name: 'Mario Danna', phone: '+15555550103' }], reportDate: '2026-10-26', reportEndDate: '2026-10-27', reportTime: '22:00', reportEndTime: '06:00', nightWork: true },
-    job4: { jobId: 'job4', version: 1, active: true, crew: [{ id: 'w5', name: 'Other Day', phone: '+15555550104' }], reportDate: '2026-10-27', reportEndDate: '2026-10-27', reportTime: '07:00', reportEndTime: '15:30' }
+    job2: { jobId: 'job2', version: 1, active: true, crew: [{ id: 'w3', name: 'Jose Fabian', phone: '+15555550102', text: true }, { id: 'w1', name: 'Niko Reyes', phone: '+15555550100', text: true }], ...day, reportTime: '07:00', reportEndTime: '15:30' },
+    job3: { jobId: 'job3', version: 1, active: true, crew: [{ id: 'w4', name: 'Mario Danna', phone: '+15555550103', text: true }], reportDate: '2026-10-26', reportEndDate: '2026-10-27', reportTime: '22:00', reportEndTime: '06:00', nightWork: true },
+    job4: { jobId: 'job4', version: 1, active: true, crew: [{ id: 'w5', name: 'Other Day', phone: '+15555550104', text: true }], reportDate: '2026-10-27', reportEndDate: '2026-10-27', reportTime: '07:00', reportEndTime: '15:30' }
   };
   const jobs = [
     { id: 'job1', name: '14851 Yorba St, Tustin', jobType: 'contract', contact: { name: 'NEW CASTLE CONSTRUCTION' }, customFields: [] },
@@ -22,7 +22,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
     if (u.pathname === '/') return route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8') });
     if (u.pathname === '/api/session') return reply(req.method() === 'GET' ? { signedIn: true, user: { id: 'u1', name: 'Sam', email: 's@x' }, via: 'picker' } : {});
     if (u.pathname === '/api/dashboard-data') return reply({ jobs, sharedState: Object.values(states) });
-    if (u.pathname === '/api/roster') return reply(u.searchParams.get('kind') === 'labor' ? [{ id: 'w1', name: 'Niko Reyes', phone: '+15555550100' }, { id: 'w2', name: 'Julio Herrera', phone: '+15555550101' }] : []);
+    if (u.pathname === '/api/roster') return reply(u.searchParams.get('kind') === 'labor' ? [{ id: 'w1', name: 'Niko Reyes', phone: '+15555550100', text: true }, { id: 'w2', name: 'Julio Herrera', phone: '+15555550101', text: true }] : []);
     if (u.pathname === '/api/shared-state') {
       if (req.method() === 'GET') return reply({ sharedState: Object.values(states), pendingSync: [] });
       const b = req.postDataJSON(); const s = states[b.jobId];
@@ -39,7 +39,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   // Call assignCrew directly for the contract job (the picker UI is covered by other smokes).
   await page.evaluate(async () => {
     const btn = document.createElement('button'); document.body.append(btn);
-    await assignCrew('job1', [{ id: 'w1', name: 'Niko Reyes', phone: '+15555550100' }, { id: 'w2', name: 'Julio Herrera', phone: '+15555550101' }], btn);
+    await assignCrew('job1', [{ id: 'w1', name: 'Niko Reyes', phone: '+15555550100', text: true }, { id: 'w2', name: 'Julio Herrera', phone: '+15555550101', text: true }], btn);
   });
   await page.waitForTimeout(500);
   const perWorker = effects.filter(e => e.payload.action === 'assign');
@@ -48,7 +48,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   // Send schedule now still texts the workers in that assignment right away.
   await page.evaluate(async () => {
     const btn = document.createElement('button'); document.body.append(btn);
-    await assignCrew('job1', [{ id: 'w5', name: 'Pat Doe', phone: '+15555550105' }], btn, { rapid: true });
+    await assignCrew('job1', [{ id: 'w5', name: 'Pat Doe', phone: '+15555550105', text: true }], btn, { rapid: true });
   });
   await page.waitForTimeout(500);
   const crew = effects.filter(e => e.payload.action === 'crewText');

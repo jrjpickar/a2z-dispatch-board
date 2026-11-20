@@ -1,7 +1,7 @@
 import { db, ensureSchema } from './db.mjs';
 import { json, authorizeWrite, readPayload, errorResponse, authorizeRead } from '../../lib/http.mjs';
 import { StateError } from '../../lib/state.mjs';
-import { waitsForHold, isRapid, claimRapid, syncJob, waitingSummary, ensureHoldTables, holdSchedule, notifiedOnJob, resendTimes, owedTexts, recordDontText, jobState, textPlan, textJob, logScheduleWorkers, sendJobScheduleNow } from '../../lib/daily-dispatch.mjs';
+import { waitsForHold, isRapid, claimRapid, syncJob, waitingSummary, ensureHoldTables, holdSchedule, notifiedOnJob, resendTimes, owedTexts, recordDontText, jobState, textPlan, textJob, logScheduleWorkers, sendJobScheduleNow, textWorkerNow } from '../../lib/daily-dispatch.mjs';
 import { sessionFromRequest } from '../../lib/session.mjs';
 import { logActivity } from '../../lib/activity.mjs';
 import { refreshTimer, startRunner } from '../../lib/hold-timer.mjs';
@@ -48,6 +48,21 @@ export default async function handler(request) {
       const ok = !result.makeFailed && result.textOk && !result.skipped;
       const error = result.skipped === 'closed' ? 'This job is closed.' : result.skipped === 'no_date' ? 'This job has no date, so nothing can go out. Save its times, then Send now.' : 'Some of it did not finish. Check Admin > Make / GHL problems.';
       return json({ ok, ...result, ...(ok ? {} : { error }) });
+    }
+    // Text crew (job row dropdown): one worker, held 5 seconds and confirmed on the board.
+    if (body.op === 'worker_text_now') {
+      const jobId = String(body.jobId || '').slice(0, 160);
+      if (!jobId) throw new StateError('Pick the job');
+      const w = body.worker && typeof body.worker === 'object' ? body.worker : {};
+      const worker = { contactId: String(w.contactId || '').slice(0, 120), workerName: String(w.workerName || '').slice(0, 120), workerPhone: String(w.workerPhone || '').slice(0, 40) };
+      if (!worker.contactId && !worker.workerName && !worker.workerPhone) throw new StateError('Pick the worker to text');
+      const result = await textWorkerNow(sql, jobId, worker);
+      await logScheduleWorkers(sql, sessionFromRequest(request), 'Sent schedule text', { ...result.state, jobId }, [{ ...result.worker, dontText: false }], { force: true });
+      const name = result.worker.name || worker.workerName;
+      const error = !result.makeOk && !result.textOk ? `Neither the Make run nor the text for ${name} was confirmed.`
+        : !result.makeOk ? `${name} was texted, but the Make run (worker webhook) was not confirmed.` : `The Make run went out, but the text to ${name} was not confirmed.`;
+      return json({ ok: result.ok, makeOk: result.makeOk, textOk: result.textOk, makeAction: result.makeAction, worker: name, date: result.date,
+        ...(result.ok ? {} : { error: error + ' Check Admin > Make / GHL problems and retry there.' }) });
     }
     // New times saved after the crew was sent the job: dispatch picked Text the new times
     // (resend true) or Don't text (logged only).

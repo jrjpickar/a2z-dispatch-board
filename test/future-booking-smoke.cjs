@@ -57,6 +57,7 @@ const ymd = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angel
   assert.match(await badge(L2, 'Ana Lopez'), /^also /);
   assert.equal(await badge(L2, 'Bob Ray'), 'booked this day');
   await page.evaluate(L2 => { const cb = [...document.querySelectorAll(L2 + ' .crew-worker-select')].find(c => c.dataset.name === 'Ana Lopez'); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }, L2);
+  await page.evaluate(L2 => document.querySelector(L2 + ' .crew-text-all').click(), L2);
   await page.evaluate(L2 => document.querySelector(L2 + ' .crew-assign-confirm').click(), L2);
   await page.waitForTimeout(900);
   assert.deepEqual(commits.map(c => c.jobId), ['later2']);

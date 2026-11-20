@@ -1,5 +1,20 @@
 # A2Z Dispatch 1.9
 
+## Text crew replaces Send now on job rows (Nov 20, 2026)
+
+- **Send now is gone from job rows.** In its place, **Text crew** opens a dropdown of the job's crew (with each worker's planned text time when one is waiting).
+- **Hold a name for 5 seconds**, then a prompt asks **Send text** or **Cancel**. A quick click or a shorter hold sends nothing. Send text works like Send now did, for that one worker: their run goes to the worker webhook now (their waiting `assign` / split day run, or a fresh `rapid_assign` when none is waiting, so the GHL appointment and job log texts happen), and they get the schedule text (Twilio + GHL log), even if they already got it or were put on without a text. Logged in Activity as "Sent schedule text".
+- **Remove as before:** a worker sent this way is marked notified, so taking them off sends the `remove` run. Nothing is sent again at the 12 hour mark.
+- **Server:** `POST /api/workflow-effect { op: "worker_text_now", jobId, worker: { contactId, workerName, workerPhone } }` (`textWorkerNow` in lib/daily-dispatch.mjs). Refuses a closed job, a job with no date, a worker not on the job and a worker with no phone. The Schedule text tracker shows a texted Don't text worker as texted.
+- Admin > problems still has Send now for a whole job.
+
+## Schedule text per worker, off by default (Nov 20, 2026)
+
+- **+ Assign crew:** the single "Don't text workers" box is gone. Each ticked worker shows in **Text schedule to** with their own checkbox, unticked by default (**Text all** / **Text none** toggles them).
+- **Unticked workers** are saved on the board only, the same as Don't text was: `dontText: true`, recorded as Don't text in the Schedule text tracker, no run to the worker webhook or split day webhook, no Twilio text, never sent at the 12 hour mark.
+- **Ticked workers** follow Text at as before (12 hours before start, Now or a picked time). **Send schedule now** only shows when at least one worker is ticked and only sends to the ticked ones. Nobody ticked: the button reads **Assign without texting**.
+- `workerIndex` / `workerCount` on worker webhook runs now count only the workers being sent.
+
 ## Simpler logistics rows, clock out dayOfWeek (Nov 13, 2026)
 
 - **One tap assign:** on a logistics move, picking a driver, vehicle or dump truck from its dropdown assigns it right away. The Assign, Add Vehicle and Add Dump Truck buttons are gone. The same prompts still ask first (driver or vehicle on other moves, vehicle with a labor crew). Saying no puts the dropdown back and sends nothing. The driver dropdown still needs a saved time.

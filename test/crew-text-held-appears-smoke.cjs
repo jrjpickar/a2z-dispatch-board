@@ -28,13 +28,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); con
   const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
   await page.goto('https://a2z.test/');
   await page.waitForFunction(() => document.getElementById('jobsBody').innerText.includes('12 Main St'));
-  assert.equal(await page.$('.job-crewtext-now'), null);
+  assert.equal(await page.$('.crewtext-menu'), null);
   await page.evaluate(() => { const b = [...document.querySelectorAll('#jobsBody button')].find(x => /assign crew/i.test(x.textContent)); b.click(); });
   await page.waitForSelector('.crew-worker-select', { state: 'attached' });
   await page.evaluate(() => { const cb = [...document.querySelectorAll('.crew-worker-select')].find(c => c.dataset.name === 'Ana Lopez'); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); });
   await page.waitForSelector('.crew-assign-confirm', { state: 'visible' });
   await page.click('.crew-assign-confirm');
-  await page.waitForSelector('.job-crewtext-now', { timeout: 15000 });
+  await page.waitForSelector('.crewtext-menu', { timeout: 15000 });
   assert.deepEqual(errors, []);
   console.log('held appears OK');
   await browser.close();
