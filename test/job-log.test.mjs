@@ -153,6 +153,7 @@ test('board saves the job log doc, Generate PDF posts it to the job_log_pdf webh
   assert.equal(gen.ok, true);
   assert.equal(sent[0][0], 'https://hook.us2.make.com/6i4gimll9ejpfujhvh7tasv3cwiqpjkj');
   const payload = sent[0][1];
+  assert.equal(payload.dateUs, '10/26/26');
   assert.equal(payload.customerName, 'Acme Co'); assert.equal(payload.employeeTwo, 'Bo'); assert.equal(payload.totalHours, '12'); assert.equal(payload.jobId, 'd1');
   assert.equal(payload.pdfReturnUrl, 'https://x.test/api/job-log?pdf=1&docId=event%3Aev-d1');
   // Same fields the job log scenario (scheduleForInvoices) already maps, and the row's own eventId.
