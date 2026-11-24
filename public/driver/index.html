@@ -342,9 +342,9 @@
       locOn: 'Location on', locNeed: 'Location needed', locOff: 'Location blocked', fixIt: 'Fix it',
       setupT: 'Location is required to clock in', setupB: 'A2Z records where you are when you tap Clock In or Clock Out, and while you are on the clock with the app open. Never off the clock.', setupBtn: 'Turn on location',
       clockIn: 'Clock In', clockOut: 'Clock Out', locRequired: 'Location required', getting: 'Getting your location...', saving2: 'Saving...',
-      notIn: 'Not clocked in yet', onSince: 'On the clock since', outAt: 'Clocked out {t}', otherOpen: 'You are clocked in at {a}. Clock out there first.',
+      notIn: 'Not clocked in yet', onSince: 'On the clock', outAt: 'Clocked out', otherOpen: 'You are clocked in at {a}. Clock out there first.',
       liveOn: 'Sharing your location while on the clock · last sent {t}', livePaused: 'Location paused. Keep the app open while you work.',
-      inOk: 'Clocked in at {t}. {r}', outOk: 'Clocked out at {t} · {h} h. {r}', seeYou: 'Tomorrow: {t} at {a}.',
+      inOk: 'Clocked in. {r}', outOk: 'Clocked out. {r}', seeYou: 'Tomorrow: {t} at {a}.',
       rOnsite: 'On site.', rNear: 'Near the site ({d}).', rAway: '{d} from the job. Dispatch will see this.', rUnknown: 'Location saved.',
       errBlocked: 'Location is blocked. Turn it on to clock in.', errNoFix: "Can't find your location. Step outside and try again.", sumSaved: 'Your summary is saved. Tap Clock Out to try again.',
       fixT: 'Turn location back on', fixB: "The app can't ask again after location was blocked. Change it in your phone settings:",
@@ -406,9 +406,9 @@
       locOn: 'Ubicación activada', locNeed: 'Se necesita ubicación', locOff: 'Ubicación bloqueada', fixIt: 'Arreglar',
       setupT: 'Se requiere ubicación para marcar entrada', setupB: 'A2Z registra dónde estás cuando tocas Marcar Entrada o Marcar Salida, y mientras trabajas con la app abierta. Nunca fuera del horario.', setupBtn: 'Activar ubicación',
       clockIn: 'Marcar Entrada', clockOut: 'Marcar Salida', locRequired: 'Se requiere ubicación', getting: 'Buscando tu ubicación...', saving2: 'Guardando...',
-      notIn: 'Aún no marcas entrada', onSince: 'Trabajando desde', outAt: 'Salida marcada {t}', otherOpen: 'Tienes entrada marcada en {a}. Marca salida allí primero.',
+      notIn: 'Aún no marcas entrada', onSince: 'Trabajando', outAt: 'Salida marcada', otherOpen: 'Tienes entrada marcada en {a}. Marca salida allí primero.',
       liveOn: 'Compartiendo tu ubicación mientras trabajas · último envío {t}', livePaused: 'Ubicación en pausa. Mantén la app abierta mientras trabajas.',
-      inOk: 'Entrada marcada a las {t}. {r}', outOk: 'Salida marcada a las {t} · {h} h. {r}', seeYou: 'Mañana: {t} en {a}.',
+      inOk: 'Entrada marcada. {r}', outOk: 'Salida marcada. {r}', seeYou: 'Mañana: {t} en {a}.',
       rOnsite: 'En el sitio.', rNear: 'Cerca del sitio ({d}).', rAway: 'A {d} del trabajo. Despacho verá esto.', rUnknown: 'Ubicación guardada.',
       errBlocked: 'La ubicación está bloqueada. Actívala para marcar entrada.', errNoFix: 'No se encuentra tu ubicación. Sal afuera e intenta de nuevo.', sumSaved: 'Tu resumen está guardado. Toca Marcar Salida para intentar de nuevo.',
       fixT: 'Vuelve a activar la ubicación', fixB: 'La app no puede preguntar de nuevo después de bloquear la ubicación. Cámbialo en la configuración del teléfono:',
@@ -805,8 +805,8 @@
     const open = clock.open, mine = open && open.jobId === job.jobId;
     const doneHere = !open && (clock.recent || []).find(s => s.jobId === job.jobId && s.clockOut && s.clockOut.at.slice(0, 10) >= pacificDay(-1));
     let state;
-    if (mine) state = '<span>' + escapeHtml(t('onSince')) + '</span><b>' + escapeHtml(fmtTime(open.clockIn.at)) + ' · ' + escapeHtml(hm(Date.now() - Date.parse(open.clockIn.at))) + '</b>';
-    else if (doneHere) state = '<span>' + escapeHtml(t('outAt', { t: fmtTime(doneHere.clockOut.at) })) + '</span><b>' + escapeHtml(hm(Date.parse(doneHere.clockOut.at) - Date.parse(doneHere.clockIn.at))) + '</b>';
+    if (mine) state = '<span>' + escapeHtml(t('onSince')) + '</span>';
+    else if (doneHere) state = '<span>' + escapeHtml(t('outAt')) + '</span>';
     else state = '<span>' + escapeHtml(t('notIn')) + '</span>';
     let btn;
     const forgotten = open && Date.now() - Date.parse(open.clockIn.at) >= 16 * 3600000;
