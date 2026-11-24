@@ -179,3 +179,26 @@ test('Acknowledge takes a red row out of Needs attention for everyone; Undo puts
   assert.equal(t.jobs.find(j => j.jobId === 'ackjob').workers[0].problem, true);
   await assert.rejects(ackTexts(sql, { jobId: 'nojob', items: [{ key: 'x', status: 'missed' }] }), /no date/);
 });
+
+test('GHL token expired while two crew texts go out at once: one refresh, both texts log to GHL', async () => {
+  stubFetch();
+  const base = globalThis.fetch; let refreshes = 0;
+  await sql`update dispatch_settings set value = ${JSON.stringify({ access_token: 'old', refresh_token: 'rt-race', expiresAt: Date.now() - 1000, locationId: 'QUcu2PEAxPV1sQm1GQCq' })} where key = 'ghl-oauth:QUcu2PEAxPV1sQm1GQCq'`;
+  globalThis.fetch = async (url, init = {}) => {
+    if (String(url).endsWith('/oauth/token')) {
+      refreshes++; await new Promise(r => setTimeout(r, 20));
+      // GHL refresh tokens work once: a second refresh with the same one is invalid_grant.
+      return refreshes === 1 && new URLSearchParams(init.body).get('refresh_token') === 'rt-race'
+        ? Response.json({ access_token: 'new', refresh_token: 'rt-next', expires_in: 86400, locationId: 'QUcu2PEAxPV1sQm1GQCq' })
+        : Response.json({ error: 'invalid_grant' }, { status: 400 });
+    }
+    return base(url, init);
+  };
+  await setState('race', { jobAddress: '9210 Race Dr', reportDate: NEAR.date, reportTime: NEAR.time, crew: [ANA, BO] });
+  const { sendCrewText } = await import('../lib/crew-text.mjs');
+  const r = await sendCrewText({ jobId: 'race', reportDate: NEAR.date, textWorkers: [ANA, BO].map(w => ({ workerName: w.name, workerPhone: w.phone, contactId: w.id })) }, 'eff-race', { sql });
+  assert.equal(r.sent, 2);
+  assert.equal(refreshes, 1, 'only one refresh with the single-use token');
+  const [row] = await sql`select value from dispatch_settings where key = 'ghl-oauth:QUcu2PEAxPV1sQm1GQCq'`;
+  assert.equal((typeof row.value === 'string' ? JSON.parse(row.value) : row.value).refresh_token, 'rt-next');
+});
