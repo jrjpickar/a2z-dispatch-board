@@ -6664,6 +6664,24 @@ document.getElementById('submitBook').addEventListener('click', async () => {
     return;
   }
 
+  const valueInput = document.getElementById('jobValue');
+  const value = payload.monetaryValue;
+  if (valueInput.validity.badInput || (value !== null && (!Number.isFinite(value) || value < 0))) {
+    showToast('Enter a valid, nonnegative opportunity value.', true);
+    valueInput.focus();
+    return;
+  }
+  if (value === null || value === 0 || value >= 10000) {
+    const warning = value === null
+      ? 'No opportunity value was entered.'
+      : `This labor job has an opportunity value of ${value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}.`;
+    if (!confirm(`${warning}\n\nCONTRACT WORK CAN NOT BE BOOKED AS LABOR\n\nBook this labor job with that value? Select Cancel to review the Job Value.`)) {
+      valueInput.focus();
+      return;
+    }
+    payload.confirmedOpportunityValue = value;
+  }
+
   const submitBtn = document.getElementById('submitBook');
   submitBtn.textContent = "Creating...";
   submitBtn.disabled = true;

@@ -77,17 +77,23 @@ test('dispatch remains saved when GHL fails; retry uses latest schedule', async 
 });
 test('server seeds created jobs and replays creation without a second Make call', async () => {
   const original = globalThis.fetch; let calls = 0;
-  const payload = { action: 'create', requestId: crypto.randomUUID(), jobAddress: 'Created job', reportDate: '2026-09-09', reportTime: '08:00', reportEndDate: '2026-09-09', reportEndTime: '17:00' };
-  globalThis.fetch = async () => { calls++; return Response.json({ ok: true, opportunityId: 'created-job-123456789' }); };
+  const payload = { action: 'create', requestId: crypto.randomUUID(), jobAddress: 'Created job', monetaryValue: 10000, confirmedOpportunityValue: 10000, reportDate: '2026-09-09', reportTime: '08:00', reportEndDate: '2026-09-09', reportEndTime: '17:00' };
+  globalThis.fetch = async (_url, { body }) => {
+    calls++;
+    const sent = JSON.parse(body);
+    assert.equal(sent.monetaryValue, 10000);
+    assert.equal(Object.hasOwn(sent, 'confirmedOpportunityValue'), false);
+    return Response.json({ ok: true, opportunityId: 'created-job-123456789' });
+  };
   try {
     const first = await createDispatch(sql, 'job', payload);
-    const second = await createDispatch(sql, 'job', payload);
+    const second = await createDispatch(sql, 'job', { ...payload, confirmedOpportunityValue: undefined });
     assert.equal(first.record.reportTime, '08:00'); assert.equal(second.record.version, 1); assert.equal(calls, 1);
   } finally { globalThis.fetch = original; }
 });
 test('unconfirmed creation is not blindly retried', async () => {
   const original = globalThis.fetch; let calls = 0;
-  const payload = { action: 'create', requestId: crypto.randomUUID() };
+  const payload = { action: 'create', requestId: crypto.randomUUID(), monetaryValue: 2500 };
   globalThis.fetch = async () => { calls++; return new Response('Accepted'); };
   try {
     await assert.rejects(createDispatch(sql, 'job', payload), e => e.status === 502);
